@@ -128,3 +128,5 @@
     @apply font-sans;
   }
 }
+
+/* Animations handled by framer-motion in checkin-form.tsx */

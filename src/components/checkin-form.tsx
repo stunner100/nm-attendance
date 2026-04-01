@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { motion, AnimatePresence, Variants } from "framer-motion";
-import { MapPin, Clock, AlertTriangle, CheckCircle2, Loader2, User } from "lucide-react";
+import { FormEvent, useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence, Variants, useReducedMotion } from "framer-motion";
+import { MapPin, Clock, AlertTriangle, CheckCircle2, Loader2, User, Search } from "lucide-react";
+import confetti from "canvas-confetti";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,10 @@ const shakeVariants: Variants = {
 };
 
 export function CheckinForm({ scanToken }: CheckinFormProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const activeJumpVariants = shouldReduceMotion ? { jump: { opacity: 1 } } : jumpVariants;
+  const activeShakeVariants = shouldReduceMotion ? { shake: { opacity: 1 } } : shakeVariants;
+
   const [name, setName] = useState("");
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("loading");
@@ -68,6 +73,24 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
   const [punctualityMessage, setPunctualityMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(true);
+  
+  // Autocomplete state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const filteredEmployees = employees.filter(e => 
+    e.toLowerCase().includes(name.toLowerCase())
+  );
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -129,6 +152,7 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
 
     setSubmitting(true);
     setError(null);
+    setIsDropdownOpen(false);
 
     try {
       const response = await fetch("/api/checkin", {
@@ -149,6 +173,11 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
           error?: string;
         };
         setError(data.error ?? "Unable to submit check-in.");
+        
+        // Haptic error
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]);
+        }
         return;
       }
 
@@ -156,6 +185,28 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
         timestamp?: string;
         punctualityMessage?: string;
       };
+      
+      const isLateResponse = data.punctualityMessage === "You are late";
+      
+      // Haptic feedback
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        if (isLateResponse) {
+          navigator.vibrate([200, 100, 200]); // Warning buzz
+        } else {
+          navigator.vibrate([100]); // Success tick
+        }
+      }
+
+      // Confetti for on-time
+      if (!isLateResponse && !shouldReduceMotion) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#14b8a6', '#34d399']
+        });
+      }
+
       setSubmittedAt(data.timestamp ?? new Date().toISOString());
       setPunctualityMessage(
         typeof data.punctualityMessage === "string" ? data.punctualityMessage : null
@@ -177,15 +228,16 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
         initial="hidden"
         animate="visible"
         variants={containerVariants}
+        className="w-full"
       >
         <Card className="overflow-hidden border-2 shadow-2xl">
           <motion.div
-            variants={isOnTime ? jumpVariants : shakeVariants}
+            variants={isOnTime ? activeJumpVariants : activeShakeVariants}
             animate={isAnimating ? (isOnTime ? "jump" : "shake") : ""}
             className={`relative ${
               isLate
-                ? "bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 dark:from-red-950 dark:via-orange-950 dark:to-amber-950"
-                : "bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950 dark:via-green-950 dark:to-teal-950"
+                ? "bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 dark:from-red-950 dark:via-orange-950 dark:to-amber-950/50"
+                : "bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950 dark:via-green-950 dark:to-teal-950/50"
             }`}
           >
             {/* Decorative circles */}
@@ -196,7 +248,7 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
               isLate ? "bg-orange-400" : "bg-teal-400"
             }`} />
 
-            <CardHeader className="relative z-10 text-center pb-6 pt-10">
+            <CardHeader className="relative z-10 text-center pb-12 pt-10">
               <motion.div
                 variants={itemVariants}
                 className="mx-auto mb-6 w-24 h-24 rounded-full flex items-center justify-center shadow-lg"
@@ -210,8 +262,8 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
                   {isLate ? (
                     <motion.div
                       key="late"
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
+                      initial={shouldReduceMotion ? { opacity: 0 } : { scale: 0, rotate: -180 }}
+                      animate={shouldReduceMotion ? { opacity: 1 } : { scale: 1, rotate: 0 }}
                       transition={{ type: "spring", duration: 0.6 }}
                     >
                       <AlertTriangle className="w-12 h-12 text-white" strokeWidth={2.5} />
@@ -219,8 +271,8 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
                   ) : (
                     <motion.div
                       key="ontime"
-                      initial={{ scale: 0, rotate: 180 }}
-                      animate={{ scale: 1, rotate: 0 }}
+                      initial={shouldReduceMotion ? { opacity: 0 } : { scale: 0, rotate: 180 }}
+                      animate={shouldReduceMotion ? { opacity: 1 } : { scale: 1, rotate: 0 }}
                       transition={{ type: "spring", duration: 0.6 }}
                     >
                       <CheckCircle2 className="w-12 h-12 text-white" strokeWidth={2.5} />
@@ -245,7 +297,7 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
               </motion.div>
 
               <motion.div variants={itemVariants} className="mt-3">
-                <CardDescription className="flex items-center justify-center gap-2 text-base">
+                <CardDescription className="flex items-center justify-center gap-2 text-base dark:text-slate-300">
                   <Clock className="w-4 h-4" />
                   <span>Checked in at {new Date(submittedAt).toLocaleTimeString()}</span>
                 </CardDescription>
@@ -254,11 +306,11 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
               {punctualityMessage ? (
                 <motion.div
                   variants={itemVariants}
-                  animate={isAnimating ? "pulse" : ""}
+                  animate={isAnimating && !shouldReduceMotion ? "pulse" : ""}
                   className={`mt-6 px-6 py-3 rounded-full inline-flex items-center gap-2 font-semibold text-sm shadow-md ${
                     isLate
-                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+                      ? "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-100 dark:border dark:border-red-800"
+                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-100 dark:border dark:border-emerald-800"
                   }`}
                 >
                   {isLate ? (
@@ -275,23 +327,10 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
                 </motion.div>
               ) : null}
 
-              <motion.div
-                variants={itemVariants}
-                className="mt-8"
-              >
-                <Button
-                  onClick={() => {
-                    setSubmittedAt(null);
-                    setPunctualityMessage(null);
-                    setName("");
-                    setError(null);
-                  }}
-                  variant="outline"
-                  className="rounded-full px-8"
-                >
-                  Check in another person
-                </Button>
+              <motion.div variants={itemVariants} className="mt-8 text-sm text-muted-foreground dark:text-slate-400">
+                You may now close this tab.
               </motion.div>
+
             </CardHeader>
           </motion.div>
         </Card>
@@ -304,6 +343,7 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
+      className="w-full"
     >
       <Card className="overflow-hidden border-2 shadow-xl">
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-100 dark:via-slate-200 dark:to-slate-100">
@@ -332,8 +372,8 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
         <CardContent className="pt-6 pb-8">
           {gpsStatus === "denied" ? (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
+              initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, height: 0 }}
+              animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
               className="mb-6 rounded-xl border-2 border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 p-4"
             >
               <div className="flex items-start gap-3">
@@ -373,27 +413,65 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
               <label className="text-sm font-semibold text-foreground" htmlFor="name">
                 Full Name
               </label>
-              <div className="relative">
+              
+              <div className="relative" ref={wrapperRef}>
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="name"
                   name="name"
-                  list={employees.length > 0 ? "employee-names" : undefined}
                   placeholder="Enter your full name"
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  autoComplete="name"
+                  onChange={(event) => {
+                    setName(event.target.value);
+                    if (event.target.value.length > 0) {
+                      setIsDropdownOpen(true);
+                    } else {
+                      setIsDropdownOpen(false);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (employees.length > 0) setIsDropdownOpen(true);
+                  }}
+                  autoComplete="off"
                   required
                   className="pl-12 h-14 text-lg rounded-xl border-2 focus:border-slate-400 dark:focus:border-slate-500 transition-colors"
                 />
+                
+                {/* Custom Autocomplete Dropdown */}
+                <AnimatePresence>
+                  {isDropdownOpen && employees.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-full mt-2 left-0 right-0 z-50 rounded-xl border bg-popover shadow-xl overflow-hidden"
+                    >
+                      <div className="max-h-60 overflow-y-auto p-1">
+                        {filteredEmployees.length > 0 ? (
+                          filteredEmployees.map((employee) => (
+                            <div
+                              key={employee}
+                              onClick={() => {
+                                setName(employee);
+                                setIsDropdownOpen(false);
+                              }}
+                              className="flex items-center gap-2 px-4 py-3 text-sm rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              <Search className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-medium text-foreground">{employee}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                            No matching employees found.
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-              {employees.length > 0 ? (
-                <datalist id="employee-names">
-                  {employees.map((employee) => (
-                    <option key={employee} value={employee} />
-                  ))}
-                </datalist>
-              ) : null}
             </motion.div>
 
             <AnimatePresence>

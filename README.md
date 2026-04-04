@@ -1,14 +1,15 @@
-# NM Attendance
+# NM HR System
 
-QR-based attendance check-in built with Next.js, NextAuth, and Postgres.
+QR-based attendance check-in and admin HR operations platform built with Next.js, NextAuth, and Postgres.
 
 ## Features
 
 - Public check-in page with GPS capture when the browser allows it.
-- Admin dashboard for reviewing attendance by date.
-- Admin roster page for managing approved employee names.
-- QR code page for printing the public check-in URL.
-- Server-side roster checks so only approved names can submit attendance.
+- Server-enforced one-time check-in scan tokens (30-minute token validity, single submission per scan).
+- Admin HR dashboard with KPI cards and key alerts.
+- HR modules for recruitment, headcount/org, compliance, payroll/leave, performance, training/onboarding.
+- CSV import workflows (dry-run + commit) for employees, recruitment, leave, and payroll.
+- Attendance module remains available inside `/admin`.
 
 ## Environment
 
@@ -19,10 +20,7 @@ Set these variables in `.env.local` and in production:
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `NEXT_PUBLIC_APP_URL` for a stable QR destination
-- `ALLOWED_EMPLOYEE_NAMES` for a comma-, semicolon-, or newline-separated roster
-
-If `ALLOWED_EMPLOYEE_NAMES` is omitted, the app will use existing roster entries already in the database.
-If the roster table is empty, populate it before sending employees to the check-in page.
+- `ALLOWED_EMPLOYEE_NAMES` (optional) for pre-seeding roster autocomplete names
 
 ## Development
 
@@ -37,11 +35,19 @@ Open `http://localhost:3000`.
 
 - `/checkin` public attendance form
 - `/login` admin sign-in
-- `/admin` attendance dashboard
-- `/admin/roster` approved roster management
+- `/admin` HR overview dashboard + attendance module
+- `/admin/recruitment`
+- `/admin/headcount`
+- `/admin/compliance`
+- `/admin/payroll-leave`
+- `/admin/performance`
+- `/admin/training`
+- `/admin/imports`
+- `/admin/roster` roster autocomplete management
 - `/admin/qr` printable QR code
 
 ## Notes
 
 - Attendance timestamps are recorded on the server.
-- The admin routes and attendance API require a signed-in admin session.
+- The HR admin routes and HR APIs require a signed-in admin session.
+- Public check-in accepts any name; roster is convenience metadata only.

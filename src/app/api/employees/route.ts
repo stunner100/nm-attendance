@@ -16,7 +16,7 @@ type EmployeeMutationPayload = {
 };
 
 function isAdminSession(session: Session | null): boolean {
-  return session?.user.role === "admin";
+  return session?.user?.role === "admin";
 }
 
 function extractRosterNames(payload: EmployeeMutationPayload): string[] {
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   const names = extractRosterNames(payload);
   if (names.length === 0) {
     return NextResponse.json(
-      { error: "Provide at least one approved name." },
+      { error: "Provide at least one roster name." },
       { status: 400 }
     );
   }
@@ -85,9 +85,9 @@ export async function POST(request: Request) {
     const roster = await getEmployeeNames();
     return NextResponse.json({ names: roster, addedNames });
   } catch (error) {
-    console.error("Failed to add approved names", error);
+    console.error("Failed to add roster names", error);
     return NextResponse.json(
-      { error: "Failed to add approved names." },
+      { error: "Failed to add roster names." },
       { status: 500 }
     );
   }
@@ -125,9 +125,9 @@ export async function DELETE(request: Request) {
     const roster = await getEmployeeNames();
     return NextResponse.json({ names: roster, removed: true });
   } catch (error) {
-    console.error("Failed to remove approved name", error);
+    console.error("Failed to remove roster name", error);
     return NextResponse.json(
-      { error: "Failed to remove approved name." },
+      { error: "Failed to remove roster name." },
       { status: 500 }
     );
   }

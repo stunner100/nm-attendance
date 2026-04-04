@@ -1,0 +1,407 @@
+import { revalidatePath } from "next/cache";
+
+import { AdminPageIntro } from "@/components/hr/admin-page-shell";
+import { StatusBadge } from "@/components/hr/status-badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { requireAdminPage } from "@/lib/admin-auth";
+import {
+  createOnboardingChecklistItem,
+  createTrainingAssignment,
+  createTrainingModule,
+  getTrainingModuleData,
+  listHREmployeeOptions,
+  listTrainingModuleOptions,
+  updateOnboardingChecklistStatus,
+  updateTrainingAssignmentStatus,
+} from "@/lib/hr-db";
+import { HR_TRAINING_STATUSES } from "@/lib/types";
+import { humanizeLabel } from "@/lib/labels";
+
+type TrainingPageProps = {
+  searchParams: Promise<{ category?: string; assignmentStatus?: string }>;
+};
+
+async function createModuleAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/training");
+
+  const code = String(formData.get("code") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
+  const durationHours = Number(formData.get("durationHours") ?? "");
+
+  if (!code || !title || !category) {
+    return;
+  }
+
+  await createTrainingModule({
+    code,
+    title,
+    category,
+    durationHours: Number.isFinite(durationHours) ? durationHours : 0,
+  });
+
+  revalidatePath("/admin/training");
+  revalidatePath("/admin");
+}
+
+async function createAssignmentAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/training");
+
+  const employeeId = Number(formData.get("employeeId") ?? "");
+  const moduleId = Number(formData.get("moduleId") ?? "");
+  const status = String(formData.get("status") ?? "assigned").trim();
+  const assignedAt = String(formData.get("assignedAt") ?? "").trim();
+
+  if (!Number.isFinite(employeeId) || !Number.isFinite(moduleId)) {
+    return;
+  }
+  if (!HR_TRAINING_STATUSES.includes(status as (typeof HR_TRAINING_STATUSES)[number])) {
+    return;
+  }
+
+  await createTrainingAssignment({
+    employeeId,
+    moduleId,
+    status: status as (typeof HR_TRAINING_STATUSES)[number],
+    assignedAt: assignedAt || undefined,
+  });
+
+  revalidatePath("/admin/training");
+  revalidatePath("/admin");
+}
+
+async function createOnboardingAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/training");
+
+  const employeeId = Number(formData.get("employeeId") ?? "");
+  const itemName = String(formData.get("itemName") ?? "").trim();
+  const status = String(formData.get("status") ?? "pending").trim();
+  const dueDate = String(formData.get("dueDate") ?? "").trim();
+
+  if (!Number.isFinite(employeeId) || !itemName) {
+    return;
+  }
+  if (status !== "pending" && status !== "completed") {
+    return;
+  }
+
+  await createOnboardingChecklistItem({
+    employeeId,
+    itemName,
+    status,
+    dueDate: dueDate || undefined,
+  });
+
+  revalidatePath("/admin/training");
+  revalidatePath("/admin");
+}
+
+async function updateAssignmentStatusAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/training");
+
+  const assignmentId = Number(formData.get("assignmentId") ?? "");
+  const status = String(formData.get("status") ?? "").trim();
+
+  if (!Number.isFinite(assignmentId)) {
+    return;
+  }
+  if (!HR_TRAINING_STATUSES.includes(status as (typeof HR_TRAINING_STATUSES)[number])) {
+    return;
+  }
+
+  await updateTrainingAssignmentStatus(
+    assignmentId,
+    status as (typeof HR_TRAINING_STATUSES)[number]
+  );
+  revalidatePath("/admin/training");
+  revalidatePath("/admin");
+}
+
+async function updateOnboardingStatusAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/training");
+
+  const checklistId = Number(formData.get("checklistId") ?? "");
+  const status = String(formData.get("status") ?? "").trim();
+  if (!Number.isFinite(checklistId) || (status !== "pending" && status !== "completed")) {
+    return;
+  }
+
+  await updateOnboardingChecklistStatus(checklistId, status);
+  revalidatePath("/admin/training");
+  revalidatePath("/admin");
+}
+
+export default async function TrainingPage({ searchParams }: TrainingPageProps) {
+  const params = await searchParams;
+
+  const categoryFilter = params.category?.trim() || "";
+  const assignmentStatusFilter = params.assignmentStatus?.trim() || "";
+
+  const [data, employees, moduleOptions] = await Promise.all([
+    getTrainingModuleData({
+      category: categoryFilter,
+      assignmentStatus: assignmentStatusFilter,
+    }),
+    listHREmployeeOptions(),
+    listTrainingModuleOptions(),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <AdminPageIntro
+        title="Training & Onboarding"
+        description="Monitor onboarding completion and training curriculum progress."
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-3 sm:grid-cols-3" method="GET">
+            <label className="text-sm">
+              <span className="mb-1 block text-xs text-muted-foreground">Module category</span>
+              <Input defaultValue={categoryFilter} name="category" placeholder="e.g. CS" />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs text-muted-foreground">Assignment status</span>
+              <select
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                defaultValue={assignmentStatusFilter}
+                name="assignmentStatus"
+              >
+                <option value="">All statuses</option>
+                {HR_TRAINING_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {humanizeLabel(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-end">
+              <Button className="w-full" type="submit">
+                Apply Filters
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Training Module</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createModuleAction} className="grid gap-3">
+              <Input name="code" placeholder="Module code" required />
+              <Input name="title" placeholder="Module title" required />
+              <Input name="category" placeholder="Category (CS, Onboarding...)" required />
+              <Input name="durationHours" placeholder="Duration (hours)" step="0.25" type="number" />
+              <Button type="submit">Save Module</Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Assign to Employee</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createAssignmentAction} className="grid gap-3">
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                defaultValue=""
+                name="employeeId"
+                required
+              >
+                <option disabled value="">
+                  Select employee
+                </option>
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.full_name}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                defaultValue=""
+                name="moduleId"
+                required
+              >
+                <option disabled value="">
+                  Select module
+                </option>
+                {moduleOptions.map((module) => (
+                  <option key={module.id} value={module.id}>
+                    {module.code} - {module.title}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                defaultValue="assigned"
+                name="status"
+              >
+                {HR_TRAINING_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {humanizeLabel(status)}
+                  </option>
+                ))}
+              </select>
+              <Input name="assignedAt" type="date" />
+              <Button type="submit">Create Assignment</Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Checklist Item</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createOnboardingAction} className="grid gap-3">
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                defaultValue=""
+                name="employeeId"
+                required
+              >
+                <option disabled value="">
+                  Select employee
+                </option>
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.full_name}
+                  </option>
+                ))}
+              </select>
+              <Input name="itemName" placeholder="Checklist item" required />
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                defaultValue="pending"
+                name="status"
+              >
+                <option value="pending">{humanizeLabel("pending")}</option>
+                <option value="completed">{humanizeLabel("completed")}</option>
+              </select>
+              <Input name="dueDate" type="date" />
+              <Button type="submit">Save Checklist Item</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Training Modules ({data.modules.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {data.modules.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Create your first training module to get started.</p>
+          ) : (
+            data.modules.map((module) => (
+              <div key={module.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                <div>
+                  <p className="text-sm font-medium">
+                    {module.code} - {module.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {module.category} {"\u2022"} {module.duration_hours} hours
+                  </p>
+                </div>
+                <StatusBadge status={module.active ? "active" : "inactive"} />
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Assignments ({data.assignments.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {data.assignments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Assign a training module to an employee to get started.</p>
+          ) : (
+            data.assignments.map((assignment) => (
+              <div key={assignment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                <div>
+                  <p className="text-sm font-medium">Training assignment</p>
+                  <p className="text-xs text-muted-foreground">
+                    Assigned {assignment.assigned_at}
+                    {assignment.completed_at ? ` {"\u2022"} Completed ${assignment.completed_at}` : ""}
+                  </p>
+                </div>
+                <form action={updateAssignmentStatusAction} className="flex items-center gap-2">
+                  <input name="assignmentId" type="hidden" value={assignment.id} />
+                  <select
+                    className="h-8 rounded-md border bg-background px-2 text-xs"
+                    defaultValue={assignment.status}
+                    name="status"
+                  >
+                    {HR_TRAINING_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {humanizeLabel(status)}
+                      </option>
+                    ))}
+                  </select>
+                  <Button size="sm" type="submit" variant="outline">
+                    Save
+                  </Button>
+                  <StatusBadge status={assignment.status} />
+                </form>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Onboarding Checklist ({data.onboarding.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {data.onboarding.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Add your first onboarding checklist item to get started.</p>
+          ) : (
+            data.onboarding.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                <div>
+                  <p className="text-sm font-medium">{item.item_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Due {item.due_date || "Not set"}
+                  </p>
+                </div>
+                <form action={updateOnboardingStatusAction} className="flex items-center gap-2">
+                  <input name="checklistId" type="hidden" value={item.id} />
+                  <select
+                    className="h-8 rounded-md border bg-background px-2 text-xs"
+                    defaultValue={item.status}
+                    name="status"
+                  >
+                    <option value="pending">{humanizeLabel("pending")}</option>
+                    <option value="completed">{humanizeLabel("completed")}</option>
+                  </select>
+                  <Button size="sm" type="submit" variant="outline">
+                    Save
+                  </Button>
+                  <StatusBadge status={item.status} />
+                </form>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

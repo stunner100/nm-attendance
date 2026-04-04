@@ -1,18 +1,12 @@
-import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { Clock, QrCode, Printer } from "lucide-react";
 import QRCode from "qrcode";
 
-import { auth } from "@/auth";
-import { LogoutButton } from "@/components/logout-button";
 import { PrintButton } from "@/components/print-button";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default async function AdminQrPage() {
-  const session = await auth();
-  if (!session || session.user.role !== "admin") {
-    redirect("/login?callbackUrl=/admin/qr");
-  }
-
   const appUrl = (
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -28,48 +22,42 @@ export default async function AdminQrPage() {
   });
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="mx-auto max-w-lg space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+          <QrCode className="h-5 w-5 text-emerald-600" />
+        </div>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Office QR Code</h1>
-          <p className="text-sm text-muted-foreground">
-            Print and place this code where employees can scan it.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Signed in as {session.user.email}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            className="text-sm font-medium text-primary underline underline-offset-2"
-            href="/admin/roster"
-          >
-            Manage roster
-          </Link>
-          <Link
-            className="text-sm font-medium text-primary underline underline-offset-2"
-            href="/admin"
-          >
-            Back to dashboard
-          </Link>
-          <LogoutButton />
+          <h1 className="text-xl font-semibold text-slate-900">Check-in QR Code</h1>
+          <p className="text-sm text-slate-500">Print and display this code at your office entrance.</p>
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card p-4 sm:p-6">
-        <Image
-          src={qrDataUrl}
-          alt="Attendance check-in QR code"
-          width={400}
-          height={400}
-          unoptimized
-          className="mx-auto h-auto w-full max-w-[400px]"
-        />
-        <p className="mt-4 break-all text-center text-sm text-muted-foreground">{checkinUrl}</p>
-      </div>
+      <Card className="border-0 shadow-lg">
+        <CardContent className="flex flex-col items-center gap-4 pt-6">
+          <img
+            src={qrDataUrl}
+            alt="Attendance check-in QR code"
+            className="h-auto w-full max-w-[300px]"
+          />
+          <p className="break-all text-center text-sm text-slate-500">{checkinUrl}</p>
+          <PrintButton />
+        </CardContent>
+      </Card>
 
-      <PrintButton />
-    </main>
+      <div className="flex gap-3">
+        <Link href="/admin/attendance" className="flex-1">
+          <Button variant="outline" className="w-full">
+            <Clock className="mr-2 h-4 w-4" />
+            View Attendance
+          </Button>
+        </Link>
+        <Link href="/admin" className="flex-1">
+          <Button variant="outline" className="w-full">
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
+    </div>
   );
 }

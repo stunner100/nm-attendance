@@ -9,7 +9,7 @@ type AuthenticatedRequest = NextRequest & {
 };
 
 function isAdminSession(session: Session | null): boolean {
-  return session?.user.role === "admin";
+  return session?.user?.role === "admin";
 }
 
 function isProtectedPath(pathname: string): boolean {

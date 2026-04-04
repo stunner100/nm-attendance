@@ -55,7 +55,7 @@ export function RosterManager({ initialNames }: RosterManagerProps) {
 
     const namesToAdd = splitRosterNames(draft);
     if (namesToAdd.length === 0) {
-      setError("Paste at least one approved name.");
+      setError("Paste at least one roster name.");
       return;
     }
 
@@ -72,7 +72,7 @@ export function RosterManager({ initialNames }: RosterManagerProps) {
 
       const data = (await response.json().catch(() => ({}))) as RosterResponse;
       if (!response.ok) {
-        setError(readErrorMessage(data, "Unable to add approved names."));
+        setError(readErrorMessage(data, "Unable to add roster names."));
         return;
       }
 
@@ -92,7 +92,7 @@ export function RosterManager({ initialNames }: RosterManagerProps) {
   };
 
   const onDelete = async (name: string) => {
-    if (!window.confirm(`Remove ${name} from the approved roster?`)) {
+    if (!window.confirm(`Remove ${name} from the roster?`)) {
       return;
     }
 
@@ -111,7 +111,7 @@ export function RosterManager({ initialNames }: RosterManagerProps) {
 
       const data = (await response.json().catch(() => ({}))) as RosterResponse;
       if (!response.ok) {
-        setError(readErrorMessage(data, "Unable to remove approved name."));
+        setError(readErrorMessage(data, "Unable to remove roster name."));
         return;
       }
 
@@ -128,9 +128,9 @@ export function RosterManager({ initialNames }: RosterManagerProps) {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       <Card>
         <CardHeader>
-          <CardTitle>Add approved names</CardTitle>
+          <CardTitle>Add names</CardTitle>
           <CardDescription>
-            Paste one name per line, or separate names with commas or semicolons.
+            Enter one name per line, or separate with commas.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -161,15 +161,15 @@ Clara Mensah"
           </form>
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground">
-          Approved names are the only names that can submit check-ins.
+          These names appear in the check-in form autocomplete.
         </CardFooter>
       </Card>
 
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>Approved roster</CardTitle>
-            <CardDescription>These names are available in the public check-in form.</CardDescription>
+            <CardTitle>Names ({names.length})</CardTitle>
+            <CardDescription>These names appear in the check-in form.</CardDescription>
           </div>
 
           <Badge variant="secondary">{names.length}</Badge>
@@ -177,7 +177,7 @@ Clara Mensah"
         <CardContent>
           {names.length === 0 ? (
             <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              No approved names yet. Add them on the left before opening check-in to employees.
+              No names yet. Add staff names on the left to improve check-in autocomplete.
             </div>
           ) : (
             <Table>
@@ -209,7 +209,7 @@ Clara Mensah"
           )}
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground">
-          Changes apply immediately to the public check-in autocomplete and roster validation.
+          Updates appear in the check-in form immediately.
         </CardFooter>
       </Card>
     </div>

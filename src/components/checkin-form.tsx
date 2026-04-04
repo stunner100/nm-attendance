@@ -1,9 +1,15 @@
 "use client";
 
-import { FormEvent, useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence, Variants, useReducedMotion } from "framer-motion";
-import { MapPin, Clock, AlertTriangle, CheckCircle2, Loader2, User, Search } from "lucide-react";
-import confetti from "canvas-confetti";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  MapPin,
+  Search,
+  User,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,66 +27,67 @@ type Coordinates = {
   lng: number;
 };
 
-type CheckinFormProps = {
-  scanToken: string;
-};
+type TokenStatus = "loading" | "ready" | "error";
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, staggerChildren: 0.1 },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0 },
-};
-
-const jumpVariants: Variants = {
-  jump: {
-    y: [0, -30, 0, -15, 0, -5, 0],
-    scale: [1, 1.1, 1, 1.05, 1, 1.02, 1],
-    transition: {
-      duration: 0.8,
-      times: [0, 0.15, 0.3, 0.45, 0.6, 0.8, 1],
-    },
-  },
-};
-
-const shakeVariants: Variants = {
-  shake: {
-    x: [0, -10, 10, -10, 10, -5, 5, -2, 2, 0],
-    transition: {
-      duration: 0.6,
-    },
-  },
-};
-
-export function CheckinForm({ scanToken }: CheckinFormProps) {
-  const shouldReduceMotion = useReducedMotion();
-  const activeJumpVariants = shouldReduceMotion ? { jump: { opacity: 1 } } : jumpVariants;
-  const activeShakeVariants = shouldReduceMotion ? { shake: { opacity: 1 } } : shakeVariants;
-
+export function CheckinForm() {
+  const [scanToken, setScanToken] = useState<string | null>(null);
+  const [tokenStatus, setTokenStatus] = useState<TokenStatus>("loading");
   const [name, setName] = useState("");
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  const [gpsStatus, setGpsStatus] = useState<GpsStatus>("loading");
+  const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
   const [employees, setEmployees] = useState<string[]>([]);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [punctualityMessage, setPunctualityMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isAnimating, setIsAnimating] = useState(true);
-  
-  // Autocomplete state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const filteredEmployees = employees.filter(e => 
-    e.toLowerCase().includes(name.toLowerCase())
+  const filteredEmployees = employees.filter((employee) =>
+    employee.toLowerCase().includes(name.toLowerCase())
   );
+
+  useEffect(() => {
+    let active = true;
+
+    const prepareScanToken = async () => {
+      try {
+        const response = await fetch("/api/checkin/token", {
+          cache: "no-store",
+        });
+        const data = (await response.json().catch(() => ({}))) as {
+          scanToken?: string;
+          error?: string;
+        };
+
+        if (!response.ok || typeof data.scanToken !== "string") {
+          throw new Error(data.error ?? "Unable to prepare check-in.");
+        }
+
+        if (!active) {
+          return;
+        }
+
+        setScanToken(data.scanToken);
+        setTokenStatus("ready");
+      } catch (tokenError) {
+        if (!active) {
+          return;
+        }
+
+        console.error("Failed to prepare scan token", tokenError);
+        setScanToken(null);
+        setTokenStatus("error");
+      }
+    };
+
+    void prepareScanToken();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -88,16 +95,83 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
         setIsDropdownOpen(false);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
+    if (!submittedAt || punctualityMessage !== "You are on time") {
+      return;
+    }
+
+    let active = true;
+
+    const triggerConfetti = async () => {
+      try {
+        const confettiModule = await import("canvas-confetti");
+        if (!active) {
+          return;
+        }
+
+        confettiModule.default({
+          particleCount: 42,
+          spread: 68,
+          origin: { y: 0.62 },
+          colors: ["#10b981", "#14b8a6", "#34d399"],
+        });
+      } catch (confettiError) {
+        console.error("Failed to load confetti", confettiError);
+      }
+    };
+
+    const timer = window.setTimeout(() => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          void triggerConfetti();
+        });
+      });
+    }, 260);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [punctualityMessage, submittedAt]);
+
+  async function loadEmployees() {
+    if (employeesLoaded) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/employees", { cache: "no-store" });
+      if (!response.ok) {
+        setEmployeesLoaded(true);
+        return;
+      }
+
+      const data = (await response.json()) as { names?: string[] };
+      setEmployees(Array.isArray(data.names) ? data.names : []);
+    } catch {
+      setEmployees([]);
+    } finally {
+      setEmployeesLoaded(true);
+    }
+  }
+
+  function requestLocation() {
+    if (gpsStatus === "loading" || gpsStatus === "granted") {
+      return;
+    }
+
     if (!navigator.geolocation) {
       setGpsStatus("denied");
       setCoordinates(null);
       return;
     }
+
+    setGpsStatus("loading");
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -113,40 +187,22 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
       },
       {
         enableHighAccuracy: true,
-        timeout: 10_000,
-        maximumAge: 0,
+        timeout: 8_000,
+        maximumAge: 60_000,
       }
     );
-  }, []);
+  }
 
-  useEffect(() => {
-    const loadEmployees = async () => {
-      try {
-        const response = await fetch("/api/employees", { cache: "no-store" });
-        if (!response.ok) return;
-
-        const data = (await response.json()) as { names?: string[] };
-        setEmployees(Array.isArray(data.names) ? data.names : []);
-      } catch {
-        setEmployees([]);
-      }
-    };
-
-    void loadEmployees();
-  }, []);
-
-  useEffect(() => {
-    if (submittedAt) {
-      const timer = setTimeout(() => setIsAnimating(false), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [submittedAt]);
-
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!name.trim()) {
       setError("Please enter a name.");
+      return;
+    }
+
+    if (!scanToken) {
+      setError("Check-in is not ready yet. Wait a moment and try again.");
       return;
     }
 
@@ -173,11 +229,6 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
           error?: string;
         };
         setError(data.error ?? "Unable to submit check-in.");
-        
-        // Haptic error
-        if (typeof navigator !== "undefined" && navigator.vibrate) {
-          navigator.vibrate([100, 50, 100]);
-        }
         return;
       }
 
@@ -185,333 +236,223 @@ export function CheckinForm({ scanToken }: CheckinFormProps) {
         timestamp?: string;
         punctualityMessage?: string;
       };
-      
-      const isLateResponse = data.punctualityMessage === "You are late";
-      
-      // Haptic feedback
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        if (isLateResponse) {
-          navigator.vibrate([200, 100, 200]); // Warning buzz
-        } else {
-          navigator.vibrate([100]); // Success tick
-        }
-      }
 
-      // Confetti for on-time
-      if (!isLateResponse && !shouldReduceMotion) {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#10b981', '#14b8a6', '#34d399']
-        });
-      }
-
-      setSubmittedAt(data.timestamp ?? new Date().toISOString());
       setPunctualityMessage(
         typeof data.punctualityMessage === "string" ? data.punctualityMessage : null
       );
-      setIsAnimating(true);
+      setSubmittedAt(data.timestamp ?? new Date().toISOString());
     } catch {
       setError("Network error while submitting check-in.");
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   const isLate = punctualityMessage === "You are late";
-  const isOnTime = punctualityMessage === "You are on time";
 
   if (submittedAt) {
     return (
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-        className="w-full"
-      >
-        <Card className="overflow-hidden border-2 shadow-2xl">
-          <motion.div
-            variants={isOnTime ? activeJumpVariants : activeShakeVariants}
-            animate={isAnimating ? (isOnTime ? "jump" : "shake") : ""}
-            className={`relative ${
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="overflow-hidden border-0 shadow-xl">
+          <div
+            className={
               isLate
-                ? "bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 dark:from-red-950 dark:via-orange-950 dark:to-amber-950/50"
-                : "bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950 dark:via-green-950 dark:to-teal-950/50"
-            }`}
+                ? "relative bg-gradient-to-br from-orange-50 via-red-50 to-white"
+                : "relative bg-gradient-to-br from-emerald-50 via-teal-50 to-white"
+            }
           >
-            {/* Decorative circles */}
-            <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-20 ${
-              isLate ? "bg-red-400" : "bg-emerald-400"
-            }`} />
-            <div className={`absolute -bottom-8 -left-8 w-32 h-32 rounded-full opacity-15 ${
-              isLate ? "bg-orange-400" : "bg-teal-400"
-            }`} />
-
-            <CardHeader className="relative z-10 text-center pb-12 pt-10">
-              <motion.div
-                variants={itemVariants}
-                className="mx-auto mb-6 w-24 h-24 rounded-full flex items-center justify-center shadow-lg"
-                style={{
-                  background: isLate
-                    ? "linear-gradient(135deg, #ef4444 0%, #f97316 100%)"
-                    : "linear-gradient(135deg, #10b981 0%, #14b8a6 100%)",
-                }}
+            <CardHeader className="relative z-10 px-6 pb-12 pt-8 text-center sm:px-10">
+              <div
+                className={
+                  isLate
+                    ? "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg"
+                    : "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg"
+                }
               >
-                <AnimatePresence mode="wait">
-                  {isLate ? (
-                    <motion.div
-                      key="late"
-                      initial={shouldReduceMotion ? { opacity: 0 } : { scale: 0, rotate: -180 }}
-                      animate={shouldReduceMotion ? { opacity: 1 } : { scale: 1, rotate: 0 }}
-                      transition={{ type: "spring", duration: 0.6 }}
-                    >
-                      <AlertTriangle className="w-12 h-12 text-white" strokeWidth={2.5} />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="ontime"
-                      initial={shouldReduceMotion ? { opacity: 0 } : { scale: 0, rotate: 180 }}
-                      animate={shouldReduceMotion ? { opacity: 1 } : { scale: 1, rotate: 0 }}
-                      transition={{ type: "spring", duration: 0.6 }}
-                    >
-                      <CheckCircle2 className="w-12 h-12 text-white" strokeWidth={2.5} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+                {isLate ? (
+                  <AlertTriangle className="h-10 w-10 text-white" strokeWidth={2.4} />
+                ) : (
+                  <CheckCircle2 className="h-10 w-10 text-white" strokeWidth={2.4} />
+                )}
+              </div>
 
-              <motion.div variants={itemVariants}>
-                <CardTitle className={`text-3xl font-bold tracking-tight ${
-                  isLate ? "text-red-700 dark:text-red-300" : "text-emerald-700 dark:text-emerald-300"
-                }`}>
-                  {isLate ? "You're Late!" : "You're On Time!"}
-                </CardTitle>
-              </motion.div>
+              <CardTitle className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                {isLate ? "You are late" : "You are on time"}
+              </CardTitle>
+              <CardDescription className="mt-3 text-base text-slate-600 sm:text-lg">
+                {name} checked in at {new Date(submittedAt).toLocaleTimeString()}
+              </CardDescription>
 
-              <motion.div variants={itemVariants} className="mt-4">
-                <div className="flex items-center justify-center gap-2 text-lg font-medium text-foreground">
-                  <User className="w-5 h-5" />
-                  <span>{name}</span>
-                </div>
-              </motion.div>
+              <div
+                className={
+                  isLate
+                    ? "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-red-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-red-700 shadow-sm duration-500"
+                    : "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm duration-500"
+                }
+              >
+                {isLate ? (
+                  <AlertTriangle className="h-4 w-4" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                <span>{punctualityMessage}</span>
+              </div>
 
-              <motion.div variants={itemVariants} className="mt-3">
-                <CardDescription className="flex items-center justify-center gap-2 text-base dark:text-slate-300">
-                  <Clock className="w-4 h-4" />
-                  <span>Checked in at {new Date(submittedAt).toLocaleTimeString()}</span>
-                </CardDescription>
-              </motion.div>
-
-              {punctualityMessage ? (
-                <motion.div
-                  variants={itemVariants}
-                  animate={isAnimating && !shouldReduceMotion ? "pulse" : ""}
-                  className={`mt-6 px-6 py-3 rounded-full inline-flex items-center gap-2 font-semibold text-sm shadow-md ${
-                    isLate
-                      ? "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-100 dark:border dark:border-red-800"
-                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-100 dark:border dark:border-emerald-800"
-                  }`}
-                >
-                  {isLate ? (
-                    <>
-                      <AlertTriangle className="w-4 h-4" />
-                      <span>Please remember to arrive on time tomorrow!</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Great job being punctual!</span>
-                    </>
-                  )}
-                </motion.div>
-              ) : null}
-
-              <motion.div variants={itemVariants} className="mt-8 text-sm text-muted-foreground dark:text-slate-400">
-                You may now close this tab.
-              </motion.div>
-
+              <p className="mt-8 text-sm text-slate-500">You may now close this tab.</p>
             </CardHeader>
-          </motion.div>
+          </div>
         </Card>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      className="w-full"
-    >
-      <Card className="overflow-hidden border-2 shadow-xl">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-100 dark:via-slate-200 dark:to-slate-100">
-          <CardHeader className="text-center pb-8 pt-10">
-            <motion.div
-              variants={itemVariants}
-              className="mx-auto mb-6 w-20 h-20 rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur flex items-center justify-center"
-            >
-              <Clock className="w-10 h-10 text-white dark:text-slate-900" />
-            </motion.div>
+    <Card className="overflow-hidden border-0 shadow-xl">
+      <div className="relative overflow-hidden bg-gradient-to-b from-slate-800 to-slate-900">
+        <CardHeader className="relative z-10 px-6 pb-8 pt-8 text-center sm:px-8 sm:pt-9">
+          <div className="mx-auto mb-5 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-3xl bg-white/10 shadow-inner">
+            <Clock className="h-9 w-9 text-white" />
+          </div>
+          <CardTitle className="text-3xl font-semibold tracking-tight text-white">
+            Office Check-In
+          </CardTitle>
+          <CardDescription className="mt-3 text-base leading-7 text-slate-300">
+            Enter your name and tap Check In.
+          </CardDescription>
+        </CardHeader>
+      </div>
 
-            <motion.div variants={itemVariants}>
-              <CardTitle className="text-2xl font-bold text-white dark:text-slate-900 tracking-tight">
-                Office Check-In
-              </CardTitle>
-            </motion.div>
+      <CardContent className="space-y-5 px-5 py-6 sm:px-8 sm:py-8">
+        <form className="space-y-5" onSubmit={onSubmit}>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-900" htmlFor="name">
+              Full Name
+            </label>
 
-            <motion.div variants={itemVariants}>
-              <CardDescription className="text-slate-300 dark:text-slate-600 mt-2 text-sm">
-                Scan the QR code, enter your name, and submit your attendance
-              </CardDescription>
-            </motion.div>
-          </CardHeader>
-        </div>
+            <div className="relative" ref={wrapperRef}>
+              <User className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="name"
+                name="name"
+                placeholder="Enter your full name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (event.target.value.length > 0 && employeesLoaded) {
+                    setIsDropdownOpen(true);
+                  } else {
+                    setIsDropdownOpen(false);
+                  }
+                }}
+                onFocus={() => {
+                  void loadEmployees();
+                  if (employees.length > 0) {
+                    setIsDropdownOpen(true);
+                  }
+                }}
+                autoComplete="off"
+                required
+                className="h-14 rounded-2xl border-slate-200 bg-white pl-12 text-lg shadow-sm transition-colors focus:border-emerald-400"
+              />
 
-        <CardContent className="pt-6 pb-8">
-          {gpsStatus === "denied" ? (
-            <motion.div
-              initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, height: 0 }}
-              animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
-              className="mb-6 rounded-xl border-2 border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 p-4"
-            >
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-amber-800 dark:text-amber-200">
-                  <p className="font-medium">Location access unavailable</p>
-                  <p className="mt-1 text-amber-700 dark:text-amber-300">
-                    You can still submit your attendance without GPS verification.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ) : gpsStatus === "loading" ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-6 flex items-center justify-center gap-2 text-sm text-muted-foreground py-4"
-            >
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Requesting location access...</span>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-6 flex items-center gap-3 rounded-xl border-2 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-800 p-4"
-            >
-              <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <span className="text-sm text-emerald-700 dark:text-emerald-300">
-                GPS location enabled and ready
-              </span>
-            </motion.div>
-          )}
-
-          <form className="space-y-6" onSubmit={onSubmit}>
-            <motion.div variants={itemVariants} className="space-y-2">
-              <label className="text-sm font-semibold text-foreground" htmlFor="name">
-                Full Name
-              </label>
-              
-              <div className="relative" ref={wrapperRef}>
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Enter your full name"
-                  value={name}
-                  onChange={(event) => {
-                    setName(event.target.value);
-                    if (event.target.value.length > 0) {
-                      setIsDropdownOpen(true);
-                    } else {
-                      setIsDropdownOpen(false);
-                    }
-                  }}
-                  onFocus={() => {
-                    if (employees.length > 0) setIsDropdownOpen(true);
-                  }}
-                  autoComplete="off"
-                  required
-                  className="pl-12 h-14 text-lg rounded-xl border-2 focus:border-slate-400 dark:focus:border-slate-500 transition-colors"
-                />
-                
-                {/* Custom Autocomplete Dropdown */}
-                <AnimatePresence>
-                  {isDropdownOpen && employees.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute top-full mt-2 left-0 right-0 z-50 rounded-xl border bg-popover shadow-xl overflow-hidden"
-                    >
-                      <div className="max-h-60 overflow-y-auto p-1">
-                        {filteredEmployees.length > 0 ? (
-                          filteredEmployees.map((employee) => (
-                            <div
-                              key={employee}
-                              onClick={() => {
-                                setName(employee);
-                                setIsDropdownOpen(false);
-                              }}
-                              className="flex items-center gap-2 px-4 py-3 text-sm rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            >
-                              <Search className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium text-foreground">{employee}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                            No matching employees found.
-                          </div>
-                        )}
+              {isDropdownOpen && employees.length > 0 ? (
+                <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <div className="max-h-60 overflow-y-auto p-1.5">
+                    {filteredEmployees.length > 0 ? (
+                      filteredEmployees.map((employee) => (
+                        <button
+                          key={employee}
+                          type="button"
+                          onClick={() => {
+                            setName(employee);
+                            setIsDropdownOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm transition-colors hover:bg-slate-50"
+                        >
+                          <Search className="h-4 w-4 text-slate-400" />
+                          <span className="font-medium text-slate-800">{employee}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-3 text-sm text-slate-500">
+                        No matching names found.
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-
-            <AnimatePresence>
-              {error ? (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="rounded-xl bg-red-50 dark:bg-red-950 border-2 border-red-200 dark:border-red-800 p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+                    )}
                   </div>
-                </motion.div>
+                </div>
               ) : null}
-            </AnimatePresence>
+            </div>
+          </div>
 
-            <motion.div variants={itemVariants}>
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Add location</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Optional. Your GPS coordinates will be attached to this check-in.
+                </p>
+              </div>
+
               <Button
-                disabled={submitting}
-                type="submit"
-                className="w-full h-14 text-lg font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                type="button"
+                variant={gpsStatus === "granted" ? "secondary" : "outline"}
+                onClick={requestLocation}
+                disabled={gpsStatus === "loading"}
+                className="min-w-40"
               >
-                {submitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Submitting...
-                  </span>
+                {gpsStatus === "loading" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Getting location...
+                  </>
+                ) : gpsStatus === "granted" ? (
+                  <>
+                    <MapPin className="h-4 w-4" />
+                    Location ready
+                  </>
                 ) : (
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5" />
-                    Check In
-                  </span>
+                  <>
+                    <MapPin className="h-4 w-4" />
+                    Use my location
+                  </>
                 )}
               </Button>
-            </motion.div>
-          </form>
-        </CardContent>
-      </Card>
-    </motion.div>
+            </div>
+          </div>
+
+          {error ? (
+            <div className="animate-in fade-in slide-in-from-top-1 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 duration-300">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5" />
+                <p className="font-medium">{error}</p>
+              </div>
+            </div>
+          ) : null}
+
+          <Button
+            disabled={submitting || tokenStatus !== "ready"}
+            type="submit"
+            className="h-14 w-full rounded-2xl bg-slate-950 text-lg font-semibold shadow-lg shadow-slate-200 transition-transform hover:translate-y-[-1px] hover:bg-slate-900"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Checking in...
+              </>
+            ) : tokenStatus === "ready" ? (
+              <>
+                <CheckCircle2 className="h-5 w-5" />
+                Check In
+              </>
+            ) : (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Getting ready...
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

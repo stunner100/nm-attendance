@@ -1,27 +1,44 @@
 import { CheckinForm } from "@/components/checkin-form";
-import { issueCheckinScanToken } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
-export default async function CheckinPage() {
-  const scanToken = await issueCheckinScanToken();
-
+export default function CheckinPage() {
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950">
-      {/* Background ambient glow */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 dark:bg-emerald-500/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-teal-500/10 dark:bg-teal-500/5 blur-[120px] pointer-events-none" />
-      
-      {/* Noise texture overlay */}
-      <div 
-        className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none mix-blend-overlay"
-        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}
-      />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50">
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <section className="hidden max-w-2xl space-y-6 lg:block">
+            <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white/80 px-4 py-1.5 text-sm font-medium text-emerald-900 shadow-sm backdrop-blur">
+              NM Attendance
+            </div>
+            <div className="space-y-4">
+              <h1 className="max-w-xl text-5xl font-semibold tracking-tight text-slate-950">
+                Quick check-in for the office.
+              </h1>
+              <p className="max-w-lg text-lg leading-8 text-slate-600">
+                Enter your name and tap Check In. That&apos;s it.
+              </p>
+            </div>
 
-      <main className="relative z-10 w-full max-w-xl flex-1 flex flex-col justify-center px-4 py-10 sm:px-6">
-        <CheckinForm scanToken={scanToken} />
+            <div className="grid max-w-xl gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur">
+                <p className="text-sm font-medium text-slate-500">Fast</p>
+                <p className="mt-2 text-xl font-semibold text-slate-950">One tap check-in</p>
+              </div>
+              <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur">
+                <p className="text-sm font-medium text-slate-500">Simple</p>
+                <p className="mt-2 text-xl font-semibold text-slate-950">Just your name</p>
+              </div>
+              <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur">
+                <p className="text-sm font-medium text-slate-500">Instant</p>
+                <p className="mt-2 text-xl font-semibold text-slate-950">See your time</p>
+              </div>
+            </div>
+          </section>
+
+          <div className="mx-auto w-full max-w-xl">
+            <CheckinForm />
+          </div>
+        </div>
       </main>
     </div>
   );
 }
-

@@ -1,6 +1,9 @@
 import { randomUUID } from "crypto";
 
 import type {
+  HRAccountabilityAction,
+  HRAccountabilityStage,
+  HRAccountabilityStatus,
   HRContractType,
   HRDepartment,
   HRDisciplinaryCase,
@@ -9,10 +12,16 @@ import type {
   HREmploymentStatus,
   HRExitType,
   HRFollowupAction,
+  HRGrowthPlan,
+  HRGrowthPlanStatus,
+  HRKpiCard,
+  HRKpiCardItem,
+  HRKpiCardStatus,
   HRKpiScore,
   HRLeaveBalance,
   HRLeaveRequest,
   HRLeaveRequestStatus,
+  HRMonthlyScore,
   HROnboardingChecklist,
   HRPayrollAnomaly,
   HRPayrollCycle,
@@ -21,10 +30,19 @@ import type {
   HRPip,
   HRPipStatus,
   HRPolicyViolation,
+  HRPresentation,
+  HRPresentationStatus,
+  HRPresenterType,
+  HRRatingBand,
   HRRecruitmentApplicant,
   HRRecruitmentRole,
   HRRecruitmentStage,
+  HRReward,
+  HRRewardTier,
   HRReviewStatus,
+  HRRoadmapHealth,
+  HRTask,
+  HRTaskStatus,
   HRTrainingAssignment,
   HRTrainingModule,
   HRTrainingStatus,
@@ -343,6 +361,132 @@ export function normalizeOnboardingChecklist(row: DbRow): HROnboardingChecklist 
     status: asString(row.status) as "pending" | "completed",
     due_date: asNullableDateOnly(row.due_date),
     completed_at: asNullableDateOnly(row.completed_at),
+  };
+}
+
+export function normalizeKpiCard(row: DbRow): HRKpiCard {
+  return {
+    id: asNumber(row.id),
+    employee_id: asNumber(row.employee_id),
+    period: asString(row.period),
+    role_title: asNullableString(row.role_title),
+    company_goal: asNullableString(row.company_goal),
+    status: asString(row.status) as HRKpiCardStatus,
+    created_at: asString(row.created_at),
+    updated_at: asString(row.updated_at),
+  };
+}
+
+export function normalizeKpiCardItem(row: DbRow): HRKpiCardItem {
+  return {
+    id: asNumber(row.id),
+    card_id: asNumber(row.card_id),
+    kpi_text: asString(row.kpi_text),
+    target_measure: asNullableString(row.target_measure),
+    weight: asNumber(row.weight),
+    created_at: asString(row.created_at),
+  };
+}
+
+export function normalizeTask(row: DbRow): HRTask {
+  return {
+    id: asNumber(row.id),
+    employee_id: asNumber(row.employee_id),
+    card_id: asNullableNumber(row.card_id),
+    title: asString(row.title),
+    description: asNullableString(row.description),
+    due_date: asNullableDateOnly(row.due_date),
+    status: asString(row.status) as HRTaskStatus,
+    completed_at: asNullableDateOnly(row.completed_at),
+    quality_note: asNullableString(row.quality_note),
+    created_at: asString(row.created_at),
+  };
+}
+
+export function normalizeMonthlyScore(row: DbRow): HRMonthlyScore {
+  return {
+    id: asNumber(row.id),
+    employee_id: asNumber(row.employee_id),
+    period: asString(row.period),
+    kpi_score: asNumber(row.kpi_score),
+    task_score: asNumber(row.task_score),
+    comms_score: asNumber(row.comms_score),
+    teamwork_score: asNumber(row.teamwork_score),
+    total_score: asNumber(row.total_score),
+    rating: asString(row.rating) as HRRatingBand,
+    notes: asNullableString(row.notes),
+    scored_by: asNullableString(row.scored_by),
+    created_at: asString(row.created_at),
+  };
+}
+
+export function normalizePresentation(row: DbRow): HRPresentation {
+  return {
+    id: asNumber(row.id),
+    employee_id: asNumber(row.employee_id),
+    period: asString(row.period),
+    presenter_type: asString(row.presenter_type) as HRPresenterType,
+    status: asString(row.status) as HRPresentationStatus,
+    achievements: asNullableString(row.achievements),
+    kpi_results: asNullableString(row.kpi_results),
+    tasks_completed: asNullableString(row.tasks_completed),
+    tasks_delayed: asNullableString(row.tasks_delayed),
+    challenges: asNullableString(row.challenges),
+    support_needed: asNullableString(row.support_needed),
+    lessons: asNullableString(row.lessons),
+    next_priorities: asNullableString(row.next_priorities),
+    roadmap_health: asNullableString(row.roadmap_health) as HRRoadmapHealth | null,
+    key_wins: asNullableString(row.key_wins),
+    blockers: asNullableString(row.blockers),
+    risks: asNullableString(row.risks),
+    dependencies: asNullableString(row.dependencies),
+    qa_notes: asNullableString(row.qa_notes),
+    submitted_at: asNullableDateOnly(row.submitted_at),
+    created_at: asString(row.created_at),
+  };
+}
+
+export function normalizeReward(row: DbRow): HRReward {
+  return {
+    id: asNumber(row.id),
+    employee_id: asNumber(row.employee_id),
+    tier: asString(row.tier) as HRRewardTier,
+    reward_type: asString(row.reward_type),
+    description: asNullableString(row.description),
+    awarded_on: asDateOnly(row.awarded_on),
+    created_at: asString(row.created_at),
+  };
+}
+
+export function normalizeAccountabilityAction(row: DbRow): HRAccountabilityAction {
+  return {
+    id: asNumber(row.id),
+    employee_id: asNumber(row.employee_id),
+    stage: asString(row.stage) as HRAccountabilityStage,
+    reason: asString(row.reason),
+    issued_on: asDateOnly(row.issued_on),
+    status: asString(row.status) as HRAccountabilityStatus,
+    notes: asNullableString(row.notes),
+    created_at: asString(row.created_at),
+  };
+}
+
+export function normalizeGrowthPlan(row: DbRow): HRGrowthPlan {
+  return {
+    id: asNumber(row.id),
+    employee_id: asNumber(row.employee_id),
+    current_role: asNullableString(row.current_role),
+    current_responsibilities: asNullableString(row.current_responsibilities),
+    required_kpis: asNullableString(row.required_kpis),
+    skills_to_improve: asNullableString(row.skills_to_improve),
+    possible_next_role: asNullableString(row.possible_next_role),
+    promotion_requirements: asNullableString(row.promotion_requirements),
+    training_needed: asNullableString(row.training_needed),
+    review_timeline: asNullableString(row.review_timeline),
+    status: asString(row.status) as HRGrowthPlanStatus,
+    next_review_date: asNullableDateOnly(row.next_review_date),
+    created_at: asString(row.created_at),
+    updated_at: asString(row.updated_at),
   };
 }
 

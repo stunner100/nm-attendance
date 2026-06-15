@@ -13,6 +13,7 @@ export type AttendanceRow = {
 
 export const HR_DEPARTMENTS = [
   "Operations",
+  "Product",
   "Marketing",
   "Tech",
   "Finance & Compliance",
@@ -76,6 +77,74 @@ export type HRExitType = (typeof HR_EXIT_TYPES)[number];
 
 export const HR_WORK_MODES = ["onsite", "hybrid", "remote"] as const;
 export type HRWorkMode = (typeof HR_WORK_MODES)[number];
+
+export const HR_KPI_CARD_STATUSES = ["draft", "active", "archived"] as const;
+export type HRKpiCardStatus = (typeof HR_KPI_CARD_STATUSES)[number];
+
+export const HR_TASK_STATUSES = [
+  "assigned",
+  "in_progress",
+  "completed",
+  "delayed",
+] as const;
+export type HRTaskStatus = (typeof HR_TASK_STATUSES)[number];
+
+export const HR_RATING_BANDS = [
+  "excellent",
+  "strong",
+  "acceptable",
+  "below_expectation",
+  "poor",
+] as const;
+export type HRRatingBand = (typeof HR_RATING_BANDS)[number];
+
+export const HR_PRESENTER_TYPES = [
+  "associate",
+  "mid_level",
+  "manager",
+  "hod",
+] as const;
+export type HRPresenterType = (typeof HR_PRESENTER_TYPES)[number];
+
+export const HR_PRESENTATION_STATUSES = [
+  "scheduled",
+  "submitted",
+  "reviewed",
+] as const;
+export type HRPresentationStatus = (typeof HR_PRESENTATION_STATUSES)[number];
+
+export const HR_ROADMAP_HEALTH = ["on_track", "at_risk", "delayed"] as const;
+export type HRRoadmapHealth = (typeof HR_ROADMAP_HEALTH)[number];
+
+export const HR_REWARD_TIERS = [
+  "weekly",
+  "monthly",
+  "quarterly",
+  "long_term",
+] as const;
+export type HRRewardTier = (typeof HR_REWARD_TIERS)[number];
+
+export const HR_ACCOUNTABILITY_STAGES = [
+  "coaching",
+  "verbal_warning",
+  "written_warning",
+  "pip",
+  "final_review",
+  "reassignment",
+  "termination",
+  "investigation",
+] as const;
+export type HRAccountabilityStage = (typeof HR_ACCOUNTABILITY_STAGES)[number];
+
+export const HR_ACCOUNTABILITY_STATUSES = ["open", "resolved"] as const;
+export type HRAccountabilityStatus = (typeof HR_ACCOUNTABILITY_STATUSES)[number];
+
+export const HR_GROWTH_PLAN_STATUSES = [
+  "active",
+  "on_hold",
+  "completed",
+] as const;
+export type HRGrowthPlanStatus = (typeof HR_GROWTH_PLAN_STATUSES)[number];
 
 export type HREmployee = {
   id: number;
@@ -253,6 +322,116 @@ export type HROnboardingChecklist = {
   completed_at: string | null;
 };
 
+export type HRKpiCard = {
+  id: number;
+  employee_id: number;
+  period: string;
+  role_title: string | null;
+  company_goal: string | null;
+  status: HRKpiCardStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HRKpiCardItem = {
+  id: number;
+  card_id: number;
+  kpi_text: string;
+  target_measure: string | null;
+  weight: number;
+  created_at: string;
+};
+
+export type HRTask = {
+  id: number;
+  employee_id: number;
+  card_id: number | null;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  status: HRTaskStatus;
+  completed_at: string | null;
+  quality_note: string | null;
+  created_at: string;
+};
+
+export type HRMonthlyScore = {
+  id: number;
+  employee_id: number;
+  period: string;
+  kpi_score: number;
+  task_score: number;
+  comms_score: number;
+  teamwork_score: number;
+  total_score: number;
+  rating: HRRatingBand;
+  notes: string | null;
+  scored_by: string | null;
+  created_at: string;
+};
+
+export type HRPresentation = {
+  id: number;
+  employee_id: number;
+  period: string;
+  presenter_type: HRPresenterType;
+  status: HRPresentationStatus;
+  achievements: string | null;
+  kpi_results: string | null;
+  tasks_completed: string | null;
+  tasks_delayed: string | null;
+  challenges: string | null;
+  support_needed: string | null;
+  lessons: string | null;
+  next_priorities: string | null;
+  roadmap_health: HRRoadmapHealth | null;
+  key_wins: string | null;
+  blockers: string | null;
+  risks: string | null;
+  dependencies: string | null;
+  qa_notes: string | null;
+  submitted_at: string | null;
+  created_at: string;
+};
+
+export type HRReward = {
+  id: number;
+  employee_id: number;
+  tier: HRRewardTier;
+  reward_type: string;
+  description: string | null;
+  awarded_on: string;
+  created_at: string;
+};
+
+export type HRAccountabilityAction = {
+  id: number;
+  employee_id: number;
+  stage: HRAccountabilityStage;
+  reason: string;
+  issued_on: string;
+  status: HRAccountabilityStatus;
+  notes: string | null;
+  created_at: string;
+};
+
+export type HRGrowthPlan = {
+  id: number;
+  employee_id: number;
+  current_role: string | null;
+  current_responsibilities: string | null;
+  required_kpis: string | null;
+  skills_to_improve: string | null;
+  possible_next_role: string | null;
+  promotion_requirements: string | null;
+  training_needed: string | null;
+  review_timeline: string | null;
+  status: HRGrowthPlanStatus;
+  next_review_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type HRDashboardSummary = {
   recruitment: {
     open_roles: number;
@@ -296,6 +475,22 @@ export type HRDashboardSummary = {
     modules_assigned: number;
     modules_completed: number;
     cs_curriculum_completion_rate: number;
+  };
+  framework: {
+    period: string;
+    scored_employees: number;
+    avg_monthly_score: number;
+    excellent_count: number;
+    bonus_eligible_count: number;
+    poor_count: number;
+    rating_distribution: Record<HRRatingBand, number>;
+    avg_score_by_department: Record<HRDepartment, number>;
+    active_kpi_cards: number;
+    overdue_tasks: number;
+    presentations_pending: number;
+    rewards_this_month: number;
+    open_accountability: number;
+    growth_reviews_due: number;
   };
   alerts: Array<{
     id: string;

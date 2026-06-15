@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Clock, Users, Briefcase, ShieldCheck, DollarSign, TrendingUp, GraduationCap, Upload, QrCode } from "lucide-react";
+import { LayoutDashboard, Clock, Users, Briefcase, ShieldCheck, DollarSign, TrendingUp, GraduationCap, Upload, QrCode, Target, Gauge, Presentation, Award, ShieldAlert, Sprout } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,17 @@ const NAV_GROUPS = [
       { href: "/admin/roster", label: "Roster", icon: Users },
       { href: "/admin/headcount", label: "Employees", icon: Briefcase },
       { href: "/admin/recruitment", label: "Recruitment", icon: Users },
+    ],
+  },
+  {
+    label: "Performance Framework",
+    items: [
+      { href: "/admin/kpi-cards", label: "KPI Cards", icon: Target },
+      { href: "/admin/scores", label: "Monthly Scores", icon: Gauge },
+      { href: "/admin/presentations", label: "Presentations", icon: Presentation },
+      { href: "/admin/rewards", label: "Rewards", icon: Award },
+      { href: "/admin/accountability", label: "Accountability", icon: ShieldAlert },
+      { href: "/admin/growth", label: "Growth Plans", icon: Sprout },
     ],
   },
   {

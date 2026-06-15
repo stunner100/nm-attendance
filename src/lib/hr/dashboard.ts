@@ -5,15 +5,18 @@ import {
   HR_DEPARTMENTS,
   HR_DISCIPLINARY_STATUSES,
   HR_PAYROLL_STATUSES,
+  HR_RATING_BANDS,
   HR_RECRUITMENT_STAGES,
 } from "@/lib/types";
 import type {
   HRContractType,
   HRDepartment,
   HRDisciplinaryStatus,
+  HRRatingBand,
   HRRecruitmentStage,
   HRPayrollStatus,
 } from "@/lib/types";
+import { currentPeriod } from "@/lib/hr/framework-reference";
 
 import {
   asNullableString,
@@ -26,6 +29,8 @@ import {
 export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
   await ensureDbSchema();
   const pool = getDbPool();
+
+  const period = currentPeriod();
 
   const [
     openRolesRes,
@@ -50,6 +55,15 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
     onboardingRes,
     trainingRes,
     csTrainingRes,
+    monthlyScoreRes,
+    ratingDistRes,
+    deptScoreRes,
+    kpiCardRes,
+    overdueTaskRes,
+    presentationPendingRes,
+    rewardsMonthRes,
+    accountabilityOpenRes,
+    growthDueRes,
     alertsRes,
   ] = await Promise.all([
     pool.query(`
@@ -208,6 +222,75 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
       WHERE LOWER(tm.category) LIKE 'cs%'
          OR LOWER(tm.title) LIKE '%customer service%'
     `),
+    pool.query(
+      `
+        SELECT
+          COUNT(*)::int AS scored_employees,
+          COALESCE(AVG(total_score), 0)::float AS avg_total,
+          COUNT(*) FILTER (WHERE total_score >= 90)::int AS excellent_count,
+          COUNT(*) FILTER (WHERE total_score >= 80)::int AS bonus_eligible_count,
+          COUNT(*) FILTER (WHERE total_score < 60)::int AS poor_count
+        FROM hr_monthly_scores
+        WHERE period = $1
+      `,
+      [period]
+    ),
+    pool.query(
+      `
+        SELECT rating, COUNT(*)::int AS count
+        FROM hr_monthly_scores
+        WHERE period = $1
+        GROUP BY rating
+      `,
+      [period]
+    ),
+    pool.query(
+      `
+        SELECT e.department AS department, COALESCE(AVG(s.total_score), 0)::float AS avg_total
+        FROM hr_monthly_scores s
+        INNER JOIN hr_employees e ON e.id = s.employee_id
+        WHERE s.period = $1
+        GROUP BY e.department
+      `,
+      [period]
+    ),
+    pool.query(`
+      SELECT COUNT(*)::int AS active_cards
+      FROM hr_kpi_cards
+      WHERE status = 'active'
+    `),
+    pool.query(`
+      SELECT COUNT(*)::int AS overdue_tasks
+      FROM hr_tasks
+      WHERE status <> 'completed'
+        AND due_date IS NOT NULL
+        AND due_date < CURRENT_DATE
+    `),
+    pool.query(
+      `
+        SELECT COUNT(*)::int AS pending
+        FROM hr_presentations
+        WHERE period = $1 AND status <> 'reviewed'
+      `,
+      [period]
+    ),
+    pool.query(`
+      SELECT COUNT(*)::int AS rewards_month
+      FROM hr_rewards
+      WHERE DATE_TRUNC('month', awarded_on) = DATE_TRUNC('month', CURRENT_DATE)
+    `),
+    pool.query(`
+      SELECT COUNT(*)::int AS open_actions
+      FROM hr_accountability_actions
+      WHERE status = 'open'
+    `),
+    pool.query(`
+      SELECT COUNT(*)::int AS due_reviews
+      FROM hr_growth_plans
+      WHERE status = 'active'
+        AND next_review_date IS NOT NULL
+        AND next_review_date <= CURRENT_DATE + INTERVAL '30 days'
+    `),
     pool.query(`
       SELECT *
       FROM (
@@ -283,6 +366,7 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
 
   const byDepartment: Record<HRDepartment, number> = {
     Operations: 0,
+    Product: 0,
     Marketing: 0,
     Tech: 0,
     "Finance & Compliance": 0,
@@ -373,6 +457,36 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
   const csCompleted = asNumber(csTrainingRow?.completed_count);
   const csCompletionRate = csAssigned === 0 ? 0 : (csCompleted / csAssigned) * 100;
 
+  const monthlyScoreRow = asRecordRows(monthlyScoreRes.rows)[0] as DbRow | undefined;
+
+  const ratingDistribution = HR_RATING_BANDS.reduce(
+    (acc, band) => {
+      acc[band] = 0;
+      return acc;
+    },
+    {} as Record<HRRatingBand, number>
+  );
+  for (const row of asRecordRows(ratingDistRes.rows)) {
+    const rating = asString(row.rating) as HRRatingBand;
+    if (rating in ratingDistribution) {
+      ratingDistribution[rating] = asNumber(row.count);
+    }
+  }
+
+  const avgScoreByDepartment = HR_DEPARTMENTS.reduce(
+    (acc, department) => {
+      acc[department] = 0;
+      return acc;
+    },
+    {} as Record<HRDepartment, number>
+  );
+  for (const row of asRecordRows(deptScoreRes.rows)) {
+    const department = asString(row.department) as HRDepartment;
+    if (department in avgScoreByDepartment) {
+      avgScoreByDepartment[department] = asNumber(row.avg_total);
+    }
+  }
+
   return {
     recruitment: {
       open_roles: asNumber((asRecordRows(openRolesRes.rows)[0] as DbRow)?.open_roles),
@@ -430,6 +544,34 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
       modules_assigned: asNumber(trainingRow?.assigned_count),
       modules_completed: asNumber(trainingRow?.completed_count),
       cs_curriculum_completion_rate: csCompletionRate,
+    },
+    framework: {
+      period,
+      scored_employees: asNumber(monthlyScoreRow?.scored_employees),
+      avg_monthly_score: asNumber(monthlyScoreRow?.avg_total),
+      excellent_count: asNumber(monthlyScoreRow?.excellent_count),
+      bonus_eligible_count: asNumber(monthlyScoreRow?.bonus_eligible_count),
+      poor_count: asNumber(monthlyScoreRow?.poor_count),
+      rating_distribution: ratingDistribution,
+      avg_score_by_department: avgScoreByDepartment,
+      active_kpi_cards: asNumber(
+        (asRecordRows(kpiCardRes.rows)[0] as DbRow)?.active_cards
+      ),
+      overdue_tasks: asNumber(
+        (asRecordRows(overdueTaskRes.rows)[0] as DbRow)?.overdue_tasks
+      ),
+      presentations_pending: asNumber(
+        (asRecordRows(presentationPendingRes.rows)[0] as DbRow)?.pending
+      ),
+      rewards_this_month: asNumber(
+        (asRecordRows(rewardsMonthRes.rows)[0] as DbRow)?.rewards_month
+      ),
+      open_accountability: asNumber(
+        (asRecordRows(accountabilityOpenRes.rows)[0] as DbRow)?.open_actions
+      ),
+      growth_reviews_due: asNumber(
+        (asRecordRows(growthDueRes.rows)[0] as DbRow)?.due_reviews
+      ),
     },
     alerts: asRecordRows(alertsRes.rows).map((row) => ({
       id: asString(row.id),

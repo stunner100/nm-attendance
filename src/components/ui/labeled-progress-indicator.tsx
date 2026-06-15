@@ -1,8 +1,7 @@
 'use client';
 
-import { motion, AnimatePresence } from 'motion/react';
-
 import { useState, useEffect, type FC } from 'react';
+import { cn } from '@/lib/utils';
 
 export interface LabeledProgressIndicatorProps {
   labels: string[];
@@ -19,70 +18,33 @@ export const LabeledProgressIndicator: FC<LabeledProgressIndicatorProps> = ({
   const [labelIndex, setLabelIndex] = useState(0);
 
   useEffect(() => {
+    if (labels.length <= 1) return;
     const interval = setInterval(() => {
       setLabelIndex((prev) => (prev + 1) % labels.length);
     }, intervalMs);
-
     return () => clearInterval(interval);
   }, [labels.length, intervalMs]);
 
+  const displayLabel = labels[labelIndex] ?? labels[0];
+
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="relative flex w-full items-center justify-center perspective-[800px] transform-3d">
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={labelIndex}
-            initial={{
-              opacity: 0,
-              y: 10,
-              scale: 2,
-              filter: 'blur(4px)',
-              rotateX: -60,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              filter: 'blur(0px)',
-              rotateX: 0,
-            }}
-            exit={{
-              opacity: 0,
-              filter: 'blur(4px)',
-              rotateX: 90,
-              scale: 0.9,
-            }}
-            transition={{
-              type: 'spring',
-              stiffness: 600,
-              damping: 100,
-              mass: 10,
-            }}
-            className="origon-bottom flex w-full items-center justify-center text-3xl font-bold text-[#B5B5B5] will-change-transform transform-3d dark:text-zinc-400"
-          >
-            {labels[labelIndex]}
-          </motion.span>
-        </AnimatePresence>
+      <div className="flex w-full items-center justify-center">
+        <span
+          key={labelIndex}
+          className={cn(
+            'text-3xl font-bold text-[#B5B5B5] transition-opacity duration-300 dark:text-zinc-400',
+          )}
+        >
+          {displayLabel}
+        </span>
       </div>
 
       <div className="h-4 w-[320px] overflow-hidden rounded-full border border-black/5 bg-[#F0F0F0] shadow-inner dark:border-white/5 dark:bg-zinc-900">
-        <motion.div
-          initial={{ width: '0%' }}
-          animate={{ width: progress }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          className="relative h-full overflow-hidden rounded-full bg-[#016FFE] dark:bg-blue-600"
-        >
-          <motion.div
-            initial={{ x: '-100%' }}
-            animate={{ x: '200%' }}
-            transition={{
-              duration: intervalMs / 1000,
-              repeat: Infinity,
-              ease: 'linear',
-            }}
-            className="absolute inset-y-0 w-full bg-linear-to-r from-zinc-900/10 via-sky-300 to-zinc-900/10"
-          />
-        </motion.div>
+        <div
+          className="relative h-full overflow-hidden rounded-full bg-[#016FFE] transition-[width] duration-700 ease-out dark:bg-blue-600"
+          style={{ width: progress }}
+        />
       </div>
     </div>
   );

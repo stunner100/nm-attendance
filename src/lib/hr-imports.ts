@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 
 import { parseCsv } from "@/lib/csv";
 import { ensureDbSchema, getDbPool } from "@/lib/db";
-import { logImportRun } from "@/lib/hr-db";
+import { logImportRun } from "@/lib/hr/import-runs";
 import {
   HR_CONTRACT_TYPES,
   HR_DEPARTMENTS,

@@ -62,9 +62,10 @@ export function AttendanceTable({
 
   const handleExportCsv = async () => {
     try {
+      const dateQuery = initialDate ? `&date=${encodeURIComponent(initialDate)}` : "";
       const a = document.createElement("a");
-      a.href = "/api/admin/export-all-data?format=csv";
-      a.download = `abonten-technologies-export-${new Date().toISOString().split("T")[0]}.csv`;
+      a.href = `/api/admin/export-attendance?format=csv${dateQuery}`;
+      a.download = `attendance-export-${new Date().toISOString().split("T")[0]}.csv`;
       a.click();
     } catch (err) {
       console.error("Export failed", err);
@@ -72,16 +73,26 @@ export function AttendanceTable({
   };
 
   const handleClearAll = async () => {
-    if (!confirm("Are you sure you want to delete ALL data (attendance, HR, recruitment, payroll, training, performance, compliance)? This cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete ALL data (attendance, HR, recruitment, payroll, training, performance, compliance)? This cannot be undone."
+      )
+    ) {
       return;
     }
-    if (!confirm("This is your final confirmation. All platform data will be permanently deleted.")) {
+
+    const confirmPhrase = window.prompt(
+      'Type "DELETE ALL DATA" to confirm permanent deletion of all operational data.'
+    );
+    if (confirmPhrase !== "DELETE ALL DATA") {
       return;
     }
 
     try {
       const res = await fetch("/api/admin/clear-all-data", {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmPhrase }),
       });
       if (!res.ok) {
         const err = await res.json();

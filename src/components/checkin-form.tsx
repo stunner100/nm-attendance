@@ -39,7 +39,6 @@ export function CheckinForm() {
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
   const [employees, setEmployees] = useState<string[]>([]);
-  const [employeesLoaded, setEmployeesLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [submittedAction, setSubmittedAction] = useState<AttendanceAction | null>(null);
@@ -116,9 +115,45 @@ export function CheckinForm() {
   }, []);
 
   useEffect(() => {
-    void loadEmployees();
     void requestLocation();
   }, []);
+
+  useEffect(() => {
+    const query = name.trim();
+    if (query.length < 2) {
+      setEmployees([]);
+      return;
+    }
+
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch(
+            `/api/checkin/suggest?q=${encodeURIComponent(query)}`,
+            { cache: "no-store" }
+          );
+          if (!response.ok || !active) {
+            return;
+          }
+
+          const data = (await response.json()) as { names?: string[] };
+          if (active) {
+            setEmployees(Array.isArray(data.names) ? data.names : []);
+          }
+        } catch {
+          if (active) {
+            setEmployees([]);
+          }
+        }
+      })();
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [name]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -169,27 +204,6 @@ export function CheckinForm() {
       window.clearTimeout(timer);
     };
   }, [punctualityMessage, submittedAt]);
-
-  async function loadEmployees() {
-    if (employeesLoaded) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/employees", { cache: "no-store" });
-      if (!response.ok) {
-        setEmployeesLoaded(true);
-        return;
-      }
-
-      const data = (await response.json()) as { names?: string[] };
-      setEmployees(Array.isArray(data.names) ? data.names : []);
-    } catch {
-      setEmployees([]);
-    } finally {
-      setEmployeesLoaded(true);
-    }
-  }
 
   function requestLocation() {
     if (gpsStatus === "loading" || gpsStatus === "granted") {
@@ -467,15 +481,14 @@ export function CheckinForm() {
                 value={name}
                 onChange={(event) => {
                   setName(event.target.value);
-                  if (event.target.value.length > 0 && employeesLoaded) {
+                  if (event.target.value.trim().length >= 2) {
                     setIsDropdownOpen(true);
                   } else {
                     setIsDropdownOpen(false);
                   }
                 }}
                 onFocus={() => {
-                  void loadEmployees();
-                  if (employees.length > 0) {
+                  if (name.trim().length >= 2 && employees.length > 0) {
                     setIsDropdownOpen(true);
                   }
                 }}

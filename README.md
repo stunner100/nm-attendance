@@ -23,6 +23,12 @@ Set these variables in `.env.local` and in production:
 - `NEXT_PUBLIC_APP_URL` for a stable QR destination
 - `ALLOWED_EMPLOYEE_NAMES` (optional) for pre-seeding roster autocomplete names
 
+## Database migrations
+
+Schema changes live in `migrations/*.sql` and are applied automatically on startup via `src/lib/migrate.ts`. Applied files are tracked in `schema_migrations`.
+
+For local development after pulling new migrations, restart the dev server or hit any API route that touches the database.
+
 ## Development
 
 ```bash

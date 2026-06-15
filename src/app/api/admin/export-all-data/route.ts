@@ -1,32 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { getDbPool } from "@/lib/db";
-
-const EXPORT_ORDER = [
-  "hr_onboarding_checklists",
-  "hr_kpi_scores",
-  "hr_pips",
-  "hr_performance_reviews",
-  "hr_leave_requests",
-  "hr_leave_balances",
-  "hr_payroll_anomalies",
-  "hr_payroll_cycles",
-  "hr_followup_actions",
-  "hr_policy_violations",
-  "hr_disciplinary_cases",
-  "hr_training_assignments",
-  "hr_training_modules",
-  "hr_recruitment_stage_events",
-  "hr_recruitment_applicants",
-  "hr_recruitment_roles",
-  "hr_employees",
-  "hr_import_runs",
-  "attendance",
-  "checkin_scan_tokens",
-  "employees",
-  "users",
-];
+import { logAdminAction } from "@/lib/admin-audit";
+import { exportAllTables, tablesToCsv } from "@/lib/admin-backup";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -38,45 +14,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const pool = getDbPool();
   const url = new URL(request.url);
   const format = url.searchParams.get("format") || "json";
 
   try {
-    const results: Record<string, unknown[]> = {};
+    const results = await exportAllTables();
 
-    for (const table of EXPORT_ORDER) {
-      const res = await pool.query(`SELECT * FROM ${table} ORDER BY id`);
-      results[table] = res.rows;
-    }
+    await logAdminAction({
+      action: "export_all_data",
+      actorEmail: session.user.email,
+      details: { format },
+    });
 
     if (format === "csv") {
-      const csvParts: string[] = [];
-
-      for (const [table, rows] of Object.entries(results)) {
-        if (rows.length === 0) continue;
-
-        const headers = Object.keys(rows[0] as Record<string, unknown>);
-        const csvRows = [
-          headers.map((h) => `"${h}"`).join(","),
-          ...rows.map((row) =>
-            headers
-              .map((h) => {
-                const val = (row as Record<string, unknown>)[h];
-                const str = val === null || val === undefined ? "" : String(val);
-                return `"${str.replace(/"/g, '""')}"`;
-              })
-              .join(",")
-          ),
-        ];
-
-        csvParts.push(`-- ${table}\n${csvRows.join("\n")}`);
-      }
-
-      return new Response(csvParts.join("\n\n"), {
+      return new Response(tablesToCsv(results), {
         headers: {
           "Content-Type": "text/csv;charset=utf-8;",
-          "Content-Disposition": `attachment; filename="abonten-technologies-export-${new Date().toISOString().split("T")[0]}.csv"`,
+          "Content-Disposition": `attachment; filename="abonten-technologies-backup-${new Date().toISOString().split("T")[0]}.csv"`,
         },
       });
     }

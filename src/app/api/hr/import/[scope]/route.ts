@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import mammoth from "mammoth";
 
 import { requireAdminApi } from "@/lib/admin-auth";
-import { listImportRuns } from "@/lib/hr-db";
+import { listImportRuns } from "@/lib/hr/import-runs";
 import {
   ensureImportScope,
   getImportTemplate,

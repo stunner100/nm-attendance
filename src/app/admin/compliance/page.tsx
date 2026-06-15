@@ -1,11 +1,13 @@
 import { revalidatePath } from "next/cache";
 
+import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
   createDisciplinaryCase,
   createFollowupAction,
@@ -19,7 +21,7 @@ import { HR_DISCIPLINARY_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type CompliancePageProps = {
-  searchParams: Promise<{ status?: string; severity?: string }>;
+  searchParams: Promise<{ status?: string; severity?: string; error?: string }>;
 };
 
 async function createCaseAction(formData: FormData): Promise<void> {
@@ -35,14 +37,14 @@ async function createCaseAction(formData: FormData): Promise<void> {
   const dueDate = String(formData.get("dueDate") ?? "").trim();
 
   if (!category || !summary) {
-    return;
+    redirectWithFormError("/admin/compliance", "Category and summary are required.");
   }
   if (
     !HR_DISCIPLINARY_STATUSES.includes(
       status as (typeof HR_DISCIPLINARY_STATUSES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/compliance", "Select a valid case status.");
   }
 
   await createDisciplinaryCase({
@@ -70,10 +72,10 @@ async function createViolationAction(formData: FormData): Promise<void> {
   const occurredOn = String(formData.get("occurredOn") ?? "").trim();
 
   if (!category) {
-    return;
+    redirectWithFormError("/admin/compliance", "Violation category is required.");
   }
   if (!["low", "medium", "high"].includes(severity)) {
-    return;
+    redirectWithFormError("/admin/compliance", "Select a valid severity level.");
   }
 
   await createPolicyViolation({
@@ -100,10 +102,10 @@ async function createFollowupActionAction(formData: FormData): Promise<void> {
   const notes = String(formData.get("notes") ?? "").trim();
 
   if (!actionType) {
-    return;
+    redirectWithFormError("/admin/compliance", "Follow-up action type is required.");
   }
   if (!["pending", "in_progress", "done"].includes(status)) {
-    return;
+    redirectWithFormError("/admin/compliance", "Select a valid follow-up status.");
   }
 
   await createFollowupAction({
@@ -126,14 +128,14 @@ async function updateCaseStatusAction(formData: FormData): Promise<void> {
   const caseId = Number(formData.get("caseId") ?? "");
   const status = String(formData.get("status") ?? "").trim();
   if (!Number.isFinite(caseId)) {
-    return;
+    redirectWithFormError("/admin/compliance", "Case ID is required.");
   }
   if (
     !HR_DISCIPLINARY_STATUSES.includes(
       status as (typeof HR_DISCIPLINARY_STATUSES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/compliance", "Select a valid case status.");
   }
 
   await updateDisciplinaryCaseStatus(
@@ -152,7 +154,7 @@ async function updateFollowupStatusAction(formData: FormData): Promise<void> {
   const actionId = Number(formData.get("actionId") ?? "");
   const status = String(formData.get("status") ?? "").trim();
   if (!Number.isFinite(actionId) || !["pending", "in_progress", "done"].includes(status)) {
-    return;
+    redirectWithFormError("/admin/compliance", "Valid action ID and status are required.");
   }
 
   await updateFollowupActionStatus(actionId, status as "pending" | "in_progress" | "done");
@@ -180,6 +182,8 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
         title="HR Cases & Compliance"
         description="Track cases, policy violations, and follow-up actions."
       />
+
+      <AdminFormAlert message={readFormError(params)} />
 
       <Card>
         <CardHeader>

@@ -1,11 +1,13 @@
 import { revalidatePath } from "next/cache";
 
+import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import { humanizeLabel } from "@/lib/labels";
 import {
   createLeaveRequest,
@@ -22,7 +24,7 @@ import {
 import { HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
 
 type PayrollLeavePageProps = {
-  searchParams: Promise<{ cycleStatus?: string; leaveStatus?: string }>;
+  searchParams: Promise<{ cycleStatus?: string; leaveStatus?: string; error?: string }>;
 };
 
 async function createCycleAction(formData: FormData): Promise<void> {
@@ -35,10 +37,10 @@ async function createCycleAction(formData: FormData): Promise<void> {
   const notes = String(formData.get("notes") ?? "").trim();
 
   if (!cycleMonth) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Payroll cycle month is required.");
   }
   if (!HR_PAYROLL_STATUSES.includes(status as (typeof HR_PAYROLL_STATUSES)[number])) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Select a valid payroll cycle status.");
   }
 
   await createPayrollCycle({
@@ -63,10 +65,10 @@ async function createAnomalyAction(formData: FormData): Promise<void> {
   const details = String(formData.get("details") ?? "").trim();
 
   if (!Number.isFinite(payrollCycleId) || !anomalyType) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Payroll cycle and anomaly type are required.");
   }
   if (!["open", "resolved"].includes(status)) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Select a valid anomaly status.");
   }
 
   await createPayrollAnomaly({
@@ -91,7 +93,7 @@ async function upsertBalanceAction(formData: FormData): Promise<void> {
   const carryDays = Number(formData.get("carryDays") ?? "");
 
   if (!Number.isFinite(employeeId) || !Number.isFinite(annualDays)) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Employee and annual leave days are required.");
   }
 
   await upsertLeaveBalance({
@@ -117,14 +119,14 @@ async function createLeaveRequestAction(formData: FormData): Promise<void> {
   const status = String(formData.get("status") ?? "pending").trim();
 
   if (!Number.isFinite(employeeId) || !leaveType || !startDate || !endDate || !Number.isFinite(days)) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Complete all leave request fields.");
   }
   if (
     !HR_LEAVE_REQUEST_STATUSES.includes(
       status as (typeof HR_LEAVE_REQUEST_STATUSES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Select a valid leave request status.");
   }
 
   await createLeaveRequest({
@@ -148,10 +150,10 @@ async function updateCycleStatusAction(formData: FormData): Promise<void> {
   const status = String(formData.get("status") ?? "").trim();
 
   if (!Number.isFinite(cycleId)) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Payroll cycle ID is required.");
   }
   if (!HR_PAYROLL_STATUSES.includes(status as (typeof HR_PAYROLL_STATUSES)[number])) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Select a valid payroll cycle status.");
   }
 
   await updatePayrollCycleStatus(cycleId, status as (typeof HR_PAYROLL_STATUSES)[number]);
@@ -167,14 +169,14 @@ async function updateLeaveStatusAction(formData: FormData): Promise<void> {
   const status = String(formData.get("status") ?? "").trim();
 
   if (!Number.isFinite(leaveRequestId)) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Leave request ID is required.");
   }
   if (
     !HR_LEAVE_REQUEST_STATUSES.includes(
       status as (typeof HR_LEAVE_REQUEST_STATUSES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Select a valid leave request status.");
   }
 
   await updateLeaveRequestStatus(
@@ -193,7 +195,7 @@ async function updateAnomalyStatusAction(formData: FormData): Promise<void> {
   const status = String(formData.get("status") ?? "").trim();
 
   if (!Number.isFinite(anomalyId) || !["open", "resolved"].includes(status)) {
-    return;
+    redirectWithFormError("/admin/payroll-leave", "Valid anomaly ID and status are required.");
   }
 
   await updatePayrollAnomalyStatus(anomalyId, status as "open" | "resolved");
@@ -222,6 +224,8 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
         title="Payroll & Leave Management"
         description="Monitor payroll cycles, anomalies, leave balances, and approvals."
       />
+
+      <AdminFormAlert message={readFormError(params)} />
 
       <Card>
         <CardHeader>

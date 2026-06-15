@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { CheckinRejectedError, checkoutAttendance } from "@/lib/db";
-import { enforceRateLimit } from "@/lib/rate-limit";
-
-const CHECKOUT_RATE_LIMIT = 20;
-const CHECKOUT_WINDOW_MS = 60_000;
 
 type CheckoutPayload = {
   name?: unknown;
@@ -12,16 +8,6 @@ type CheckoutPayload = {
 };
 
 export async function POST(request: Request) {
-  const limited = enforceRateLimit(
-    request,
-    "checkout-submit",
-    CHECKOUT_RATE_LIMIT,
-    CHECKOUT_WINDOW_MS
-  );
-  if (limited) {
-    return limited;
-  }
-
   let payload: CheckoutPayload;
 
   try {

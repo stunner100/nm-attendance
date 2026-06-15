@@ -1,7 +1,11 @@
-import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { Pool } from "pg";
 
+import {
+  CHECKIN_SCAN_TOKEN_TTL_MINUTES,
+  createRawCheckinScanToken,
+  hashCheckinScanToken,
+} from "@/lib/checkin-tokens";
 import { runMigrations } from "@/lib/migrate";
 import type { AttendanceRow } from "@/lib/types";
 import {
@@ -59,14 +63,8 @@ const globalForDb = globalThis as unknown as {
   employeeSeedPromise?: Promise<void>;
 };
 
-const CHECKIN_SCAN_TOKEN_TTL_MINUTES = 30;
-
 function normalizeEmployeeName(name: string): string {
   return normalizeRosterName(name);
-}
-
-function hashCheckinScanToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
 }
 
 function getPool(): Pool {
@@ -179,7 +177,7 @@ export async function ensureDefaultAdmin(): Promise<void> {
 export async function issueCheckinScanToken(): Promise<string> {
   await ensureSchema();
 
-  const rawToken = randomBytes(32).toString("hex");
+  const rawToken = createRawCheckinScanToken();
   const tokenHash = hashCheckinScanToken(rawToken);
   const pool = getPool();
 

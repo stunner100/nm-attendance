@@ -1,8 +1,12 @@
-export {
-  logImportRun,
-  listImportRuns,
-  type HRImportRun,
-} from "@/lib/hr/import-runs";
-export { getHRDashboardSummary } from "@/lib/hr/dashboard";
-// Domain CRUD remains in hr-db.ts during incremental split.
-export * from "@/lib/hr-db";
+export * from "@/lib/hr/types";
+export * from "@/lib/hr/shared";
+export * from "@/lib/hr/employees";
+export * from "@/lib/hr/recruitment";
+export * from "@/lib/hr/compliance";
+export * from "@/lib/hr/payroll-leave";
+export * from "@/lib/hr/performance";
+export * from "@/lib/hr/training";
+export * from "@/lib/hr/modules";
+export * from "@/lib/hr/import-runs";
+export * from "@/lib/hr/dashboard";
+export * from "@/lib/hr/form-actions";

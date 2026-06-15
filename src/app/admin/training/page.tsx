@@ -1,11 +1,13 @@
 import { revalidatePath } from "next/cache";
 
+import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
   createOnboardingChecklistItem,
   createTrainingAssignment,
@@ -20,7 +22,7 @@ import { HR_TRAINING_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type TrainingPageProps = {
-  searchParams: Promise<{ category?: string; assignmentStatus?: string }>;
+  searchParams: Promise<{ category?: string; assignmentStatus?: string; error?: string }>;
 };
 
 async function createModuleAction(formData: FormData): Promise<void> {
@@ -33,7 +35,7 @@ async function createModuleAction(formData: FormData): Promise<void> {
   const durationHours = Number(formData.get("durationHours") ?? "");
 
   if (!code || !title || !category) {
-    return;
+    redirectWithFormError("/admin/training", "Module code, title, and category are required.");
   }
 
   await createTrainingModule({
@@ -57,10 +59,10 @@ async function createAssignmentAction(formData: FormData): Promise<void> {
   const assignedAt = String(formData.get("assignedAt") ?? "").trim();
 
   if (!Number.isFinite(employeeId) || !Number.isFinite(moduleId)) {
-    return;
+    redirectWithFormError("/admin/training", "Employee and training module are required.");
   }
   if (!HR_TRAINING_STATUSES.includes(status as (typeof HR_TRAINING_STATUSES)[number])) {
-    return;
+    redirectWithFormError("/admin/training", "Select a valid training status.");
   }
 
   await createTrainingAssignment({
@@ -84,10 +86,10 @@ async function createOnboardingAction(formData: FormData): Promise<void> {
   const dueDate = String(formData.get("dueDate") ?? "").trim();
 
   if (!Number.isFinite(employeeId) || !itemName) {
-    return;
+    redirectWithFormError("/admin/training", "Employee and onboarding item name are required.");
   }
   if (status !== "pending" && status !== "completed") {
-    return;
+    redirectWithFormError("/admin/training", "Select a valid onboarding status.");
   }
 
   await createOnboardingChecklistItem({
@@ -109,10 +111,10 @@ async function updateAssignmentStatusAction(formData: FormData): Promise<void> {
   const status = String(formData.get("status") ?? "").trim();
 
   if (!Number.isFinite(assignmentId)) {
-    return;
+    redirectWithFormError("/admin/training", "Assignment ID is required.");
   }
   if (!HR_TRAINING_STATUSES.includes(status as (typeof HR_TRAINING_STATUSES)[number])) {
-    return;
+    redirectWithFormError("/admin/training", "Select a valid training status.");
   }
 
   await updateTrainingAssignmentStatus(
@@ -130,7 +132,7 @@ async function updateOnboardingStatusAction(formData: FormData): Promise<void> {
   const checklistId = Number(formData.get("checklistId") ?? "");
   const status = String(formData.get("status") ?? "").trim();
   if (!Number.isFinite(checklistId) || (status !== "pending" && status !== "completed")) {
-    return;
+    redirectWithFormError("/admin/training", "Valid checklist ID and status are required.");
   }
 
   await updateOnboardingChecklistStatus(checklistId, status);
@@ -159,6 +161,8 @@ export default async function TrainingPage({ searchParams }: TrainingPageProps) 
         title="Training & Onboarding"
         description="Monitor onboarding completion and training curriculum progress."
       />
+
+      <AdminFormAlert message={readFormError(params)} />
 
       <Card>
         <CardHeader>

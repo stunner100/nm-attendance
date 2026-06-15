@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { CheckinRejectedError, insertAttendance } from "@/lib/db";
-import { enforceRateLimit } from "@/lib/rate-limit";
-
-const CHECKIN_RATE_LIMIT = 20;
-const CHECKIN_WINDOW_MS = 60_000;
 
 type CheckinPayload = {
   name?: unknown;
@@ -63,16 +59,6 @@ function getPunctualityMessage(timestamp: string): string {
 }
 
 export async function POST(request: Request) {
-  const limited = enforceRateLimit(
-    request,
-    "checkin-submit",
-    CHECKIN_RATE_LIMIT,
-    CHECKIN_WINDOW_MS
-  );
-  if (limited) {
-    return limited;
-  }
-
   let payload: CheckinPayload;
 
   try {

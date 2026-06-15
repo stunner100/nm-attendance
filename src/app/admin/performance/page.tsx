@@ -1,11 +1,13 @@
 import { revalidatePath } from "next/cache";
 
+import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
   createKpiScore,
   createPerformanceReview,
@@ -19,7 +21,7 @@ import { HR_PIP_STATUSES, HR_REVIEW_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type PerformancePageProps = {
-  searchParams: Promise<{ reviewStatus?: string; pipStatus?: string }>;
+  searchParams: Promise<{ reviewStatus?: string; pipStatus?: string; error?: string }>;
 };
 
 async function createReviewAction(formData: FormData): Promise<void> {
@@ -33,7 +35,7 @@ async function createReviewAction(formData: FormData): Promise<void> {
   const notes = String(formData.get("notes") ?? "").trim();
 
   if (!Number.isFinite(employeeId) || !reviewPeriod || !dueDate) {
-    return;
+    redirectWithFormError("/admin/performance", "Employee, review period, and due date are required.");
   }
 
   await createPerformanceReview({
@@ -62,10 +64,10 @@ async function createPipAction(formData: FormData): Promise<void> {
   const progressNote = String(formData.get("progressNote") ?? "").trim();
 
   if (!Number.isFinite(employeeId) || !startDate) {
-    return;
+    redirectWithFormError("/admin/performance", "Employee and PIP start date are required.");
   }
   if (!HR_PIP_STATUSES.includes(status as (typeof HR_PIP_STATUSES)[number])) {
-    return;
+    redirectWithFormError("/admin/performance", "Select a valid PIP status.");
   }
 
   await createPip({
@@ -91,7 +93,7 @@ async function createKpiAction(formData: FormData): Promise<void> {
   const periodEnd = String(formData.get("periodEnd") ?? "").trim();
 
   if (!Number.isFinite(employeeId) || !metricName || !Number.isFinite(score) || !periodStart || !periodEnd) {
-    return;
+    redirectWithFormError("/admin/performance", "Complete all KPI score fields.");
   }
 
   await createKpiScore({
@@ -114,10 +116,10 @@ async function updateReviewStatusAction(formData: FormData): Promise<void> {
   const status = String(formData.get("status") ?? "").trim();
 
   if (!Number.isFinite(reviewId)) {
-    return;
+    redirectWithFormError("/admin/performance", "Review ID is required.");
   }
   if (!HR_REVIEW_STATUSES.includes(status as (typeof HR_REVIEW_STATUSES)[number])) {
-    return;
+    redirectWithFormError("/admin/performance", "Select a valid review status.");
   }
 
   await updatePerformanceReviewStatus(reviewId, status as (typeof HR_REVIEW_STATUSES)[number]);
@@ -134,10 +136,10 @@ async function updatePipStatusAction(formData: FormData): Promise<void> {
   const progressNote = String(formData.get("progressNote") ?? "").trim();
 
   if (!Number.isFinite(pipId)) {
-    return;
+    redirectWithFormError("/admin/performance", "PIP ID is required.");
   }
   if (!HR_PIP_STATUSES.includes(status as (typeof HR_PIP_STATUSES)[number])) {
-    return;
+    redirectWithFormError("/admin/performance", "Select a valid PIP status.");
   }
 
   await updatePipStatus(
@@ -169,6 +171,8 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
         title="Performance Management"
         description="Track review completion, improvement plan progress, and KPI score trends."
       />
+
+      <AdminFormAlert message={readFormError(params)} />
 
       <Card>
         <CardHeader>

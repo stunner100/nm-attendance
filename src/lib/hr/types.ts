@@ -1,13 +1,22 @@
 import type {
+  HRAccountabilityStage,
+  HRAccountabilityStatus,
   HRContractType,
   HRDepartment,
   HRDisciplinaryStatus,
   HREmploymentStatus,
   HRExitType,
+  HRGrowthPlanStatus,
+  HRKpiCardStatus,
   HRLeaveRequestStatus,
   HRPayrollStatus,
   HRPipStatus,
+  HRPresentationStatus,
+  HRPresenterType,
   HRRecruitmentStage,
+  HRRewardTier,
+  HRRoadmapHealth,
+  HRTaskStatus,
   HRTrainingStatus,
   HRWorkMode,
 } from "@/lib/types";
@@ -159,4 +168,92 @@ export type CreateOnboardingChecklistInput = {
   itemName: string;
   status?: "pending" | "completed";
   dueDate?: string | null;
+};
+
+export type CreateKpiCardInput = {
+  employeeId: number;
+  period: string;
+  roleTitle?: string | null;
+  companyGoal?: string | null;
+  status?: HRKpiCardStatus;
+};
+
+export type CreateKpiCardItemInput = {
+  cardId: number;
+  kpiText: string;
+  targetMeasure?: string | null;
+  weight?: number;
+};
+
+export type CreateTaskInput = {
+  employeeId: number;
+  cardId?: number | null;
+  title: string;
+  description?: string | null;
+  dueDate?: string | null;
+  status?: HRTaskStatus;
+  qualityNote?: string | null;
+};
+
+export type CreateMonthlyScoreInput = {
+  employeeId: number;
+  period: string;
+  kpiScore: number;
+  taskScore: number;
+  commsScore: number;
+  teamworkScore: number;
+  notes?: string | null;
+  scoredBy?: string | null;
+};
+
+export type CreatePresentationInput = {
+  employeeId: number;
+  period: string;
+  presenterType: HRPresenterType;
+  status?: HRPresentationStatus;
+  achievements?: string | null;
+  kpiResults?: string | null;
+  tasksCompleted?: string | null;
+  tasksDelayed?: string | null;
+  challenges?: string | null;
+  supportNeeded?: string | null;
+  lessons?: string | null;
+  nextPriorities?: string | null;
+  roadmapHealth?: HRRoadmapHealth | null;
+  keyWins?: string | null;
+  blockers?: string | null;
+  risks?: string | null;
+  dependencies?: string | null;
+  qaNotes?: string | null;
+};
+
+export type CreateRewardInput = {
+  employeeId: number;
+  tier: HRRewardTier;
+  rewardType: string;
+  description?: string | null;
+  awardedOn?: string | null;
+};
+
+export type CreateAccountabilityActionInput = {
+  employeeId: number;
+  stage: HRAccountabilityStage;
+  reason: string;
+  issuedOn?: string | null;
+  status?: HRAccountabilityStatus;
+  notes?: string | null;
+};
+
+export type CreateGrowthPlanInput = {
+  employeeId: number;
+  currentRole?: string | null;
+  currentResponsibilities?: string | null;
+  requiredKpis?: string | null;
+  skillsToImprove?: string | null;
+  possibleNextRole?: string | null;
+  promotionRequirements?: string | null;
+  trainingNeeded?: string | null;
+  reviewTimeline?: string | null;
+  status?: HRGrowthPlanStatus;
+  nextReviewDate?: string | null;
 };

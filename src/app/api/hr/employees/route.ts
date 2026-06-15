@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       workEmail: typeof payload.workEmail === "string" ? payload.workEmail : null,
       department: payload.department as
         | "Operations"
+        | "Product"
         | "Marketing"
         | "Tech"
         | "Finance & Compliance"

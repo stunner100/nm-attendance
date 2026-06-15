@@ -7,16 +7,19 @@ import { AttendanceTable } from "@/components/attendance-table";
 import { getAllAttendance } from "@/lib/db";
 import { getHRDashboardSummary } from "@/lib/hr-db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RATING_BANDS } from "@/lib/hr/framework-reference";
 import {
   Users,
-  Briefcase,
   AlertCircle,
   FileText,
   TrendingUp,
-  Clock,
   Award,
-  UserMinus,
   Download,
+  Gauge,
+  Target,
+  Presentation,
+  ShieldAlert,
+  Sprout,
 } from "lucide-react";
 
 type AdminPageProps = {
@@ -32,6 +35,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   ]);
 
   const maxDeptCount = Math.max(...Object.values(summary.headcount.by_department), 1);
+  const framework = summary.framework;
+  const maxRating = Math.max(...Object.values(framework.rating_distribution), 1);
+  const ratingTone: Record<string, string> = {
+    emerald: "bg-emerald-500",
+    blue: "bg-blue-500",
+    amber: "bg-amber-500",
+    orange: "bg-orange-500",
+    rose: "bg-rose-500",
+  };
   const sampleCsvLinks = [
     {
       label: "Employees sample",
@@ -58,15 +70,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="HR Admin Dashboard"
-        description="Operational overview across recruitment, people operations, compliance, payroll, performance, and training."
+        title="Performance Framework Dashboard"
+        description="Night Market staff performance, rewards, accountability, and growth at a glance."
         actions={
           <Link
-            href="/admin/roster"
+            href="/admin/scores"
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
           >
-            <Users className="h-4 w-4" />
-            Open roster
+            <Gauge className="h-4 w-4" />
+            Record scores
           </Link>
         }
       />
@@ -74,37 +86,147 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <section className="grid gap-4 lg:grid-cols-3">
         <Card className="col-span-1 overflow-hidden border-0 bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg lg:col-span-2">
           <CardHeader className="pb-3">
-            <p className="text-sm font-medium text-slate-400">Today&apos;s Overview</p>
+            <p className="text-sm font-medium text-slate-400">Performance period {framework.period}</p>
             <CardTitle className="text-2xl font-semibold text-white sm:text-3xl">
-              HR, attendance, and operational risk
+              Average monthly score {framework.avg_monthly_score.toFixed(1)} / 100
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
               <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-emerald-400" />
-                <p className="text-sm text-slate-300">Open roles</p>
+                <Users className="h-4 w-4 text-sky-400" />
+                <p className="text-sm text-slate-300">Scored employees</p>
               </div>
-              <p className="mt-2 text-3xl font-bold">{summary.recruitment.open_roles}</p>
+              <p className="mt-2 text-3xl font-bold">{framework.scored_employees}</p>
             </div>
             <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-400" />
-                <p className="text-sm text-slate-300">Pending actions</p>
+                <Award className="h-4 w-4 text-emerald-400" />
+                <p className="text-sm text-slate-300">Top performers (90+)</p>
               </div>
-              <p className="mt-2 text-3xl font-bold">{summary.compliance.pending_followups}</p>
+              <p className="mt-2 text-3xl font-bold">{framework.excellent_count}</p>
             </div>
             <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-sky-400" />
-                <p className="text-sm text-slate-300">Attendance</p>
+                <AlertCircle className="h-4 w-4 text-rose-400" />
+                <p className="text-sm text-slate-300">Poor performance (&lt;60)</p>
               </div>
-              <p className="mt-2 text-3xl font-bold">{initialRecords.length}</p>
+              <p className="mt-2 text-3xl font-bold">{framework.poor_count}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="col-span-1 border-0 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">Rating Distribution</CardTitle>
+            <p className="text-sm text-slate-500">{framework.period}</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {RATING_BANDS.map((band) => {
+              const count = framework.rating_distribution[band.band] ?? 0;
+              return (
+                <div key={band.band} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700">{band.label}</span>
+                    <span className="text-slate-500">{count}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full transition-all ${ratingTone[band.tone] ?? "bg-slate-400"}`}
+                      style={{ width: `${(count / maxRating) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Avg Monthly Score"
+          value={framework.avg_monthly_score.toFixed(1)}
+          hint={`${framework.scored_employees} scored this period`}
+          icon={Gauge}
+          color="emerald"
+        />
+        <KpiCard
+          label="Bonus Eligible (80+)"
+          value={`${framework.bonus_eligible_count}`}
+          hint={`Top performers 90+: ${framework.excellent_count}`}
+          icon={Award}
+          color="blue"
+        />
+        <KpiCard
+          label="Active KPI Cards"
+          value={`${framework.active_kpi_cards}`}
+          hint={`Overdue tasks: ${framework.overdue_tasks}`}
+          icon={Target}
+          color="indigo"
+        />
+        <KpiCard
+          label="Presentations Pending"
+          value={`${framework.presentations_pending}`}
+          hint={`For period ${framework.period}`}
+          icon={Presentation}
+          color="amber"
+        />
+        <KpiCard
+          label="Rewards This Month"
+          value={`${framework.rewards_this_month}`}
+          hint="Weekly to long-term recognition"
+          icon={Award}
+          color="cyan"
+        />
+        <KpiCard
+          label="Open Accountability"
+          value={`${framework.open_accountability}`}
+          hint="Coaching to final review"
+          icon={ShieldAlert}
+          color="rose"
+        />
+        <KpiCard
+          label="Growth Reviews Due"
+          value={`${framework.growth_reviews_due}`}
+          hint="Next 30 days"
+          icon={Sprout}
+          color="purple"
+        />
+        <KpiCard
+          label="Review Completion"
+          value={`${summary.performance.review_completion_rate.toFixed(1)}%`}
+          hint={`Active PIPs: ${summary.performance.active_pips}`}
+          icon={TrendingUp}
+          color="emerald"
+        />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">Average Score by Department</CardTitle>
+            <p className="text-sm text-slate-500">Period {framework.period}</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Object.entries(framework.avg_score_by_department).map(([department, avg]) => (
+              <div key={department} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-slate-700">{department}</span>
+                  <span className="text-slate-500">{avg.toFixed(1)}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{ width: `${Math.min(avg, 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Headcount by Department</CardTitle>
             <p className="text-sm text-slate-500">{summary.headcount.total_active} total active</p>
@@ -118,75 +240,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
-                    style={{
-                      width: `${(count / maxDeptCount) * 100}%`,
-                    }}
+                    className="h-full rounded-full bg-sky-500 transition-all"
+                    style={{ width: `${(count / maxDeptCount) * 100}%` }}
                   />
                 </div>
               </div>
             ))}
           </CardContent>
         </Card>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="Open Roles"
-          value={`${summary.recruitment.open_roles}`}
-          hint={`Avg ${summary.recruitment.avg_days_open.toFixed(1)} days open`}
-          icon={Briefcase}
-          color="emerald"
-        />
-        <KpiCard
-          label="Active Staff"
-          value={`${summary.headcount.total_active}`}
-          hint={`New this quarter: ${summary.headcount.new_hires_quarter}`}
-          icon={Users}
-          color="blue"
-        />
-        <KpiCard
-          label="Pending HR Actions"
-          value={`${summary.compliance.pending_followups}`}
-          hint={`Contract renewals due: ${summary.compliance.contract_renewals_due}`}
-          icon={AlertCircle}
-          color="amber"
-        />
-        <KpiCard
-          label="Payroll Issues"
-          value={`${summary.payroll_leave.anomalies_open}`}
-          hint={`Leave approvals pending: ${summary.payroll_leave.leave_pending_approval}`}
-          icon={FileText}
-          color="red"
-        />
-        <KpiCard
-          label="Review Completion"
-          value={`${summary.performance.review_completion_rate.toFixed(1)}%`}
-          hint={`Active PIPs: ${summary.performance.active_pips}`}
-          icon={TrendingUp}
-          color="purple"
-        />
-        <KpiCard
-          label="Offer Acceptance"
-          value={`${summary.recruitment.offer_acceptance_rate.toFixed(1)}%`}
-          hint={`Time-to-hire: ${summary.recruitment.time_to_hire_days.toFixed(1)} days`}
-          icon={Award}
-          color="cyan"
-        />
-        <KpiCard
-          label="Onboarding Completion"
-          value={`${summary.training.onboarding_completion_rate.toFixed(1)}%`}
-          hint={`CS curriculum: ${summary.training.cs_curriculum_completion_rate.toFixed(1)}%`}
-          icon={Users}
-          color="indigo"
-        />
-        <KpiCard
-          label="Attrition (Quarter)"
-          value={`${summary.headcount.attrition_rate.toFixed(1)}%`}
-          hint={`Voluntary: ${summary.headcount.exits_voluntary} • Involuntary: ${summary.headcount.exits_involuntary}`}
-          icon={UserMinus}
-          color="rose"
-        />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">

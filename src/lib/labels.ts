@@ -29,6 +29,21 @@ const LABEL_MAP: Record<string, string> = {
   applied: "Applied",
   offered: "Offered",
   withdrawn: "Withdrawn",
+  hod: "HOD",
+  pip: "PIP",
+  mid_level: "Mid-Level",
+  kpi: "KPI",
+  on_track: "On Track",
+  at_risk: "At Risk",
+  delayed: "Delayed",
+  below_expectation: "Below Expectation",
+  poor: "Poor",
+  long_term: "Long Term",
+  scheduled: "Scheduled",
+  submitted: "Submitted",
+  reviewed: "Reviewed",
+  archived: "Archived",
+  draft: "Draft",
 };
 
 export function humanizeLabel(value: string): string {

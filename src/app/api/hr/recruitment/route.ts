@@ -77,6 +77,7 @@ export async function POST(request: Request) {
         title: payload.title,
         department: payload.department as
           | "Operations"
+          | "Product"
           | "Marketing"
           | "Tech"
           | "Finance & Compliance"

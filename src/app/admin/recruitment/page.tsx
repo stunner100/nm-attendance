@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 
+import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,12 @@ import {
   updateRecruitmentApplicantStage,
 } from "@/lib/hr-db";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import { HR_DEPARTMENTS, HR_RECRUITMENT_STAGES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type RecruitmentPageProps = {
-  searchParams: Promise<{ department?: string; stage?: string }>;
+  searchParams: Promise<{ department?: string; stage?: string; error?: string }>;
 };
 
 async function createRoleAction(formData: FormData): Promise<void> {
@@ -31,7 +33,7 @@ async function createRoleAction(formData: FormData): Promise<void> {
   const openedAt = String(formData.get("openedAt") ?? "").trim();
 
   if (!title || !HR_DEPARTMENTS.includes(department as (typeof HR_DEPARTMENTS)[number])) {
-    return;
+    redirectWithFormError("/admin/recruitment", "Role title and a valid department are required.");
   }
 
   await createRecruitmentRole({
@@ -58,17 +60,17 @@ async function createApplicantAction(formData: FormData): Promise<void> {
   const appliedAt = String(formData.get("appliedAt") ?? "").trim();
 
   if (!Number.isFinite(roleId) || !fullName) {
-    return;
+    redirectWithFormError("/admin/recruitment", "Role and applicant name are required.");
   }
   if (employmentTrack !== "intern" && employmentTrack !== "full_time") {
-    return;
+    redirectWithFormError("/admin/recruitment", "Select a valid employment track.");
   }
   if (
     !HR_RECRUITMENT_STAGES.includes(
       currentStage as (typeof HR_RECRUITMENT_STAGES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/recruitment", "Select a valid recruitment stage.");
   }
 
   await createRecruitmentApplicant({
@@ -93,10 +95,10 @@ async function updateApplicantStageAction(formData: FormData): Promise<void> {
   const stage = String(formData.get("stage") ?? "").trim();
 
   if (!Number.isFinite(applicantId)) {
-    return;
+    redirectWithFormError("/admin/recruitment", "Applicant ID is required.");
   }
   if (!HR_RECRUITMENT_STAGES.includes(stage as (typeof HR_RECRUITMENT_STAGES)[number])) {
-    return;
+    redirectWithFormError("/admin/recruitment", "Select a valid recruitment stage.");
   }
 
   await updateRecruitmentApplicantStage(
@@ -127,6 +129,8 @@ export default async function RecruitmentPage({ searchParams }: RecruitmentPageP
         title="Recruitment Pipeline"
         description="Track open roles, applicant progression, and hiring conversion."
       />
+
+      <AdminFormAlert message={readFormError(params)} />
 
       <Card>
         <CardHeader>

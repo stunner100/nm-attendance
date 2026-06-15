@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
+import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { KpiCard } from "@/components/hr/kpi-card";
 import { StatusBadge } from "@/components/hr/status-badge";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
   createHREmployee,
   getHeadcountModuleData,
@@ -24,7 +26,12 @@ import {
 import { humanizeLabel } from "@/lib/labels";
 
 type HeadcountPageProps = {
-  searchParams: Promise<{ department?: string; status?: string; contractType?: string }>;
+  searchParams: Promise<{
+    department?: string;
+    status?: string;
+    contractType?: string;
+    error?: string;
+  }>;
 };
 
 async function createEmployeeAction(formData: FormData): Promise<void> {
@@ -44,27 +51,27 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
   const contractEndDate = String(formData.get("contractEndDate") ?? "").trim();
 
   if (!fullName) {
-    return;
+    redirectWithFormError("/admin/headcount", "Full name is required.");
   }
   if (!HR_DEPARTMENTS.includes(department as (typeof HR_DEPARTMENTS)[number])) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid department.");
   }
   if (
     !HR_CONTRACT_TYPES.includes(
       contractType as (typeof HR_CONTRACT_TYPES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid contract type.");
   }
   if (
     !HR_EMPLOYMENT_STATUSES.includes(
       employmentStatus as (typeof HR_EMPLOYMENT_STATUSES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid employment status.");
   }
   if (!HR_WORK_MODES.includes(workMode as (typeof HR_WORK_MODES)[number])) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid work mode.");
   }
 
   await createHREmployee({
@@ -107,23 +114,23 @@ async function updateEmployeeAction(formData: FormData): Promise<void> {
   const exitDate = String(formData.get("exitDate") ?? "").trim();
 
   if (!Number.isFinite(employeeId) || employeeId <= 0 || !fullName) {
-    return;
+    redirectWithFormError("/admin/headcount", "Employee ID and full name are required.");
   }
   if (!HR_DEPARTMENTS.includes(department as (typeof HR_DEPARTMENTS)[number])) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid department.");
   }
   if (!HR_CONTRACT_TYPES.includes(contractType as (typeof HR_CONTRACT_TYPES)[number])) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid contract type.");
   }
   if (!HR_WORK_MODES.includes(workMode as (typeof HR_WORK_MODES)[number])) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid work mode.");
   }
   if (
     !HR_EMPLOYMENT_STATUSES.includes(
       employmentStatus as (typeof HR_EMPLOYMENT_STATUSES)[number]
     )
   ) {
-    return;
+    redirectWithFormError("/admin/headcount", "Select a valid employment status.");
   }
 
   const managerEmployeeId =
@@ -184,6 +191,8 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
           </Link>
         }
       />
+
+      <AdminFormAlert message={readFormError(params)} />
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Total Active" value={`${moduleData.totalActive}`} />

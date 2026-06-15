@@ -91,6 +91,12 @@ export async function POST(request: Request) {
 
   const latitude = asLatitude(payload.latitude);
   const longitude = asLongitude(payload.longitude);
+  if (latitude === null || longitude === null) {
+    return NextResponse.json(
+      { error: "Location is required for check-in. Please allow GPS access and try again." },
+      { status: 400 }
+    );
+  }
   const location =
     typeof payload.location === "string" ? payload.location.trim().slice(0, 200) : null;
   const timestamp = new Date().toISOString();

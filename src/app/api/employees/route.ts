@@ -42,6 +42,15 @@ function extractRosterNames(payload: EmployeeMutationPayload): string[] {
 }
 
 export async function GET() {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isAdminSession(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const names = await getEmployeeNames();
     return NextResponse.json({ names });

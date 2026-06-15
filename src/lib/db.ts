@@ -1,7 +1,12 @@
-import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { Pool } from "pg";
 
+import {
+  CHECKIN_SCAN_TOKEN_TTL_MINUTES,
+  createRawCheckinScanToken,
+  hashCheckinScanToken,
+} from "@/lib/checkin-tokens";
+import { runMigrations } from "@/lib/migrate";
 import type { AttendanceRow } from "@/lib/types";
 import {
   normalizeRosterName,
@@ -53,20 +58,13 @@ export type AuthUser = {
 
 const globalForDb = globalThis as unknown as {
   pool?: Pool;
-  baseSchemaInitPromise?: Promise<void>;
-  hrSchemaInitPromise?: Promise<void>;
+  schemaInitPromise?: Promise<void>;
   adminSeedPromise?: Promise<void>;
   employeeSeedPromise?: Promise<void>;
 };
 
-const CHECKIN_SCAN_TOKEN_TTL_MINUTES = 30;
-
 function normalizeEmployeeName(name: string): string {
   return normalizeRosterName(name);
-}
-
-function hashCheckinScanToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
 }
 
 function getPool(): Pool {
@@ -96,318 +94,21 @@ export function getDbPool(): Pool {
   return getPool();
 }
 
-async function ensureBaseSchema(): Promise<void> {
-  if (globalForDb.baseSchemaInitPromise) {
-    return globalForDb.baseSchemaInitPromise;
+async function ensureSchema(): Promise<void> {
+  if (globalForDb.schemaInitPromise) {
+    return globalForDb.schemaInitPromise;
   }
 
-  globalForDb.baseSchemaInitPromise = (async () => {
-    const pool = getPool();
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS attendance (
-        id          SERIAL PRIMARY KEY,
-        name        TEXT NOT NULL,
-        timestamp   TEXT NOT NULL,
-        checkout_timestamp TEXT,
-        latitude    DOUBLE PRECISION,
-        longitude   DOUBLE PRECISION,
-        location    TEXT,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS employees (
-        id   SERIAL PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE
-      );
-
-      CREATE TABLE IF NOT EXISTS users (
-        id            SERIAL PRIMARY KEY,
-        email         TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role          TEXT NOT NULL DEFAULT 'admin',
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS checkin_scan_tokens (
-        id          SERIAL PRIMARY KEY,
-        token_hash  TEXT NOT NULL UNIQUE,
-        expires_at  TIMESTAMPTZ NOT NULL,
-        used_at     TIMESTAMPTZ,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      ALTER TABLE attendance
-      ADD COLUMN IF NOT EXISTS checkout_timestamp TEXT;
-    `);
-  })();
-
-  return globalForDb.baseSchemaInitPromise;
-}
-
-async function ensureHrSchema(): Promise<void> {
-  await ensureBaseSchema();
-
-  if (globalForDb.hrSchemaInitPromise) {
-    return globalForDb.hrSchemaInitPromise;
-  }
-
-  globalForDb.hrSchemaInitPromise = (async () => {
-    const pool = getPool();
-
-    await pool.query(`
-      ALTER TABLE hr_employees
-        DROP CONSTRAINT IF EXISTS hr_employees_department_check,
-        ADD CONSTRAINT hr_employees_department_check
-          CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin'));
-    `);
-
-    await pool.query(`
-      UPDATE hr_employees
-      SET department = 'Finance & Compliance'
-      WHERE department = 'Finance & HR';
-    `);
-
-    await pool.query(`
-      ALTER TABLE hr_recruitment_roles
-        DROP CONSTRAINT IF EXISTS hr_recruitment_roles_department_check,
-        ADD CONSTRAINT hr_recruitment_roles_department_check
-          CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin'));
-    `);
-
-    await pool.query(`
-      UPDATE hr_recruitment_roles
-      SET department = 'Finance & Compliance'
-      WHERE department = 'Finance & HR';
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS hr_employees (
-        id                   SERIAL PRIMARY KEY,
-        employee_code        TEXT NOT NULL UNIQUE,
-        full_name            TEXT NOT NULL,
-        work_email           TEXT UNIQUE,
-        department           TEXT NOT NULL CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin')),
-        contract_type        TEXT NOT NULL CHECK (contract_type IN ('full_time', 'part_time', 'intern', 'contractor')),
-        work_mode            TEXT NOT NULL DEFAULT 'onsite' CHECK (work_mode IN ('onsite', 'hybrid', 'remote')),
-        employment_status    TEXT NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'inactive', 'terminated', 'resigned')),
-        manager_employee_id  INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
-        hire_date            DATE NOT NULL,
-        probation_end_date   DATE,
-        contract_end_date    DATE,
-        exit_date            DATE,
-        exit_type            TEXT CHECK (exit_type IN ('voluntary', 'involuntary')),
-        created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      ALTER TABLE hr_employees
-      ADD COLUMN IF NOT EXISTS work_mode TEXT NOT NULL DEFAULT 'onsite';
-
-      ALTER TABLE hr_employees
-      DROP CONSTRAINT IF EXISTS hr_employees_work_mode_check;
-
-      ALTER TABLE hr_employees
-      ADD CONSTRAINT hr_employees_work_mode_check
-        CHECK (work_mode IN ('onsite', 'hybrid', 'remote'));
-
-      CREATE TABLE IF NOT EXISTS hr_recruitment_roles (
-        id            SERIAL PRIMARY KEY,
-        title         TEXT NOT NULL,
-        department    TEXT NOT NULL CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin')),
-        hiring_stage  TEXT NOT NULL DEFAULT 'screening',
-        vacancies     INTEGER NOT NULL DEFAULT 1,
-        opened_at     DATE NOT NULL DEFAULT CURRENT_DATE,
-        closed_at     DATE,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_recruitment_applicants (
-        id               SERIAL PRIMARY KEY,
-        role_id          INTEGER NOT NULL REFERENCES hr_recruitment_roles(id) ON DELETE CASCADE,
-        full_name        TEXT NOT NULL,
-        email            TEXT,
-        employment_track TEXT NOT NULL CHECK (employment_track IN ('intern', 'full_time')),
-        current_stage    TEXT NOT NULL DEFAULT 'applied' CHECK (current_stage IN ('applied', 'screened', 'interviewed', 'offered', 'hired')),
-        applied_at       DATE NOT NULL DEFAULT CURRENT_DATE,
-        offered_at       DATE,
-        hired_at         DATE,
-        offer_status     TEXT CHECK (offer_status IN ('pending', 'accepted', 'rejected')),
-        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_recruitment_stage_events (
-        id            SERIAL PRIMARY KEY,
-        applicant_id  INTEGER NOT NULL REFERENCES hr_recruitment_applicants(id) ON DELETE CASCADE,
-        stage         TEXT NOT NULL CHECK (stage IN ('applied', 'screened', 'interviewed', 'offered', 'hired')),
-        changed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_disciplinary_cases (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
-        category      TEXT NOT NULL,
-        status        TEXT NOT NULL CHECK (status IN ('warning_issued', 'resolved', 'escalated')),
-        summary       TEXT NOT NULL,
-        opened_at     DATE NOT NULL DEFAULT CURRENT_DATE,
-        due_date      DATE,
-        resolved_at   DATE,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_policy_violations (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
-        category      TEXT NOT NULL,
-        severity      TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high')),
-        notes         TEXT,
-        occurred_on   DATE NOT NULL DEFAULT CURRENT_DATE,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_followup_actions (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
-        action_type   TEXT NOT NULL,
-        status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'done')),
-        due_date      DATE,
-        notes         TEXT,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_payroll_cycles (
-        id            SERIAL PRIMARY KEY,
-        cycle_month   DATE NOT NULL,
-        status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('processed', 'pending', 'issues_flagged')),
-        processed_at  DATE,
-        notes         TEXT,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE (cycle_month)
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_payroll_anomalies (
-        id                SERIAL PRIMARY KEY,
-        payroll_cycle_id  INTEGER NOT NULL REFERENCES hr_payroll_cycles(id) ON DELETE CASCADE,
-        employee_id       INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
-        anomaly_type      TEXT NOT NULL,
-        status            TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
-        details           TEXT,
-        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_leave_balances (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER NOT NULL UNIQUE REFERENCES hr_employees(id) ON DELETE CASCADE,
-        annual_days   NUMERIC(8,2) NOT NULL DEFAULT 0,
-        used_days     NUMERIC(8,2) NOT NULL DEFAULT 0,
-        carry_days    NUMERIC(8,2) NOT NULL DEFAULT 0,
-        updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_leave_requests (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
-        leave_type    TEXT NOT NULL,
-        start_date    DATE NOT NULL,
-        end_date      DATE NOT NULL,
-        days          NUMERIC(8,2) NOT NULL,
-        status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-        requested_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        reviewed_at   TIMESTAMPTZ
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_performance_reviews (
-        id                   SERIAL PRIMARY KEY,
-        employee_id          INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
-        review_period        TEXT NOT NULL,
-        due_date             DATE NOT NULL,
-        completed_at         DATE,
-        status               TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'overdue')),
-        reviewer_employee_id INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
-        notes                TEXT,
-        created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_pips (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
-        status        TEXT NOT NULL CHECK (status IN ('active', 'improving', 'completed', 'failed')),
-        start_date    DATE NOT NULL,
-        end_date      DATE,
-        progress_note TEXT,
-        last_updated  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_kpi_scores (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
-        metric_name   TEXT NOT NULL,
-        score         NUMERIC(8,2) NOT NULL,
-        period_start  DATE NOT NULL,
-        period_end    DATE NOT NULL,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_training_modules (
-        id              SERIAL PRIMARY KEY,
-        code            TEXT NOT NULL UNIQUE,
-        title           TEXT NOT NULL,
-        category        TEXT NOT NULL,
-        duration_hours  NUMERIC(8,2) NOT NULL DEFAULT 0,
-        active          BOOLEAN NOT NULL DEFAULT TRUE,
-        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_training_assignments (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
-        module_id     INTEGER NOT NULL REFERENCES hr_training_modules(id) ON DELETE CASCADE,
-        status        TEXT NOT NULL DEFAULT 'assigned' CHECK (status IN ('assigned', 'in_progress', 'completed')),
-        assigned_at   DATE NOT NULL DEFAULT CURRENT_DATE,
-        completed_at  DATE
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_onboarding_checklists (
-        id            SERIAL PRIMARY KEY,
-        employee_id   INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
-        item_name     TEXT NOT NULL,
-        status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
-        due_date      DATE,
-        completed_at  DATE
-      );
-
-      CREATE TABLE IF NOT EXISTS hr_import_runs (
-        id            SERIAL PRIMARY KEY,
-        scope         TEXT NOT NULL,
-        dry_run       BOOLEAN NOT NULL DEFAULT TRUE,
-        rows_total    INTEGER NOT NULL DEFAULT 0,
-        rows_success  INTEGER NOT NULL DEFAULT 0,
-        rows_failed   INTEGER NOT NULL DEFAULT 0,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_hr_employees_department ON hr_employees(department);
-      CREATE INDEX IF NOT EXISTS idx_hr_employees_status ON hr_employees(employment_status);
-      CREATE INDEX IF NOT EXISTS idx_hr_recruitment_applicants_stage ON hr_recruitment_applicants(current_stage);
-      CREATE INDEX IF NOT EXISTS idx_hr_recruitment_roles_opened_at ON hr_recruitment_roles(opened_at);
-      CREATE INDEX IF NOT EXISTS idx_hr_followup_actions_due_status ON hr_followup_actions(status, due_date);
-      CREATE INDEX IF NOT EXISTS idx_hr_disciplinary_cases_status ON hr_disciplinary_cases(status);
-      CREATE INDEX IF NOT EXISTS idx_hr_payroll_cycles_status ON hr_payroll_cycles(status);
-      CREATE INDEX IF NOT EXISTS idx_hr_leave_requests_status ON hr_leave_requests(status);
-      CREATE INDEX IF NOT EXISTS idx_hr_performance_reviews_status ON hr_performance_reviews(status);
-      CREATE INDEX IF NOT EXISTS idx_hr_pips_status ON hr_pips(status);
-      CREATE INDEX IF NOT EXISTS idx_hr_training_assignments_status ON hr_training_assignments(status);
-    `);
-  })();
-
-  return globalForDb.hrSchemaInitPromise;
+  globalForDb.schemaInitPromise = runMigrations();
+  return globalForDb.schemaInitPromise;
 }
 
 export async function ensureDbSchema(): Promise<void> {
-  await ensureHrSchema();
+  await ensureSchema();
 }
 
 export async function ensureBaseDbSchema(): Promise<void> {
-  await ensureBaseSchema();
+  await ensureSchema();
 }
 
 async function ensureEmployeeRoster(): Promise<void> {
@@ -416,7 +117,7 @@ async function ensureEmployeeRoster(): Promise<void> {
   }
 
   globalForDb.employeeSeedPromise = (async () => {
-    await ensureBaseSchema();
+    await ensureSchema();
 
     const pool = getPool();
     const seedEmployeeNames = splitRosterNames(
@@ -446,7 +147,7 @@ export async function ensureDefaultAdmin(): Promise<void> {
   }
 
   globalForDb.adminSeedPromise = (async () => {
-    await ensureBaseSchema();
+    await ensureSchema();
 
     const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
     const adminPassword = process.env.ADMIN_PASSWORD?.trim();
@@ -474,9 +175,9 @@ export async function ensureDefaultAdmin(): Promise<void> {
 }
 
 export async function issueCheckinScanToken(): Promise<string> {
-  await ensureBaseSchema();
+  await ensureSchema();
 
-  const rawToken = randomBytes(32).toString("hex");
+  const rawToken = createRawCheckinScanToken();
   const tokenHash = hashCheckinScanToken(rawToken);
   const pool = getPool();
 
@@ -517,7 +218,7 @@ function normalizeAuthUser(row: AuthUserDb): AuthUser {
 }
 
 export async function insertAttendance(input: CheckinAttendanceInput): Promise<void> {
-  await ensureBaseSchema();
+  await ensureSchema();
 
   const attendeeName = normalizeEmployeeName(input.name);
   if (!attendeeName) {
@@ -623,7 +324,7 @@ export async function insertAttendance(input: CheckinAttendanceInput): Promise<v
 }
 
 export async function checkoutAttendance(input: CheckoutAttendanceInput): Promise<void> {
-  await ensureBaseSchema();
+  await ensureSchema();
 
   const attendeeName = normalizeEmployeeName(input.name);
   if (!attendeeName) {
@@ -695,7 +396,7 @@ export async function checkoutAttendance(input: CheckoutAttendanceInput): Promis
 }
 
 export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> {
-  await ensureBaseSchema();
+  await ensureSchema();
 
   const pool = getPool();
 
@@ -724,15 +425,25 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
 }
 
 export async function getEmployeeNames(): Promise<string[]> {
-  await ensureBaseSchema();
+  await ensureSchema();
   await ensureEmployeeRoster();
 
   const pool = getPool();
   const result = await pool.query<{ name: string }>(
     `
       SELECT DISTINCT ON (LOWER(btrim(name))) btrim(name) AS name
-      FROM employees
-      WHERE btrim(name) <> ''
+      FROM (
+        SELECT full_name AS name
+        FROM hr_employees
+        WHERE employment_status = 'active'
+          AND btrim(full_name) <> ''
+
+        UNION ALL
+
+        SELECT name
+        FROM employees
+        WHERE btrim(name) <> ''
+      ) combined_names
       ORDER BY LOWER(btrim(name)), name
     `
   );
@@ -740,8 +451,48 @@ export async function getEmployeeNames(): Promise<string[]> {
   return result.rows.map((row) => row.name);
 }
 
+const SUGGEST_MIN_QUERY_LENGTH = 2;
+const SUGGEST_MAX_RESULTS = 15;
+
+export async function suggestEmployeeNames(query: string): Promise<string[]> {
+  const normalizedQuery = query.trim();
+  if (normalizedQuery.length < SUGGEST_MIN_QUERY_LENGTH) {
+    return [];
+  }
+
+  await ensureSchema();
+  await ensureEmployeeRoster();
+
+  const pool = getPool();
+  const pattern = `%${normalizedQuery}%`;
+  const result = await pool.query<{ name: string }>(
+    `
+      SELECT DISTINCT ON (LOWER(btrim(name))) btrim(name) AS name
+      FROM (
+        SELECT full_name AS name
+        FROM hr_employees
+        WHERE employment_status = 'active'
+          AND btrim(full_name) <> ''
+          AND full_name ILIKE $1
+
+        UNION ALL
+
+        SELECT name
+        FROM employees
+        WHERE btrim(name) <> ''
+          AND name ILIKE $1
+      ) combined_names
+      ORDER BY LOWER(btrim(name)), name
+      LIMIT $2
+    `,
+    [pattern, SUGGEST_MAX_RESULTS]
+  );
+
+  return result.rows.map((row) => row.name);
+}
+
 export async function addEmployeeNames(names: string[]): Promise<string[]> {
-  await ensureBaseSchema();
+  await ensureSchema();
   await ensureEmployeeRoster();
 
   const approvedNames = normalizeRosterNames(names);
@@ -770,7 +521,7 @@ export async function addEmployeeNames(names: string[]): Promise<string[]> {
 }
 
 export async function removeEmployeeName(name: string): Promise<boolean> {
-  await ensureBaseSchema();
+  await ensureSchema();
   await ensureEmployeeRoster();
 
   const approvedName = normalizeRosterName(name);
@@ -791,7 +542,7 @@ export async function removeEmployeeName(name: string): Promise<boolean> {
 }
 
 export async function getAuthUserByEmail(email: string): Promise<AuthUser | null> {
-  await ensureBaseSchema();
+  await ensureSchema();
 
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) {
@@ -817,7 +568,7 @@ export async function getAuthUserByEmail(email: string): Promise<AuthUser | null
 }
 
 export async function clearAttendance(): Promise<number> {
-  await ensureBaseSchema();
+  await ensureSchema();
 
   const pool = getPool();
   const result = await pool.query("DELETE FROM attendance");

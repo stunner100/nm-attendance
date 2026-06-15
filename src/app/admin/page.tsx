@@ -3,12 +3,14 @@ import Link from "next/link";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { AttendanceTable } from "@/components/attendance-table";
-import {
-  AnimatedBar,
-  FadeIn,
-  StatCard,
-} from "@/components/hr/dashboard-motion";
+import { AnimatedBar, FadeIn } from "@/components/hr/dashboard-motion";
 import { LabeledProgressIndicator } from "@/components/ui/labeled-progress-indicator";
+import {
+  WatermelonStatCard,
+  STAT_THEMES,
+} from "@/components/watermelon/stats-card";
+import { MetricBadge } from "@/components/watermelon/metric-badge";
+import { QuotaWidget } from "@/components/watermelon/quota-widget";
 import { getAllAttendance } from "@/lib/db";
 import { getHRDashboardSummary } from "@/lib/hr-db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,15 +43,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const maxDeptCount = Math.max(...Object.values(summary.headcount.by_department), 1);
   const framework = summary.framework;
-  const maxRating = Math.max(...Object.values(framework.rating_distribution), 1);
   const departmentLabels = Object.keys(framework.avg_score_by_department);
-  const ratingTone: Record<string, string> = {
-    emerald: "bg-emerald-500",
-    blue: "bg-blue-500",
-    amber: "bg-amber-500",
-    orange: "bg-orange-500",
-    rose: "bg-rose-500",
-  };
   const sampleCsvLinks = [
     {
       label: "Employees sample",
@@ -100,27 +94,24 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-sky-400" />
-                  <p className="text-sm text-slate-300">Scored employees</p>
-                </div>
-                <p className="mt-2 text-3xl font-bold">{framework.scored_employees}</p>
-              </div>
-              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-emerald-400" />
-                  <p className="text-sm text-slate-300">Top performers (90+)</p>
-                </div>
-                <p className="mt-2 text-3xl font-bold">{framework.excellent_count}</p>
-              </div>
-              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-rose-400" />
-                  <p className="text-sm text-slate-300">Poor performance (&lt;60)</p>
-                </div>
-                <p className="mt-2 text-3xl font-bold">{framework.poor_count}</p>
-              </div>
+              <MetricBadge
+                icon={<Users className="h-4 w-4" />}
+                iconColor="text-sky-400"
+                value={String(framework.scored_employees)}
+                label="Scored employees"
+              />
+              <MetricBadge
+                icon={<Award className="h-4 w-4" />}
+                iconColor="text-emerald-400"
+                value={String(framework.excellent_count)}
+                label="Top performers (90+)"
+              />
+              <MetricBadge
+                icon={<AlertCircle className="h-4 w-4" />}
+                iconColor="text-rose-400"
+                value={String(framework.poor_count)}
+                label="Poor performance (<60)"
+              />
             </div>
             {departmentLabels.length > 0 ? (
               <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
@@ -138,103 +129,118 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </FadeIn>
 
         <FadeIn delay={0.15} className="col-span-1">
-          <Card className="h-full border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Rating Distribution</CardTitle>
-            <p className="text-sm text-slate-500">{framework.period}</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {RATING_BANDS.map((band, index) => {
-              const count = framework.rating_distribution[band.band] ?? 0;
-              return (
-                <div key={band.band} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{band.label}</span>
-                    <span className="text-slate-500">{count}</span>
-                  </div>
-                  <AnimatedBar
-                    value={count}
-                    max={maxRating}
-                    colorClass={ratingTone[band.tone] ?? "bg-slate-400"}
-                    delay={index * 0.08}
-                  />
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+          <QuotaWidget
+            title="Rating Distribution"
+            subtitle={`Period ${framework.period}`}
+            used={framework.scored_employees}
+            total={framework.scored_employees || 1}
+            usedLabel={`${framework.scored_employees} scored`}
+            remainingLabel={`Avg: ${framework.avg_monthly_score.toFixed(1)}`}
+            segments={RATING_BANDS.map((band) => ({
+              label: band.label,
+              value: framework.rating_distribution[band.band] ?? 0,
+              colorClass:
+                band.tone === "emerald"
+                  ? "bg-emerald-500"
+                  : band.tone === "blue"
+                    ? "bg-blue-500"
+                    : band.tone === "amber"
+                      ? "bg-amber-500"
+                      : band.tone === "orange"
+                        ? "bg-orange-500"
+                        : "bg-rose-500",
+            }))}
+            ctaLabel="View scores"
+            onCtaClick={() => {
+              if (typeof window !== "undefined") {
+                window.location.href = "/admin/scores";
+              }
+            }}
+          />
         </FadeIn>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Avg Monthly Score"
-          value={framework.avg_monthly_score}
-          decimals={1}
-          suffix=" / 100"
-          hint={`${framework.scored_employees} scored this period`}
-          icon={<Gauge className="h-4 w-4" />}
-          color="emerald"
-          delay={0}
-        />
-        <StatCard
-          label="Bonus Eligible (80+)"
-          value={framework.bonus_eligible_count}
-          hint={`Top performers 90+: ${framework.excellent_count}`}
-          icon={<Award className="h-4 w-4" />}
-          color="blue"
-          delay={0.06}
-        />
-        <StatCard
-          label="Active KPI Cards"
-          value={framework.active_kpi_cards}
-          hint={`Overdue tasks: ${framework.overdue_tasks}`}
-          icon={<Target className="h-4 w-4" />}
-          color="indigo"
-          delay={0.12}
-        />
-        <StatCard
-          label="Presentations Pending"
-          value={framework.presentations_pending}
-          hint={`For period ${framework.period}`}
-          icon={<Presentation className="h-4 w-4" />}
-          color="amber"
-          delay={0.18}
-        />
-        <StatCard
-          label="Rewards This Month"
-          value={framework.rewards_this_month}
-          hint="Weekly to long-term recognition"
-          icon={<Award className="h-4 w-4" />}
-          color="cyan"
-          delay={0.24}
-        />
-        <StatCard
-          label="Open Accountability"
-          value={framework.open_accountability}
-          hint="Coaching to final review"
-          icon={<ShieldAlert className="h-4 w-4" />}
-          color="rose"
-          delay={0.3}
-        />
-        <StatCard
-          label="Growth Reviews Due"
-          value={framework.growth_reviews_due}
-          hint="Next 30 days"
-          icon={<Sprout className="h-4 w-4" />}
-          color="purple"
-          delay={0.36}
-        />
-        <StatCard
-          label="Review Completion"
-          value={summary.performance.review_completion_rate}
-          decimals={1}
-          suffix="%"
-          hint={`Active PIPs: ${summary.performance.active_pips}`}
-          icon={<TrendingUp className="h-4 w-4" />}
-          color="emerald"
-          delay={0.42}
-        />
+        <FadeIn delay={0}>
+          <WatermelonStatCard
+            icon={<Gauge className="h-4 w-4" />}
+            label="Avg Monthly Score"
+            metric={framework.avg_monthly_score.toFixed(1)}
+            subLabel={`${framework.scored_employees} scored`}
+            description="Weighted: KPI 50%, Tasks 25%, Comms 15%, Teamwork 10%"
+            theme={STAT_THEMES.emerald}
+          />
+        </FadeIn>
+        <FadeIn delay={0.06}>
+          <WatermelonStatCard
+            icon={<Award className="h-4 w-4" />}
+            label="Bonus Eligible (80+)"
+            metric={String(framework.bonus_eligible_count)}
+            subLabel={`Top 90+: ${framework.excellent_count}`}
+            description="Employees scoring 80+ qualify for monthly bonus; 90+ for higher recognition"
+            theme={STAT_THEMES.cyan}
+          />
+        </FadeIn>
+        <FadeIn delay={0.12}>
+          <WatermelonStatCard
+            icon={<Target className="h-4 w-4" />}
+            label="Active KPI Cards"
+            metric={String(framework.active_kpi_cards)}
+            subLabel={`${framework.overdue_tasks} overdue tasks`}
+            description="SMART, role-specific KPIs documented per employee and reviewed weekly"
+            theme={STAT_THEMES.indigo}
+          />
+        </FadeIn>
+        <FadeIn delay={0.18}>
+          <WatermelonStatCard
+            icon={<Presentation className="h-4 w-4" />}
+            label="Presentations Pending"
+            metric={String(framework.presentations_pending)}
+            subLabel={`Period ${framework.period}`}
+            description="Monthly associate and HOD presentations for ownership and accountability"
+            theme={STAT_THEMES.amber}
+          />
+        </FadeIn>
+        <FadeIn delay={0.24}>
+          <WatermelonStatCard
+            icon={<Award className="h-4 w-4" />}
+            label="Rewards This Month"
+            metric={String(framework.rewards_this_month)}
+            subLabel="Weekly to long-term"
+            description="Public recognition, bonuses, promotions, and development support"
+            theme={STAT_THEMES.purple}
+          />
+        </FadeIn>
+        <FadeIn delay={0.3}>
+          <WatermelonStatCard
+            icon={<ShieldAlert className="h-4 w-4" />}
+            label="Open Accountability"
+            metric={String(framework.open_accountability)}
+            subLabel="Coaching to final review"
+            description="Progressive ladder: coaching, verbal/written warning, PIP, final review"
+            theme={STAT_THEMES.rose}
+          />
+        </FadeIn>
+        <FadeIn delay={0.36}>
+          <WatermelonStatCard
+            icon={<Sprout className="h-4 w-4" />}
+            label="Growth Reviews Due"
+            metric={String(framework.growth_reviews_due)}
+            subLabel="Next 30 days"
+            description="6-12 month growth plans with next-role mapping and review dates"
+            theme={STAT_THEMES.emerald}
+          />
+        </FadeIn>
+        <FadeIn delay={0.42}>
+          <WatermelonStatCard
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="Review Completion"
+            metric={`${summary.performance.review_completion_rate.toFixed(1)}%`}
+            subLabel={`${summary.performance.active_pips} active PIPs`}
+            description="Scheduled performance reviews completed vs. total assigned"
+            theme={STAT_THEMES.cyan}
+          />
+        </FadeIn>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

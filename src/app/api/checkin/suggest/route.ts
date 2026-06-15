@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
 
 import { suggestEmployeeNames } from "@/lib/db";
+import { enforceRateLimit } from "@/lib/rate-limit";
+
+const SUGGEST_RATE_LIMIT = 60;
+const SUGGEST_WINDOW_MS = 60_000;
 
 export async function GET(request: Request) {
+  const limited = enforceRateLimit(
+    request,
+    "checkin-suggest",
+    SUGGEST_RATE_LIMIT,
+    SUGGEST_WINDOW_MS
+  );
+  if (limited) {
+    return limited;
+  }
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
 

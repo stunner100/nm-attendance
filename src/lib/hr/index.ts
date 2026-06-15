@@ -3,6 +3,6 @@ export {
   listImportRuns,
   type HRImportRun,
 } from "@/lib/hr/import-runs";
-
-// Domain modules remain in hr-db.ts during the incremental split.
+export { getHRDashboardSummary } from "@/lib/hr/dashboard";
+// Domain CRUD remains in hr-db.ts during incremental split.
 export * from "@/lib/hr-db";

@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import type { Pool, PoolClient } from "pg";
 
 import { parseCsv } from "@/lib/csv";
 import { ensureDbSchema, getDbPool } from "@/lib/db";
@@ -35,6 +36,12 @@ export type HRImportResult = {
   rowsFailed: number;
   errors: HRImportRowError[];
 };
+
+type Queryable = Pick<Pool, "query">;
+
+function getQueryable(client?: PoolClient): Queryable {
+  return client ?? getDbPool();
+}
 
 function normalizeHeader(header: string): string {
   return header.trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -116,9 +123,10 @@ function asScope(value: string): HRImportScope | null {
 
 async function importEmployees(
   rows: Array<Record<string, string>>,
-  dryRun: boolean
+  dryRun: boolean,
+  client?: PoolClient
 ): Promise<HRImportResult> {
-  const pool = getDbPool();
+  const db = getQueryable(client);
   const errors: HRImportRowError[] = [];
   let rowsSuccess = 0;
 
@@ -186,7 +194,7 @@ async function importEmployees(
 
       let managerEmployeeId = managerEmployeeIdRaw;
       if (managerEmployeeCode) {
-        const managerResult = await pool.query<{ id: number }>(
+        const managerResult = await db.query<{ id: number }>(
           `
             SELECT id
             FROM hr_employees
@@ -203,7 +211,7 @@ async function importEmployees(
         managerEmployeeId = managerResult.rows[0].id;
       }
 
-      await pool.query(
+      await db.query(
         `
           INSERT INTO hr_employees (
             employee_code, full_name, work_email, department, contract_type,
@@ -257,26 +265,20 @@ async function importEmployees(
     errors,
   };
 
-  await logImportRun({
-    scope: result.scope,
-    dryRun: result.dryRun,
-    rowsTotal: result.rowsTotal,
-    rowsSuccess: result.rowsSuccess,
-    rowsFailed: result.rowsFailed,
-  });
-
   return result;
 }
 
-async function getOrCreateRecruitmentRoleId(input: {
-  title: string;
-  department: (typeof HR_DEPARTMENTS)[number];
-  vacancies: number;
-  openedAt: string;
-  hiringStage: string;
-}): Promise<number> {
-  const pool = getDbPool();
-  const existing = await pool.query<{ id: number }>(
+async function getOrCreateRecruitmentRoleId(
+  input: {
+    title: string;
+    department: (typeof HR_DEPARTMENTS)[number];
+    vacancies: number;
+    openedAt: string;
+    hiringStage: string;
+  },
+  db: Queryable
+): Promise<number> {
+  const existing = await db.query<{ id: number }>(
     `
       SELECT id
       FROM hr_recruitment_roles
@@ -291,7 +293,7 @@ async function getOrCreateRecruitmentRoleId(input: {
     return existing.rows[0].id;
   }
 
-  const created = await pool.query<{ id: number }>(
+  const created = await db.query<{ id: number }>(
     `
       INSERT INTO hr_recruitment_roles (
         title, department, vacancies, opened_at, hiring_stage
@@ -307,9 +309,10 @@ async function getOrCreateRecruitmentRoleId(input: {
 
 async function importRecruitment(
   rows: Array<Record<string, string>>,
-  dryRun: boolean
+  dryRun: boolean,
+  client?: PoolClient
 ): Promise<HRImportResult> {
-  const pool = getDbPool();
+  const db = getQueryable(client);
   const errors: HRImportRowError[] = [];
   let rowsSuccess = 0;
 
@@ -367,16 +370,19 @@ async function importRecruitment(
         continue;
       }
 
-      const roleId = await getOrCreateRecruitmentRoleId({
-        title,
-        department,
-        vacancies,
-        openedAt,
-        hiringStage: roleHiringStage,
-      });
+      const roleId = await getOrCreateRecruitmentRoleId(
+        {
+          title,
+          department,
+          vacancies,
+          openedAt,
+          hiringStage: roleHiringStage,
+        },
+        db
+      );
 
       if (applicantName) {
-        const applicantInsert = await pool.query<{ id: number }>(
+        const applicantInsert = await db.query<{ id: number }>(
           `
             INSERT INTO hr_recruitment_applicants (
               role_id, full_name, email, employment_track, current_stage,
@@ -398,7 +404,7 @@ async function importRecruitment(
           ]
         );
 
-        await pool.query(
+        await db.query(
           `
             INSERT INTO hr_recruitment_stage_events (applicant_id, stage)
             VALUES ($1, $2)
@@ -423,20 +429,14 @@ async function importRecruitment(
     errors,
   };
 
-  await logImportRun({
-    scope: result.scope,
-    dryRun: result.dryRun,
-    rowsTotal: result.rowsTotal,
-    rowsSuccess: result.rowsSuccess,
-    rowsFailed: result.rowsFailed,
-  });
-
   return result;
 }
 
-async function getEmployeeIdByCode(employeeCode: string): Promise<number> {
-  const pool = getDbPool();
-  const employee = await pool.query<{ id: number }>(
+async function getEmployeeIdByCode(
+  employeeCode: string,
+  db: Queryable
+): Promise<number> {
+  const employee = await db.query<{ id: number }>(
     `
       SELECT id
       FROM hr_employees
@@ -453,9 +453,10 @@ async function getEmployeeIdByCode(employeeCode: string): Promise<number> {
 
 async function importLeave(
   rows: Array<Record<string, string>>,
-  dryRun: boolean
+  dryRun: boolean,
+  client?: PoolClient
 ): Promise<HRImportResult> {
-  const pool = getDbPool();
+  const db = getQueryable(client);
   const errors: HRImportRowError[] = [];
   let rowsSuccess = 0;
 
@@ -509,10 +510,10 @@ async function importLeave(
         continue;
       }
 
-      const employeeId = await getEmployeeIdByCode(employeeCode);
+      const employeeId = await getEmployeeIdByCode(employeeCode, db);
 
       if (recordType === "balance") {
-        await pool.query(
+        await db.query(
           `
             INSERT INTO hr_leave_balances (
               employee_id, annual_days, used_days, carry_days, updated_at
@@ -527,7 +528,7 @@ async function importLeave(
           [employeeId, annualDays, usedDays, carryDays]
         );
       } else {
-        await pool.query(
+        await db.query(
           `
             INSERT INTO hr_leave_requests (
               employee_id, leave_type, start_date, end_date, days, status
@@ -554,14 +555,6 @@ async function importLeave(
     errors,
   };
 
-  await logImportRun({
-    scope: result.scope,
-    dryRun: result.dryRun,
-    rowsTotal: result.rowsTotal,
-    rowsSuccess: result.rowsSuccess,
-    rowsFailed: result.rowsFailed,
-  });
-
   return result;
 }
 
@@ -569,10 +562,10 @@ async function getOrCreatePayrollCycleId(
   cycleMonth: string,
   status: (typeof HR_PAYROLL_STATUSES)[number],
   processedAt: string | null,
-  notes: string | null
+  notes: string | null,
+  db: Queryable
 ): Promise<number> {
-  const pool = getDbPool();
-  const result = await pool.query<{ id: number }>(
+  const result = await db.query<{ id: number }>(
     `
       INSERT INTO hr_payroll_cycles (
         cycle_month, status, processed_at, notes
@@ -591,9 +584,10 @@ async function getOrCreatePayrollCycleId(
 
 async function importPayroll(
   rows: Array<Record<string, string>>,
-  dryRun: boolean
+  dryRun: boolean,
+  client?: PoolClient
 ): Promise<HRImportResult> {
-  const pool = getDbPool();
+  const db = getQueryable(client);
   const errors: HRImportRowError[] = [];
   let rowsSuccess = 0;
 
@@ -639,15 +633,16 @@ async function importPayroll(
         cycleMonth,
         status,
         processedAt,
-        notes
+        notes,
+        db
       );
 
       if (recordType === "anomaly") {
         let employeeId: number | null = null;
         if (employeeCode) {
-          employeeId = await getEmployeeIdByCode(employeeCode);
+          employeeId = await getEmployeeIdByCode(employeeCode, db);
         }
-        await pool.query(
+        await db.query(
           `
             INSERT INTO hr_payroll_anomalies (
               payroll_cycle_id, employee_id, anomaly_type, status, details
@@ -674,15 +669,27 @@ async function importPayroll(
     errors,
   };
 
-  await logImportRun({
-    scope: result.scope,
-    dryRun: result.dryRun,
-    rowsTotal: result.rowsTotal,
-    rowsSuccess: result.rowsSuccess,
-    rowsFailed: result.rowsFailed,
-  });
-
   return result;
+}
+
+async function dispatchImport(
+  scope: HRImportScope,
+  rows: Array<Record<string, string>>,
+  dryRun: boolean,
+  client?: PoolClient
+): Promise<HRImportResult> {
+  switch (scope) {
+    case "employees":
+      return importEmployees(rows, dryRun, client);
+    case "recruitment":
+      return importRecruitment(rows, dryRun, client);
+    case "leave":
+      return importLeave(rows, dryRun, client);
+    case "payroll":
+      return importPayroll(rows, dryRun, client);
+    default:
+      throw new Error(`Unsupported scope: ${scope}`);
+  }
 }
 
 export async function runHrCsvImport(input: {
@@ -693,18 +700,45 @@ export async function runHrCsvImport(input: {
   await ensureDbSchema();
   const rows = collectRows(input.csv);
 
-  switch (input.scope) {
-    case "employees":
-      return importEmployees(rows, input.dryRun);
-    case "recruitment":
-      return importRecruitment(rows, input.dryRun);
-    case "leave":
-      return importLeave(rows, input.dryRun);
-    case "payroll":
-      return importPayroll(rows, input.dryRun);
-    default:
-      throw new Error(`Unsupported scope: ${input.scope}`);
+  let result: HRImportResult;
+
+  if (input.dryRun) {
+    result = await dispatchImport(input.scope, rows, true);
+  } else {
+    const pool = getDbPool();
+    const client = await pool.connect();
+
+    try {
+      const preview = await dispatchImport(input.scope, rows, true);
+      if (preview.rowsFailed > 0) {
+        return preview;
+      }
+
+      await client.query("BEGIN");
+      result = await dispatchImport(input.scope, rows, false, client);
+
+      if (result.rowsFailed > 0) {
+        await client.query("ROLLBACK");
+      } else {
+        await client.query("COMMIT");
+      }
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
+
+  await logImportRun({
+    scope: result.scope,
+    dryRun: result.dryRun,
+    rowsTotal: result.rowsTotal,
+    rowsSuccess: result.rowsSuccess,
+    rowsFailed: result.rowsFailed,
+  });
+
+  return result;
 }
 
 export function ensureImportScope(value: string): HRImportScope {

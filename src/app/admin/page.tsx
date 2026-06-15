@@ -1,9 +1,14 @@
 import Link from "next/link";
 
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { KpiCard } from "@/components/hr/kpi-card";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { AttendanceTable } from "@/components/attendance-table";
+import {
+  AnimatedBar,
+  FadeIn,
+  StatCard,
+} from "@/components/hr/dashboard-motion";
+import { LabeledProgressIndicator } from "@/components/ui/labeled-progress-indicator";
 import { getAllAttendance } from "@/lib/db";
 import { getHRDashboardSummary } from "@/lib/hr-db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +42,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const maxDeptCount = Math.max(...Object.values(summary.headcount.by_department), 1);
   const framework = summary.framework;
   const maxRating = Math.max(...Object.values(framework.rating_distribution), 1);
+  const departmentLabels = Object.keys(framework.avg_score_by_department);
   const ratingTone: Record<string, string> = {
     emerald: "bg-emerald-500",
     blue: "bg-blue-500",
@@ -84,45 +90,61 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       />
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <Card className="col-span-1 overflow-hidden border-0 bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg lg:col-span-2">
+        <FadeIn className="col-span-1 lg:col-span-2">
+          <Card className="h-full overflow-hidden border-0 bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg">
           <CardHeader className="pb-3">
             <p className="text-sm font-medium text-slate-400">Performance period {framework.period}</p>
             <CardTitle className="text-2xl font-semibold text-white sm:text-3xl">
               Average monthly score {framework.avg_monthly_score.toFixed(1)} / 100
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-sky-400" />
-                <p className="text-sm text-slate-300">Scored employees</p>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-sky-400" />
+                  <p className="text-sm text-slate-300">Scored employees</p>
+                </div>
+                <p className="mt-2 text-3xl font-bold">{framework.scored_employees}</p>
               </div>
-              <p className="mt-2 text-3xl font-bold">{framework.scored_employees}</p>
-            </div>
-            <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-              <div className="flex items-center gap-2">
-                <Award className="h-4 w-4 text-emerald-400" />
-                <p className="text-sm text-slate-300">Top performers (90+)</p>
+              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
+                <div className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-emerald-400" />
+                  <p className="text-sm text-slate-300">Top performers (90+)</p>
+                </div>
+                <p className="mt-2 text-3xl font-bold">{framework.excellent_count}</p>
               </div>
-              <p className="mt-2 text-3xl font-bold">{framework.excellent_count}</p>
-            </div>
-            <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-rose-400" />
-                <p className="text-sm text-slate-300">Poor performance (&lt;60)</p>
+              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-rose-400" />
+                  <p className="text-sm text-slate-300">Poor performance (&lt;60)</p>
+                </div>
+                <p className="mt-2 text-3xl font-bold">{framework.poor_count}</p>
               </div>
-              <p className="mt-2 text-3xl font-bold">{framework.poor_count}</p>
             </div>
+            {departmentLabels.length > 0 ? (
+              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">
+                  Live department focus &middot; avg {framework.avg_monthly_score.toFixed(0)}%
+                </p>
+                <LabeledProgressIndicator
+                  labels={departmentLabels}
+                  progress={`${Math.min(framework.avg_monthly_score, 100)}%`}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
+        </FadeIn>
 
-        <Card className="col-span-1 border-0 shadow-lg">
+        <FadeIn delay={0.15} className="col-span-1">
+          <Card className="h-full border-0 shadow-lg">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Rating Distribution</CardTitle>
             <p className="text-sm text-slate-500">{framework.period}</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {RATING_BANDS.map((band) => {
+            {RATING_BANDS.map((band, index) => {
               const count = framework.rating_distribution[band.band] ?? 0;
               return (
                 <div key={band.band} className="space-y-1.5">
@@ -130,128 +152,146 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <span className="font-medium text-slate-700">{band.label}</span>
                     <span className="text-slate-500">{count}</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full transition-all ${ratingTone[band.tone] ?? "bg-slate-400"}`}
-                      style={{ width: `${(count / maxRating) * 100}%` }}
-                    />
-                  </div>
+                  <AnimatedBar
+                    value={count}
+                    max={maxRating}
+                    colorClass={ratingTone[band.tone] ?? "bg-slate-400"}
+                    delay={index * 0.08}
+                  />
                 </div>
               );
             })}
           </CardContent>
         </Card>
+        </FadeIn>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
+        <StatCard
           label="Avg Monthly Score"
-          value={framework.avg_monthly_score.toFixed(1)}
+          value={framework.avg_monthly_score}
+          decimals={1}
+          suffix=" / 100"
           hint={`${framework.scored_employees} scored this period`}
-          icon={Gauge}
+          icon={<Gauge className="h-4 w-4" />}
           color="emerald"
+          delay={0}
         />
-        <KpiCard
+        <StatCard
           label="Bonus Eligible (80+)"
-          value={`${framework.bonus_eligible_count}`}
+          value={framework.bonus_eligible_count}
           hint={`Top performers 90+: ${framework.excellent_count}`}
-          icon={Award}
+          icon={<Award className="h-4 w-4" />}
           color="blue"
+          delay={0.06}
         />
-        <KpiCard
+        <StatCard
           label="Active KPI Cards"
-          value={`${framework.active_kpi_cards}`}
+          value={framework.active_kpi_cards}
           hint={`Overdue tasks: ${framework.overdue_tasks}`}
-          icon={Target}
+          icon={<Target className="h-4 w-4" />}
           color="indigo"
+          delay={0.12}
         />
-        <KpiCard
+        <StatCard
           label="Presentations Pending"
-          value={`${framework.presentations_pending}`}
+          value={framework.presentations_pending}
           hint={`For period ${framework.period}`}
-          icon={Presentation}
+          icon={<Presentation className="h-4 w-4" />}
           color="amber"
+          delay={0.18}
         />
-        <KpiCard
+        <StatCard
           label="Rewards This Month"
-          value={`${framework.rewards_this_month}`}
+          value={framework.rewards_this_month}
           hint="Weekly to long-term recognition"
-          icon={Award}
+          icon={<Award className="h-4 w-4" />}
           color="cyan"
+          delay={0.24}
         />
-        <KpiCard
+        <StatCard
           label="Open Accountability"
-          value={`${framework.open_accountability}`}
+          value={framework.open_accountability}
           hint="Coaching to final review"
-          icon={ShieldAlert}
+          icon={<ShieldAlert className="h-4 w-4" />}
           color="rose"
+          delay={0.3}
         />
-        <KpiCard
+        <StatCard
           label="Growth Reviews Due"
-          value={`${framework.growth_reviews_due}`}
+          value={framework.growth_reviews_due}
           hint="Next 30 days"
-          icon={Sprout}
+          icon={<Sprout className="h-4 w-4" />}
           color="purple"
+          delay={0.36}
         />
-        <KpiCard
+        <StatCard
           label="Review Completion"
-          value={`${summary.performance.review_completion_rate.toFixed(1)}%`}
+          value={summary.performance.review_completion_rate}
+          decimals={1}
+          suffix="%"
           hint={`Active PIPs: ${summary.performance.active_pips}`}
-          icon={TrendingUp}
+          icon={<TrendingUp className="h-4 w-4" />}
           color="emerald"
+          delay={0.42}
         />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Average Score by Department</CardTitle>
-            <p className="text-sm text-slate-500">Period {framework.period}</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {Object.entries(framework.avg_score_by_department).map(([department, avg]) => (
-              <div key={department} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-slate-700">{department}</span>
-                  <span className="text-slate-500">{avg.toFixed(1)}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
-                    style={{ width: `${Math.min(avg, 100)}%` }}
+        <FadeIn delay={0.5}>
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">Average Score by Department</CardTitle>
+              <p className="text-sm text-slate-500">Period {framework.period}</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Object.entries(framework.avg_score_by_department).map(([department, avg], index) => (
+                <div key={department} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700">{department}</span>
+                    <span className="text-slate-500">{avg.toFixed(1)}</span>
+                  </div>
+                  <AnimatedBar
+                    value={avg}
+                    max={100}
+                    colorClass="bg-emerald-500"
+                    delay={0.5 + index * 0.06}
                   />
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </FadeIn>
 
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Headcount by Department</CardTitle>
-            <p className="text-sm text-slate-500">{summary.headcount.total_active} total active</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {Object.entries(summary.headcount.by_department).map(([department, count]) => (
-              <div key={department} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-slate-700">{department}</span>
-                  <span className="text-slate-500">{count}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-sky-500 transition-all"
-                    style={{ width: `${(count / maxDeptCount) * 100}%` }}
+        <FadeIn delay={0.6}>
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">Headcount by Department</CardTitle>
+              <p className="text-sm text-slate-500">{summary.headcount.total_active} total active</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Object.entries(summary.headcount.by_department).map(([department, count], index) => (
+                <div key={department} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700">{department}</span>
+                    <span className="text-slate-500">{count}</span>
+                  </div>
+                  <AnimatedBar
+                    value={count}
+                    max={maxDeptCount}
+                    colorClass="bg-sky-500"
+                    delay={0.6 + index * 0.06}
                   />
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </FadeIn>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <Card className="border-0 shadow-lg">
+        <FadeIn delay={0.6}>
+          <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
@@ -284,8 +324,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             )}
           </CardContent>
         </Card>
+        </FadeIn>
 
-        <AttendanceTable
+        <FadeIn delay={0.7}>
+          <AttendanceTable
           initialRecords={initialRecords}
           initialDate={date}
           maxRows={8}
@@ -293,10 +335,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           description="Latest attendance actions. Open the full attendance page for complete check-in/check-out history."
           viewAllHref="/admin/attendance"
         />
+        </FadeIn>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-0 shadow-lg">
+        <FadeIn delay={0.8}>
+          <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Download className="h-5 w-5 text-emerald-600" />
@@ -324,10 +368,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             ))}
           </CardContent>
         </Card>
+        </FadeIn>
 
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">Import Workflow</CardTitle>
+        <FadeIn delay={0.9}>
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">Import Workflow</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-600">
             <p>1. Download the sample CSV that matches the data you want to import.</p>
@@ -342,6 +388,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </Link>
           </CardContent>
         </Card>
+        </FadeIn>
       </section>
     </div>
   );

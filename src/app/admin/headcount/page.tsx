@@ -12,13 +12,14 @@ import {
   createHREmployee,
   getHeadcountModuleData,
   listHREmployeeOptions,
-  updateHREmployeeStatus,
+  updateHREmployee,
 } from "@/lib/hr-db";
 import {
   HR_CONTRACT_TYPES,
   HR_DEPARTMENTS,
   HR_EMPLOYMENT_STATUSES,
   HR_EXIT_TYPES,
+  HR_WORK_MODES,
 } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
@@ -36,10 +37,10 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
   const workEmail = String(formData.get("workEmail") ?? "").trim();
   const department = String(formData.get("department") ?? "").trim();
   const contractType = String(formData.get("contractType") ?? "").trim();
+  const workMode = String(formData.get("workMode") ?? "onsite").trim();
   const employmentStatus = String(formData.get("employmentStatus") ?? "active").trim();
   const managerEmployeeIdRaw = Number(formData.get("managerEmployeeId") ?? "");
-  const hireDate = String(formData.get("hireDate") ?? "").trim();
-  const probationEndDate = String(formData.get("probationEndDate") ?? "").trim();
+  const contractStartDate = String(formData.get("contractStartDate") ?? "").trim();
   const contractEndDate = String(formData.get("contractEndDate") ?? "").trim();
 
   if (!fullName) {
@@ -62,6 +63,9 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
   ) {
     return;
   }
+  if (!HR_WORK_MODES.includes(workMode as (typeof HR_WORK_MODES)[number])) {
+    return;
+  }
 
   await createHREmployee({
     employeeCode: employeeCode || null,
@@ -69,13 +73,13 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
     workEmail: workEmail || null,
     department: department as (typeof HR_DEPARTMENTS)[number],
     contractType: contractType as (typeof HR_CONTRACT_TYPES)[number],
+    workMode: workMode as (typeof HR_WORK_MODES)[number],
     employmentStatus: employmentStatus as (typeof HR_EMPLOYMENT_STATUSES)[number],
     managerEmployeeId:
       Number.isFinite(managerEmployeeIdRaw) && managerEmployeeIdRaw > 0
         ? managerEmployeeIdRaw
         : null,
-    hireDate: hireDate || null,
-    probationEndDate: probationEndDate || null,
+    hireDate: contractStartDate || null,
     contractEndDate: contractEndDate || null,
   });
 
@@ -83,24 +87,63 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
-async function updateEmployeeStatusAction(formData: FormData): Promise<void> {
+async function updateEmployeeAction(formData: FormData): Promise<void> {
   "use server";
 
   await requireAdminPage("/admin/headcount");
 
   const employeeId = Number(formData.get("employeeId") ?? "");
-  const status = String(formData.get("status") ?? "").trim();
+  const employeeCode = String(formData.get("employeeCode") ?? "").trim();
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const workEmail = String(formData.get("workEmail") ?? "").trim();
+  const department = String(formData.get("department") ?? "").trim();
+  const contractType = String(formData.get("contractType") ?? "").trim();
+  const workMode = String(formData.get("workMode") ?? "onsite").trim();
+  const employmentStatus = String(formData.get("employmentStatus") ?? "active").trim();
+  const managerEmployeeIdRaw = Number(formData.get("managerEmployeeId") ?? "");
+  const contractStartDate = String(formData.get("contractStartDate") ?? "").trim();
+  const contractEndDate = String(formData.get("contractEndDate") ?? "").trim();
   const exitType = String(formData.get("exitType") ?? "").trim();
   const exitDate = String(formData.get("exitDate") ?? "").trim();
 
-  if (!Number.isFinite(employeeId)) {
+  if (!Number.isFinite(employeeId) || employeeId <= 0 || !fullName) {
     return;
   }
-  if (!HR_EMPLOYMENT_STATUSES.includes(status as (typeof HR_EMPLOYMENT_STATUSES)[number])) {
+  if (!HR_DEPARTMENTS.includes(department as (typeof HR_DEPARTMENTS)[number])) {
+    return;
+  }
+  if (!HR_CONTRACT_TYPES.includes(contractType as (typeof HR_CONTRACT_TYPES)[number])) {
+    return;
+  }
+  if (!HR_WORK_MODES.includes(workMode as (typeof HR_WORK_MODES)[number])) {
+    return;
+  }
+  if (
+    !HR_EMPLOYMENT_STATUSES.includes(
+      employmentStatus as (typeof HR_EMPLOYMENT_STATUSES)[number]
+    )
+  ) {
     return;
   }
 
-  await updateHREmployeeStatus(employeeId, status as (typeof HR_EMPLOYMENT_STATUSES)[number], {
+  const managerEmployeeId =
+    Number.isFinite(managerEmployeeIdRaw) &&
+    managerEmployeeIdRaw > 0 &&
+    managerEmployeeIdRaw !== employeeId
+      ? managerEmployeeIdRaw
+      : null;
+
+  await updateHREmployee(employeeId, {
+    employeeCode: employeeCode || null,
+    fullName,
+    workEmail: workEmail || null,
+    department: department as (typeof HR_DEPARTMENTS)[number],
+    contractType: contractType as (typeof HR_CONTRACT_TYPES)[number],
+    workMode: workMode as (typeof HR_WORK_MODES)[number],
+    employmentStatus: employmentStatus as (typeof HR_EMPLOYMENT_STATUSES)[number],
+    managerEmployeeId,
+    hireDate: contractStartDate || null,
+    contractEndDate: contractEndDate || null,
     exitType: HR_EXIT_TYPES.includes(exitType as (typeof HR_EXIT_TYPES)[number])
       ? (exitType as (typeof HR_EXIT_TYPES)[number])
       : null,
@@ -258,13 +301,24 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
                 <option key={status} value={status}>
                   {humanizeLabel(status)}
                 </option>
-              ))}
-            </select>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue=""
-              name="managerEmployeeId"
-            >
+                ))}
+              </select>
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                defaultValue="onsite"
+                name="workMode"
+              >
+                {HR_WORK_MODES.map((workMode) => (
+                  <option key={workMode} value={workMode}>
+                    {humanizeLabel(workMode)}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                defaultValue=""
+                name="managerEmployeeId"
+              >
               <option value="">No manager</option>
               {employeeOptions.map((employee) => (
                 <option key={employee.id} value={employee.id}>
@@ -272,9 +326,17 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
                 </option>
               ))}
             </select>
-            <Input name="hireDate" type="date" />
-            <Input name="probationEndDate" type="date" />
-            <Input name="contractEndDate" type="date" />
+            <label className="space-y-1 text-sm">
+              <span className="block text-xs text-muted-foreground">Contract start date</span>
+              <Input name="contractStartDate" type="date" />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span className="block text-xs text-muted-foreground">Contract end date</span>
+              <Input name="contractEndDate" type="date" />
+            </label>
+            <p className="sm:col-span-3 -mt-1 text-xs text-muted-foreground">
+              Contract end date is optional for permanent (full-time) employees.
+            </p>
             <div className="sm:col-span-3">
               <Button type="submit">Add Employee</Button>
             </div>
@@ -297,22 +359,65 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
                 key={employee.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
               >
-                <div>
-                  <p className="text-sm font-medium">
-                    {employee.full_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {employee.department} &bull; {humanizeLabel(employee.contract_type)} &bull; Hired{" "}
-                    {employee.hire_date}
-                  </p>
-                </div>
-
-                <form action={updateEmployeeStatusAction} className="flex flex-wrap items-center gap-2">
+                <form action={updateEmployeeAction} className="grid w-full gap-2 sm:grid-cols-4">
                   <input name="employeeId" type="hidden" value={employee.id} />
+                  <Input
+                    className="h-8 text-xs"
+                    defaultValue={employee.employee_code}
+                    name="employeeCode"
+                    placeholder="Employee code"
+                  />
+                  <Input
+                    className="h-8 text-xs"
+                    defaultValue={employee.full_name}
+                    name="fullName"
+                    placeholder="Full name"
+                    required
+                  />
+                  <Input
+                    className="h-8 text-xs"
+                    defaultValue={employee.work_email ?? ""}
+                    name="workEmail"
+                    placeholder="Work email"
+                    type="email"
+                  />
+                  <select
+                    className="h-8 rounded-md border bg-background px-2 text-xs"
+                    defaultValue={employee.department}
+                    name="department"
+                  >
+                    {HR_DEPARTMENTS.map((department) => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="h-8 rounded-md border bg-background px-2 text-xs"
+                    defaultValue={employee.contract_type}
+                    name="contractType"
+                  >
+                    {HR_CONTRACT_TYPES.map((contractType) => (
+                      <option key={contractType} value={contractType}>
+                        {humanizeLabel(contractType)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="h-8 rounded-md border bg-background px-2 text-xs"
+                    defaultValue={employee.work_mode}
+                    name="workMode"
+                  >
+                    {HR_WORK_MODES.map((workMode) => (
+                      <option key={workMode} value={workMode}>
+                        {humanizeLabel(workMode)}
+                      </option>
+                    ))}
+                  </select>
                   <select
                     className="h-8 rounded-md border bg-background px-2 text-xs"
                     defaultValue={employee.employment_status}
-                    name="status"
+                    name="employmentStatus"
                   >
                     {HR_EMPLOYMENT_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -320,6 +425,38 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
                       </option>
                     ))}
                   </select>
+                  <select
+                    className="h-8 rounded-md border bg-background px-2 text-xs"
+                    defaultValue={employee.manager_employee_id ?? ""}
+                    name="managerEmployeeId"
+                  >
+                    <option value="">No manager</option>
+                    {employeeOptions
+                      .filter((managerOption) => managerOption.id !== employee.id)
+                      .map((managerOption) => (
+                        <option key={managerOption.id} value={managerOption.id}>
+                          {managerOption.full_name} ({managerOption.employee_code})
+                        </option>
+                      ))}
+                  </select>
+                  <label className="space-y-1 text-xs">
+                    <span className="text-muted-foreground">Contract start</span>
+                    <Input
+                      className="h-8 text-xs"
+                      defaultValue={employee.hire_date}
+                      name="contractStartDate"
+                      type="date"
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs">
+                    <span className="text-muted-foreground">Contract end</span>
+                    <Input
+                      className="h-8 text-xs"
+                      defaultValue={employee.contract_end_date ?? ""}
+                      name="contractEndDate"
+                      type="date"
+                    />
+                  </label>
                   <select
                     className="h-8 rounded-md border bg-background px-2 text-xs"
                     defaultValue={employee.exit_type ?? ""}
@@ -332,11 +469,18 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
                       </option>
                     ))}
                   </select>
-                  <Input className="h-8 w-36 text-xs" name="exitDate" type="date" />
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={employee.employment_status} />
+                  <Input
+                    className="h-8 text-xs"
+                    defaultValue={employee.exit_date ?? ""}
+                    name="exitDate"
+                    type="date"
+                  />
+                  <div className="sm:col-span-4 flex flex-wrap items-center gap-2">
+                    <Button size="sm" type="submit" variant="outline">
+                      Save details
+                    </Button>
+                    <StatusBadge status={employee.employment_status} />
+                  </div>
                 </form>
               </div>
             ))

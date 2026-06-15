@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  LogOut,
   MapPin,
   Search,
   User,
@@ -28,8 +29,10 @@ type Coordinates = {
 };
 
 type TokenStatus = "loading" | "ready" | "error";
+type AttendanceAction = "checkin" | "checkout";
 
 export function CheckinForm() {
+  const [action, setAction] = useState<AttendanceAction>("checkin");
   const [scanToken, setScanToken] = useState<string | null>(null);
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>("loading");
   const [name, setName] = useState("");
@@ -39,7 +42,9 @@ export function CheckinForm() {
   const [employeesLoaded, setEmployeesLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+  const [submittedAction, setSubmittedAction] = useState<AttendanceAction | null>(null);
   const [punctualityMessage, setPunctualityMessage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -48,28 +53,49 @@ export function CheckinForm() {
     employee.toLowerCase().includes(name.toLowerCase())
   );
 
+  async function fetchScanTokenValue(): Promise<string> {
+    const response = await fetch("/api/checkin/token", {
+      cache: "no-store",
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      scanToken?: string;
+      error?: string;
+    };
+
+    if (!response.ok || typeof data.scanToken !== "string") {
+      throw new Error(data.error ?? "Unable to prepare check-in.");
+    }
+
+    return data.scanToken;
+  }
+
+  async function refreshScanToken() {
+    setTokenStatus("loading");
+    setScanToken(null);
+
+    try {
+      const nextScanToken = await fetchScanTokenValue();
+      setScanToken(nextScanToken);
+      setTokenStatus("ready");
+    } catch (tokenError) {
+      console.error("Failed to prepare scan token", tokenError);
+      setScanToken(null);
+      setTokenStatus("error");
+    }
+  }
+
   useEffect(() => {
     let active = true;
 
     const prepareScanToken = async () => {
       try {
-        const response = await fetch("/api/checkin/token", {
-          cache: "no-store",
-        });
-        const data = (await response.json().catch(() => ({}))) as {
-          scanToken?: string;
-          error?: string;
-        };
-
-        if (!response.ok || typeof data.scanToken !== "string") {
-          throw new Error(data.error ?? "Unable to prepare check-in.");
-        }
+        const nextScanToken = await fetchScanTokenValue();
 
         if (!active) {
           return;
         }
 
-        setScanToken(data.scanToken);
+        setScanToken(nextScanToken);
         setTokenStatus("ready");
       } catch (tokenError) {
         if (!active) {
@@ -87,6 +113,11 @@ export function CheckinForm() {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    void loadEmployees();
+    void requestLocation();
   }, []);
 
   useEffect(() => {
@@ -202,7 +233,12 @@ export function CheckinForm() {
     }
 
     if (!scanToken) {
-      setError("Check-in is not ready yet. Wait a moment and try again.");
+      setError("Attendance action is not ready yet. Wait a moment and try again.");
+      return;
+    }
+
+    if (action === "checkin" && (gpsStatus !== "granted" || !coordinates)) {
+      setError("Location access is required. Please allow location access and try again.");
       return;
     }
 
@@ -211,7 +247,8 @@ export function CheckinForm() {
     setIsDropdownOpen(false);
 
     try {
-      const response = await fetch("/api/checkin", {
+      const endpoint = action === "checkout" ? "/api/checkout" : "/api/checkin";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -219,8 +256,12 @@ export function CheckinForm() {
         body: JSON.stringify({
           name: name.trim(),
           scanToken,
-          latitude: coordinates?.lat ?? null,
-          longitude: coordinates?.lng ?? null,
+          ...(action === "checkin"
+            ? {
+                latitude: coordinates?.lat ?? null,
+                longitude: coordinates?.lng ?? null,
+              }
+            : {}),
         }),
       });
 
@@ -228,27 +269,61 @@ export function CheckinForm() {
         const data = (await response.json().catch(() => ({}))) as {
           error?: string;
         };
-        setError(data.error ?? "Unable to submit check-in.");
+        setError(
+          data.error ??
+            (action === "checkout"
+              ? "Unable to submit check-out."
+              : "Unable to submit check-in.")
+        );
         return;
       }
 
       const data = (await response.json().catch(() => ({}))) as {
         timestamp?: string;
         punctualityMessage?: string;
+        statusMessage?: string;
       };
 
       setPunctualityMessage(
         typeof data.punctualityMessage === "string" ? data.punctualityMessage : null
       );
+      setStatusMessage(
+        typeof data.statusMessage === "string"
+          ? data.statusMessage
+          : action === "checkout"
+            ? "Check-out recorded"
+            : null
+      );
+      setSubmittedAction(action);
       setSubmittedAt(data.timestamp ?? new Date().toISOString());
+
+      await refreshScanToken();
     } catch {
-      setError("Network error while submitting check-in.");
+      setError(
+        action === "checkout"
+          ? "Network error while submitting check-out."
+          : "Network error while submitting check-in."
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
-  const isLate = punctualityMessage === "You are late";
+  function resetForAnother(nextAction: AttendanceAction) {
+    setSubmittedAt(null);
+    setSubmittedAction(null);
+    setPunctualityMessage(null);
+    setStatusMessage(null);
+    setError(null);
+    setAction(nextAction);
+
+    if (tokenStatus !== "ready") {
+      void refreshScanToken();
+    }
+  }
+
+  const isCheckout = submittedAction === "checkout";
+  const isLate = submittedAction === "checkin" && punctualityMessage === "You are late";
 
   if (submittedAt) {
     return (
@@ -256,7 +331,9 @@ export function CheckinForm() {
         <Card className="overflow-hidden border-0 shadow-xl">
           <div
             className={
-              isLate
+              isCheckout
+                ? "relative bg-gradient-to-br from-sky-50 via-cyan-50 to-white"
+                : isLate
                 ? "relative bg-gradient-to-br from-orange-50 via-red-50 to-white"
                 : "relative bg-gradient-to-br from-emerald-50 via-teal-50 to-white"
             }
@@ -264,12 +341,16 @@ export function CheckinForm() {
             <CardHeader className="relative z-10 px-6 pb-12 pt-8 text-center sm:px-10">
               <div
                 className={
-                  isLate
+                  isCheckout
+                    ? "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-500 to-cyan-500 shadow-lg"
+                    : isLate
                     ? "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg"
                     : "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg"
                 }
               >
-                {isLate ? (
+                {isCheckout ? (
+                  <LogOut className="h-10 w-10 text-white" strokeWidth={2.4} />
+                ) : isLate ? (
                   <AlertTriangle className="h-10 w-10 text-white" strokeWidth={2.4} />
                 ) : (
                   <CheckCircle2 className="h-10 w-10 text-white" strokeWidth={2.4} />
@@ -277,28 +358,49 @@ export function CheckinForm() {
               </div>
 
               <CardTitle className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                {isLate ? "You are late" : "You are on time"}
+                {isCheckout ? "Check-out complete" : isLate ? "You are late" : "You are on time"}
               </CardTitle>
               <CardDescription className="mt-3 text-base text-slate-600 sm:text-lg">
-                {name} checked in at {new Date(submittedAt).toLocaleTimeString()}
+                {name} {isCheckout ? "checked out" : "checked in"} at{" "}
+                {new Date(submittedAt).toLocaleTimeString()}
               </CardDescription>
 
               <div
                 className={
-                  isLate
+                  isCheckout
+                    ? "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-sky-700 shadow-sm duration-500"
+                    : isLate
                     ? "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-red-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-red-700 shadow-sm duration-500"
                     : "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm duration-500"
                 }
               >
-                {isLate ? (
+                {isCheckout ? (
+                  <LogOut className="h-4 w-4" />
+                ) : isLate ? (
                   <AlertTriangle className="h-4 w-4" />
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}
-                <span>{punctualityMessage}</span>
+                <span>{isCheckout ? statusMessage : punctualityMessage}</span>
               </div>
 
-              <p className="mt-8 text-sm text-slate-500">You may now close this tab.</p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => resetForAnother("checkin")}
+                >
+                  Record check-in
+                </Button>
+                <Button
+                  type="button"
+                  className="rounded-full bg-slate-900 text-white hover:bg-slate-800"
+                  onClick={() => resetForAnother("checkout")}
+                >
+                  Record check-out
+                </Button>
+              </div>
             </CardHeader>
           </div>
         </Card>
@@ -314,16 +416,43 @@ export function CheckinForm() {
             <Clock className="h-9 w-9 text-white" />
           </div>
           <CardTitle className="text-3xl font-semibold tracking-tight text-white">
-            Office Check-In
+            Office Attendance
           </CardTitle>
           <CardDescription className="mt-3 text-base leading-7 text-slate-300">
-            Enter your name and tap Check In.
+            Enter your name and choose check-in or check-out.
           </CardDescription>
         </CardHeader>
       </div>
 
       <CardContent className="space-y-5 px-5 py-6 sm:px-8 sm:py-8">
         <form className="space-y-5" onSubmit={onSubmit}>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setAction("checkin")}
+                className={
+                  action === "checkin"
+                    ? "rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm"
+                    : "rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-600"
+                }
+              >
+                Check In
+              </button>
+              <button
+                type="button"
+                onClick={() => setAction("checkout")}
+                className={
+                  action === "checkout"
+                    ? "rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm"
+                    : "rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-600"
+                }
+              >
+                Check Out
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-900" htmlFor="name">
               Full Name
@@ -384,18 +513,27 @@ export function CheckinForm() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-slate-900">Add location</p>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-slate-500" />
+                  <p className="text-sm font-medium text-slate-900">
+                    Location {action === "checkin" ? <span className="text-red-500">*</span> : null}
+                  </p>
+                </div>
                 <p className="mt-1 text-sm text-slate-600">
-                  Optional. Your GPS coordinates will be attached to this check-in.
+                  {action === "checkout"
+                    ? "Optional for check-out. You can proceed without GPS."
+                    : gpsStatus === "granted"
+                      ? "Your GPS coordinates will be attached to this check-in."
+                      : "Required. Tap the button to share your location."}
                 </p>
               </div>
 
               <Button
                 type="button"
-                variant={gpsStatus === "granted" ? "secondary" : "outline"}
+                variant={gpsStatus === "granted" ? "secondary" : "default"}
                 onClick={requestLocation}
                 disabled={gpsStatus === "loading"}
                 className="min-w-40"
@@ -413,7 +551,7 @@ export function CheckinForm() {
                 ) : (
                   <>
                     <MapPin className="h-4 w-4" />
-                    Use my location
+                    Allow location
                   </>
                 )}
               </Button>
@@ -437,12 +575,16 @@ export function CheckinForm() {
             {submitting ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Checking in...
+                {action === "checkout" ? "Checking out..." : "Checking in..."}
               </>
             ) : tokenStatus === "ready" ? (
               <>
-                <CheckCircle2 className="h-5 w-5" />
-                Check In
+                {action === "checkout" ? (
+                  <LogOut className="h-5 w-5" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5" />
+                )}
+                {action === "checkout" ? "Check Out" : "Check In"}
               </>
             ) : (
               <>

@@ -1,10 +1,11 @@
-# NM HR System
+# Abonten Technologies HR System
 
 QR-based attendance check-in and admin HR operations platform built with Next.js, NextAuth, and Postgres.
 
 ## Features
 
-- Public check-in page with GPS capture when the browser allows it.
+- Public attendance page supporting both check-in and check-out.
+- GPS capture for check-in when the browser allows it.
 - Server-enforced one-time check-in scan tokens (30-minute token validity, single submission per scan).
 - Admin HR dashboard with KPI cards and key alerts.
 - HR modules for recruitment, headcount/org, compliance, payroll/leave, performance, training/onboarding.
@@ -48,6 +49,6 @@ Open `http://localhost:3000`.
 
 ## Notes
 
-- Attendance timestamps are recorded on the server.
+- Check-in and check-out timestamps are recorded on the server.
 - The HR admin routes and HR APIs require a signed-in admin session.
 - Public check-in accepts any name; roster is convenience metadata only.

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mammoth from "mammoth";
 
 import { requireAdminApi } from "@/lib/admin-auth";
 import { listImportRuns } from "@/lib/hr-db";
@@ -18,6 +19,27 @@ type ImportPayload = {
   dryRun?: unknown;
 };
 
+function normalizeImportedText(text: string): string {
+  const lines = text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      if (line.includes(",")) {
+        return line;
+      }
+
+      if (line.includes("\t")) {
+        return line.replace(/\t+/g, ",");
+      }
+
+      return line.replace(/\s{2,}/g, ",");
+    });
+
+  return lines.join("\n");
+}
+
 async function readCsvFromRequest(request: Request): Promise<{
   csv: string;
   dryRun: boolean;
@@ -35,7 +57,25 @@ async function readCsvFromRequest(request: Request): Promise<{
 
     const fileField = formData.get("file");
     if (fileField instanceof File) {
-      return { csv: await fileField.text(), dryRun };
+      const filename = fileField.name.toLowerCase();
+
+      if (filename.endsWith(".docx")) {
+        const fileBuffer = Buffer.from(await fileField.arrayBuffer());
+        const extracted = await mammoth.extractRawText({ buffer: fileBuffer });
+        const normalized = normalizeImportedText(extracted.value);
+
+        if (!normalized.trim()) {
+          throw new Error("Could not extract usable rows from the DOCX file.");
+        }
+
+        return { csv: normalized, dryRun };
+      }
+
+      if (filename.endsWith(".csv") || filename.endsWith(".txt") || filename.endsWith(".md")) {
+        return { csv: normalizeImportedText(await fileField.text()), dryRun };
+      }
+
+      throw new Error("Unsupported file format. Upload a CSV, DOCX, TXT, or MD file.");
     }
 
     throw new Error("Provide csv text or a file field in multipart payload.");

@@ -13,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NM HR System",
+  title: "Abonten Technologies",
   description: "Admin HR operations platform with recruitment, compliance, payroll, performance, training, and attendance.",
 };
 

@@ -30,6 +30,7 @@ import type {
   HRTrainingAssignment,
   HRTrainingModule,
   HRTrainingStatus,
+  HRWorkMode,
 } from "@/lib/types";
 import {
   HR_CONTRACT_TYPES,
@@ -40,6 +41,7 @@ import {
   HR_PIP_STATUSES,
   HR_RECRUITMENT_STAGES,
   HR_TRAINING_STATUSES,
+  HR_WORK_MODES,
 } from "@/lib/types";
 
 type DbRow = Record<string, unknown>;
@@ -50,10 +52,26 @@ export type CreateHREmployeeInput = {
   workEmail?: string | null;
   department: HRDepartment;
   contractType: HRContractType;
+  workMode?: HRWorkMode;
   employmentStatus?: HREmploymentStatus;
   managerEmployeeId?: number | null;
   hireDate?: string | null;
   probationEndDate?: string | null;
+  contractEndDate?: string | null;
+  exitDate?: string | null;
+  exitType?: HRExitType | null;
+};
+
+export type UpdateHREmployeeInput = {
+  employeeCode?: string | null;
+  fullName: string;
+  workEmail?: string | null;
+  department: HRDepartment;
+  contractType: HRContractType;
+  workMode: HRWorkMode;
+  employmentStatus: HREmploymentStatus;
+  managerEmployeeId?: number | null;
+  hireDate?: string | null;
   contractEndDate?: string | null;
   exitDate?: string | null;
   exitType?: HRExitType | null;
@@ -275,6 +293,7 @@ function normalizeEmployee(row: DbRow): HREmployee {
     work_email: asNullableString(row.work_email),
     department: asString(row.department) as HRDepartment,
     contract_type: asString(row.contract_type) as HRContractType,
+    work_mode: asString(row.work_mode) as HRWorkMode,
     employment_status: asString(row.employment_status) as HREmploymentStatus,
     manager_employee_id: asNullableNumber(row.manager_employee_id),
     hire_date: asDateOnly(row.hire_date),
@@ -532,7 +551,7 @@ export async function listHREmployees(
 
   let query = `
     SELECT
-      id, employee_code, full_name, work_email, department, contract_type,
+      id, employee_code, full_name, work_email, department, contract_type, work_mode,
       employment_status, manager_employee_id, hire_date, probation_end_date,
       contract_end_date, exit_date, exit_type, created_at, updated_at
     FROM hr_employees
@@ -594,6 +613,7 @@ export async function createHREmployee(
     HR_CONTRACT_TYPES,
     "contractType"
   );
+  const workMode = ensureEnumValue(input.workMode || "onsite", HR_WORK_MODES, "workMode");
   const employmentStatus = ensureEnumValue(
     input.employmentStatus || "active",
     HR_EMPLOYMENT_STATUSES,
@@ -604,12 +624,12 @@ export async function createHREmployee(
     `
       INSERT INTO hr_employees (
         employee_code, full_name, work_email, department, contract_type,
-        employment_status, manager_employee_id, hire_date, probation_end_date,
+        work_mode, employment_status, manager_employee_id, hire_date, probation_end_date,
         contract_end_date, exit_date, exit_type, updated_at
       )
-      VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+      VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
       RETURNING
-        id, employee_code, full_name, work_email, department, contract_type,
+        id, employee_code, full_name, work_email, department, contract_type, work_mode,
         employment_status, manager_employee_id, hire_date, probation_end_date,
         contract_end_date, exit_date, exit_type, created_at, updated_at
     `,
@@ -619,6 +639,7 @@ export async function createHREmployee(
       input.workEmail?.trim() || null,
       department,
       contractType,
+      workMode,
       employmentStatus,
       input.managerEmployeeId ?? null,
       ensureDateOnly(input.hireDate) || new Date().toISOString().slice(0, 10),
@@ -648,7 +669,7 @@ export async function updateHREmployeeStatus(
           updated_at = NOW()
       WHERE id = $1
       RETURNING
-        id, employee_code, full_name, work_email, department, contract_type,
+        id, employee_code, full_name, work_email, department, contract_type, work_mode,
         employment_status, manager_employee_id, hire_date, probation_end_date,
         contract_end_date, exit_date, exit_type, created_at, updated_at
     `,
@@ -658,6 +679,73 @@ export async function updateHREmployeeStatus(
   if (result.rows.length === 0) {
     return null;
   }
+  return normalizeEmployee(asRecordRows(result.rows)[0]);
+}
+
+export async function updateHREmployee(
+  employeeId: number,
+  patch: UpdateHREmployeeInput
+): Promise<HREmployee | null> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+
+  const fullName = patch.fullName.trim();
+  if (!fullName) {
+    throw new Error("fullName is required");
+  }
+
+  const department = ensureEnumValue(patch.department, HR_DEPARTMENTS, "department");
+  const contractType = ensureEnumValue(patch.contractType, HR_CONTRACT_TYPES, "contractType");
+  const workMode = ensureEnumValue(patch.workMode, HR_WORK_MODES, "workMode");
+  const employmentStatus = ensureEnumValue(
+    patch.employmentStatus,
+    HR_EMPLOYMENT_STATUSES,
+    "employmentStatus"
+  );
+
+  const result = await pool.query(
+    `
+      UPDATE hr_employees
+      SET employee_code = COALESCE(NULLIF($2, ''), employee_code),
+          full_name = $3,
+          work_email = NULLIF($4, ''),
+          department = $5,
+          contract_type = $6,
+          work_mode = $7,
+          employment_status = $8,
+          manager_employee_id = $9,
+          hire_date = COALESCE($10, hire_date),
+          contract_end_date = $11,
+          exit_date = $12,
+          exit_type = $13,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING
+        id, employee_code, full_name, work_email, department, contract_type, work_mode,
+        employment_status, manager_employee_id, hire_date, probation_end_date,
+        contract_end_date, exit_date, exit_type, created_at, updated_at
+    `,
+    [
+      employeeId,
+      patch.employeeCode?.trim() || null,
+      fullName,
+      patch.workEmail?.trim() || null,
+      department,
+      contractType,
+      workMode,
+      employmentStatus,
+      patch.managerEmployeeId ?? null,
+      ensureDateOnly(patch.hireDate),
+      ensureDateOnly(patch.contractEndDate),
+      ensureDateOnly(patch.exitDate),
+      patch.exitType || null,
+    ]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
   return normalizeEmployee(asRecordRows(result.rows)[0]);
 }
 
@@ -2291,7 +2379,8 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
     Operations: 0,
     Marketing: 0,
     Tech: 0,
-    "Finance & HR": 0,
+    "Finance & Compliance": 0,
+    "HR & Admin": 0,
   };
   let totalActive = 0;
   for (const row of asRecordRows(activeHeadcountRes.rows)) {

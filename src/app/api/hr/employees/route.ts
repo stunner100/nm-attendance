@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireAdminApi } from "@/lib/admin-auth";
 import { createHREmployee, listHREmployees, updateHREmployeeStatus } from "@/lib/hr-db";
-import { HR_EMPLOYMENT_STATUSES, HR_EXIT_TYPES } from "@/lib/types";
+import { HR_EMPLOYMENT_STATUSES, HR_EXIT_TYPES, HR_WORK_MODES } from "@/lib/types";
 
 type EmployeePayload = {
   employeeCode?: unknown;
@@ -10,6 +10,7 @@ type EmployeePayload = {
   workEmail?: unknown;
   department?: unknown;
   contractType?: unknown;
+  workMode?: unknown;
   employmentStatus?: unknown;
   managerEmployeeId?: unknown;
   hireDate?: unknown;
@@ -69,12 +70,22 @@ export async function POST(request: Request) {
       employeeCode: typeof payload.employeeCode === "string" ? payload.employeeCode : null,
       fullName: payload.fullName,
       workEmail: typeof payload.workEmail === "string" ? payload.workEmail : null,
-      department: payload.department as "Operations" | "Marketing" | "Tech" | "Finance & HR",
+      department: payload.department as
+        | "Operations"
+        | "Marketing"
+        | "Tech"
+        | "Finance & Compliance"
+        | "HR & Admin",
       contractType: payload.contractType as
         | "full_time"
         | "part_time"
         | "intern"
         | "contractor",
+      workMode:
+        typeof payload.workMode === "string" &&
+        HR_WORK_MODES.includes(payload.workMode as (typeof HR_WORK_MODES)[number])
+          ? (payload.workMode as "onsite" | "hybrid" | "remote")
+          : "onsite",
       employmentStatus:
         typeof payload.employmentStatus === "string"
           ? (payload.employmentStatus as

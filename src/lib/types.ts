@@ -4,13 +4,20 @@ export type AttendanceRow = {
   id: number;
   name: string;
   timestamp: string;
+  checkout_timestamp: string | null;
   latitude: number | null;
   longitude: number | null;
   location: string | null;
   created_at: string;
 };
 
-export const HR_DEPARTMENTS = ["Operations", "Marketing", "Tech", "Finance & HR"] as const;
+export const HR_DEPARTMENTS = [
+  "Operations",
+  "Marketing",
+  "Tech",
+  "Finance & Compliance",
+  "HR & Admin",
+] as const;
 export type HRDepartment = (typeof HR_DEPARTMENTS)[number];
 
 export const HR_CONTRACT_TYPES = [
@@ -67,6 +74,9 @@ export type HRTrainingStatus = (typeof HR_TRAINING_STATUSES)[number];
 export const HR_EXIT_TYPES = ["voluntary", "involuntary"] as const;
 export type HRExitType = (typeof HR_EXIT_TYPES)[number];
 
+export const HR_WORK_MODES = ["onsite", "hybrid", "remote"] as const;
+export type HRWorkMode = (typeof HR_WORK_MODES)[number];
+
 export type HREmployee = {
   id: number;
   employee_code: string;
@@ -74,6 +84,7 @@ export type HREmployee = {
   work_email: string | null;
   department: HRDepartment;
   contract_type: HRContractType;
+  work_mode: HRWorkMode;
   employment_status: HREmploymentStatus;
   manager_employee_id: number | null;
   hire_date: string;

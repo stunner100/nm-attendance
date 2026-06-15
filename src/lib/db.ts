@@ -9,13 +9,19 @@ import {
   splitRosterNames,
 } from "@/lib/roster";
 
-type InsertAttendanceInput = {
+type CheckinAttendanceInput = {
   name: string;
   scanToken: string;
   timestamp: string;
   latitude: number | null;
   longitude: number | null;
   location?: string | null;
+};
+
+type CheckoutAttendanceInput = {
+  name: string;
+  scanToken: string;
+  timestamp: string;
 };
 
 type AttendanceRowDb = Omit<AttendanceRow, "created_at"> & {
@@ -102,6 +108,7 @@ async function ensureBaseSchema(): Promise<void> {
         id          SERIAL PRIMARY KEY,
         name        TEXT NOT NULL,
         timestamp   TEXT NOT NULL,
+        checkout_timestamp TEXT,
         latitude    DOUBLE PRECISION,
         longitude   DOUBLE PRECISION,
         location    TEXT,
@@ -128,6 +135,9 @@ async function ensureBaseSchema(): Promise<void> {
         used_at     TIMESTAMPTZ,
         created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      ALTER TABLE attendance
+      ADD COLUMN IF NOT EXISTS checkout_timestamp TEXT;
     `);
   })();
 
@@ -143,14 +153,42 @@ async function ensureHrSchema(): Promise<void> {
 
   globalForDb.hrSchemaInitPromise = (async () => {
     const pool = getPool();
+
+    await pool.query(`
+      ALTER TABLE hr_employees
+        DROP CONSTRAINT IF EXISTS hr_employees_department_check,
+        ADD CONSTRAINT hr_employees_department_check
+          CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin'));
+    `);
+
+    await pool.query(`
+      UPDATE hr_employees
+      SET department = 'Finance & Compliance'
+      WHERE department = 'Finance & HR';
+    `);
+
+    await pool.query(`
+      ALTER TABLE hr_recruitment_roles
+        DROP CONSTRAINT IF EXISTS hr_recruitment_roles_department_check,
+        ADD CONSTRAINT hr_recruitment_roles_department_check
+          CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin'));
+    `);
+
+    await pool.query(`
+      UPDATE hr_recruitment_roles
+      SET department = 'Finance & Compliance'
+      WHERE department = 'Finance & HR';
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS hr_employees (
         id                   SERIAL PRIMARY KEY,
         employee_code        TEXT NOT NULL UNIQUE,
         full_name            TEXT NOT NULL,
         work_email           TEXT UNIQUE,
-        department           TEXT NOT NULL CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & HR')),
+        department           TEXT NOT NULL CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin')),
         contract_type        TEXT NOT NULL CHECK (contract_type IN ('full_time', 'part_time', 'intern', 'contractor')),
+        work_mode            TEXT NOT NULL DEFAULT 'onsite' CHECK (work_mode IN ('onsite', 'hybrid', 'remote')),
         employment_status    TEXT NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'inactive', 'terminated', 'resigned')),
         manager_employee_id  INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
         hire_date            DATE NOT NULL,
@@ -162,10 +200,20 @@ async function ensureHrSchema(): Promise<void> {
         updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      ALTER TABLE hr_employees
+      ADD COLUMN IF NOT EXISTS work_mode TEXT NOT NULL DEFAULT 'onsite';
+
+      ALTER TABLE hr_employees
+      DROP CONSTRAINT IF EXISTS hr_employees_work_mode_check;
+
+      ALTER TABLE hr_employees
+      ADD CONSTRAINT hr_employees_work_mode_check
+        CHECK (work_mode IN ('onsite', 'hybrid', 'remote'));
+
       CREATE TABLE IF NOT EXISTS hr_recruitment_roles (
         id            SERIAL PRIMARY KEY,
         title         TEXT NOT NULL,
-        department    TEXT NOT NULL CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & HR')),
+        department    TEXT NOT NULL CHECK (department IN ('Operations', 'Marketing', 'Tech', 'Finance & Compliance', 'HR & Admin')),
         hiring_stage  TEXT NOT NULL DEFAULT 'screening',
         vacancies     INTEGER NOT NULL DEFAULT 1,
         opened_at     DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -468,7 +516,7 @@ function normalizeAuthUser(row: AuthUserDb): AuthUser {
   };
 }
 
-export async function insertAttendance(input: InsertAttendanceInput): Promise<void> {
+export async function insertAttendance(input: CheckinAttendanceInput): Promise<void> {
   await ensureBaseSchema();
 
   const attendeeName = normalizeEmployeeName(input.name);
@@ -485,50 +533,164 @@ export async function insertAttendance(input: InsertAttendanceInput): Promise<vo
 
   const scanTokenHash = hashCheckinScanToken(scanToken);
   const pool = getPool();
-  const result = await pool.query(
-    `
-      WITH consumed_scan_token AS (
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+        SELECT pg_advisory_xact_lock(hashtext(LOWER($1)))
+      `,
+      [attendeeName]
+    );
+
+    const activeCheckinResult = await client.query(
+      `
+        SELECT id
+        FROM attendance
+        WHERE LOWER(btrim(name)) = LOWER($1)
+          AND checkout_timestamp IS NULL
+        LIMIT 1
+      `,
+      [attendeeName]
+    );
+
+    if ((activeCheckinResult.rowCount ?? 0) > 0) {
+      throw new CheckinRejectedError(
+        "You already have an active check-in. Please check out before checking in again."
+      );
+    }
+
+    const consumedTokenResult = await client.query(
+      `
         UPDATE checkin_scan_tokens
         SET used_at = NOW()
         WHERE token_hash = $1
           AND used_at IS NULL
           AND expires_at > NOW()
         RETURNING id
-      ),
-      inserted_employee AS (
-        INSERT INTO employees (name)
-        SELECT $2
-        WHERE EXISTS (SELECT 1 FROM consumed_scan_token)
-          AND NOT EXISTS (
-            SELECT 1
-            FROM employees
-            WHERE LOWER(btrim(name)) = LOWER($2)
-          )
-        ON CONFLICT (name) DO NOTHING
-      ),
-      inserted_attendance AS (
-        INSERT INTO attendance (name, timestamp, latitude, longitude, location)
-        SELECT $2, $3, $4, $5, $6
-        WHERE EXISTS (SELECT 1 FROM consumed_scan_token)
-        RETURNING id
-      )
-      SELECT id
-      FROM inserted_attendance
-    `,
-    [
-      scanTokenHash,
-      attendeeName,
-      input.timestamp,
-      input.latitude,
-      input.longitude,
-      input.location ?? null,
-    ]
-  );
+      `,
+      [scanTokenHash]
+    );
 
-  if ((result.rowCount ?? 0) === 0) {
+    if ((consumedTokenResult.rowCount ?? 0) === 0) {
+      throw new CheckinRejectedError(
+        "This scan is no longer valid. Please scan the QR code again."
+      );
+    }
+
+    await client.query(
+      `
+        INSERT INTO employees (name)
+        SELECT $1
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM employees
+          WHERE LOWER(btrim(name)) = LOWER($1)
+        )
+        ON CONFLICT (name) DO NOTHING
+      `,
+      [attendeeName]
+    );
+
+    const insertedAttendanceResult = await client.query(
+      `
+        INSERT INTO attendance (name, timestamp, latitude, longitude, location)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+      `,
+      [
+        attendeeName,
+        input.timestamp,
+        input.latitude,
+        input.longitude,
+        input.location ?? null,
+      ]
+    );
+
+    if ((insertedAttendanceResult.rowCount ?? 0) === 0) {
+      throw new CheckinRejectedError("Failed to record check-in.");
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function checkoutAttendance(input: CheckoutAttendanceInput): Promise<void> {
+  await ensureBaseSchema();
+
+  const attendeeName = normalizeEmployeeName(input.name);
+  if (!attendeeName) {
+    throw new CheckinRejectedError("Name is required.");
+  }
+
+  const scanToken = input.scanToken.trim();
+  if (!scanToken) {
     throw new CheckinRejectedError(
       "This scan is no longer valid. Please scan the QR code again."
     );
+  }
+
+  const scanTokenHash = hashCheckinScanToken(scanToken);
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const consumedTokenResult = await client.query(
+      `
+        UPDATE checkin_scan_tokens
+        SET used_at = NOW()
+        WHERE token_hash = $1
+          AND used_at IS NULL
+          AND expires_at > NOW()
+        RETURNING id
+      `,
+      [scanTokenHash]
+    );
+
+    if ((consumedTokenResult.rowCount ?? 0) === 0) {
+      throw new CheckinRejectedError(
+        "This scan is no longer valid. Please scan the QR code again."
+      );
+    }
+
+    const checkoutResult = await client.query(
+      `
+        UPDATE attendance
+        SET checkout_timestamp = $2
+        WHERE id = (
+          SELECT id
+          FROM attendance
+          WHERE LOWER(btrim(name)) = LOWER($1)
+            AND checkout_timestamp IS NULL
+          ORDER BY timestamp DESC
+          LIMIT 1
+        )
+        RETURNING id
+      `,
+      [attendeeName, input.timestamp]
+    );
+
+    if ((checkoutResult.rowCount ?? 0) === 0) {
+      throw new CheckinRejectedError(
+        "No active check-in found for this name. Please check in first."
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
 }
 
@@ -540,7 +702,7 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
   if (date) {
     const result = await pool.query<AttendanceRowDb>(
       `
-        SELECT id, name, timestamp, latitude, longitude, location, created_at
+        SELECT id, name, timestamp, checkout_timestamp, latitude, longitude, location, created_at
         FROM attendance
         WHERE LEFT(timestamp, 10) = $1
         ORDER BY timestamp DESC
@@ -552,7 +714,7 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
 
   const result = await pool.query<AttendanceRowDb>(
     `
-      SELECT id, name, timestamp, latitude, longitude, location, created_at
+      SELECT id, name, timestamp, checkout_timestamp, latitude, longitude, location, created_at
       FROM attendance
       ORDER BY timestamp DESC
     `
@@ -652,4 +814,12 @@ export async function getAuthUserByEmail(email: string): Promise<AuthUser | null
   }
 
   return normalizeAuthUser(result.rows[0]);
+}
+
+export async function clearAttendance(): Promise<number> {
+  await ensureBaseSchema();
+
+  const pool = getPool();
+  const result = await pool.query("DELETE FROM attendance");
+  return result.rowCount ?? 0;
 }

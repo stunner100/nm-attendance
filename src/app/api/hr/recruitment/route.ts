@@ -75,7 +75,12 @@ export async function POST(request: Request) {
 
       const role = await createRecruitmentRole({
         title: payload.title,
-        department: payload.department as "Operations" | "Marketing" | "Tech" | "Finance & HR",
+        department: payload.department as
+          | "Operations"
+          | "Marketing"
+          | "Tech"
+          | "Finance & Compliance"
+          | "HR & Admin",
         hiringStage:
           typeof payload.hiringStage === "string" ? payload.hiringStage : undefined,
         vacancies:

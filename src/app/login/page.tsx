@@ -28,11 +28,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-emerald-50">
       <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10 sm:px-6">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600">
-            <span className="text-lg font-bold text-white">NM</span>
-          </div>
+          <img src="/logo.jpg" alt="Abonten Technologies Logo" className="mx-auto mb-4 h-16 w-auto object-contain" />
+            
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
-            NM HR System
+            Abonten Technologies
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             Sign in to manage HR operations and attendance.

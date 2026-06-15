@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { getAllAttendance } from "@/lib/db";
+import { getAllAttendance, clearAttendance } from "@/lib/db";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -32,6 +32,32 @@ export async function GET(request: Request) {
     console.error("Failed to load attendance records", error);
     return NextResponse.json(
       { error: "Failed to load attendance records." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (session.user?.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    if (body.action === "clear") {
+      const deletedCount = await clearAttendance();
+      return NextResponse.json({ ok: true, deletedCount });
+    }
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (error) {
+    console.error("Failed to clear attendance records", error);
+    return NextResponse.json(
+      { error: "Failed to clear attendance records." },
       { status: 500 }
     );
   }

@@ -19,7 +19,7 @@ export default async function AttendancePage({
     <div className="space-y-6">
       <AdminPageIntro
         title="Attendance Log"
-        description="Full attendance history with date filtering and GPS links."
+        description="Full attendance history with check-in, check-out, date filtering, and GPS links."
         actions={
           <Link
             href="/admin"
@@ -34,7 +34,7 @@ export default async function AttendancePage({
         initialRecords={initialRecords}
         initialDate={date}
         basePath="/admin/attendance"
-        description="Search the full check-in history by date."
+        description="Search complete attendance history (check-in + check-out) by date."
       />
     </div>
   );

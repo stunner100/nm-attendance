@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { Upload, FileText, Download, Eye, CheckCircle2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Upload, FileText, Download, Eye, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,50 +39,68 @@ type ImportManagerProps = {
   initialRuns: ImportRun[];
 };
 
+function detectScopeFromHeaders(csv: string): HRImportScope | null {
+  const firstLine = csv.split("\n")[0]?.toLowerCase() || "";
+  if (firstLine.includes("employee_code") && firstLine.includes("department") && firstLine.includes("contract_type")) {
+    return "employees";
+  }
+  if (firstLine.includes("role_title") || firstLine.includes("applicant_name")) {
+    return "recruitment";
+  }
+  if (firstLine.includes("leave_type") || firstLine.includes("annual_days") || firstLine.includes("start_date")) {
+    return "leave";
+  }
+  if (firstLine.includes("cycle_month") || firstLine.includes("anomaly_type")) {
+    return "payroll";
+  }
+  return null;
+}
+
 export function ImportManager({ initialRuns }: ImportManagerProps) {
   const [scope, setScope] = useState<HRImportScope>("employees");
   const [csv, setCsv] = useState("");
-  const [dryRun, setDryRun] = useState(true);
-  const [result, setResult] = useState<HRImportResult | null>(null);
+  const [previewResult, setPreviewResult] = useState<HRImportResult | null>(null);
+  const [importResult, setImportResult] = useState<HRImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [template, setTemplate] = useState<string>("");
   const [runs, setRuns] = useState<ImportRun[]>(initialRuns);
-  const [isPending, startTransition] = useTransition();
+  const [isRunning, setIsRunning] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    startTransition(() => {
-      void (async () => {
-        try {
-          const response = await fetch(`/api/hr/import/${scope}`, { cache: "no-store" });
-          const data = (await response.json().catch(() => ({}))) as {
-            template?: string;
-            runs?: ImportRun[];
-            error?: string;
-          };
+    const loadTemplate = async () => {
+      try {
+        const response = await fetch(`/api/hr/import/${scope}`, { cache: "no-store" });
+        const data = (await response.json().catch(() => ({}))) as {
+          template?: string;
+          runs?: ImportRun[];
+          error?: string;
+        };
 
-          if (!response.ok) {
-            if (!cancelled) {
-              setError(data.error ?? "Failed to load import template.");
-            }
-            return;
-          }
-
+        if (!response.ok) {
           if (!cancelled) {
-            setTemplate(typeof data.template === "string" ? data.template : "");
-            setRuns(Array.isArray(data.runs) ? data.runs : []);
-            setResult(null);
+            setError(data.error ?? "Failed to load import template.");
           }
-        } catch {
-          if (!cancelled) {
-            setError("Failed to load import metadata.");
-          }
+          return;
         }
-      })();
-    });
+
+        if (!cancelled) {
+          setTemplate(typeof data.template === "string" ? data.template : "");
+          setRuns(Array.isArray(data.runs) ? data.runs : []);
+          setPreviewResult(null);
+          setImportResult(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load import metadata.");
+        }
+      }
+    };
+
+    void loadTemplate();
 
     return () => {
       cancelled = true;
@@ -93,19 +111,31 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith(".csv")) {
-      setError("Please upload a .csv file. To use Excel files, save as CSV first.");
+    const lowerName = file.name.toLowerCase();
+    if (
+      !lowerName.endsWith(".csv") &&
+      !lowerName.endsWith(".docx") &&
+      !lowerName.endsWith(".txt") &&
+      !lowerName.endsWith(".md")
+    ) {
+      setError("Please upload a .csv or .docx file (also supports .txt and .md).");
       return;
     }
 
     setFileName(file.name);
     setError(null);
+    setPreviewResult(null);
+    setImportResult(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result;
       if (typeof text === "string") {
         setCsv(text);
+        const detected = detectScopeFromHeaders(text);
+        if (detected && detected !== scope) {
+          setScope(detected);
+        }
       }
     };
     reader.onerror = () => {
@@ -125,14 +155,15 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
     URL.revokeObjectURL(url);
   };
 
-  const runImport = async (nextDryRun: boolean) => {
+  const runAction = async (dryRun: boolean) => {
     setError(null);
-    setResult(null);
 
     if (!csv.trim()) {
-      setError("Upload or paste CSV data before importing.");
+      setError("Upload or paste CSV data first.");
       return;
     }
+
+    setIsRunning(true);
 
     try {
       const response = await fetch(`/api/hr/import/${scope}`, {
@@ -140,10 +171,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          csv,
-          dryRun: nextDryRun,
-        }),
+        body: JSON.stringify({ csv, dryRun }),
       });
 
       const data = (await response.json().catch(() => ({}))) as {
@@ -152,14 +180,16 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
       };
 
       if (!response.ok) {
-        setError(data.error ?? "Import request failed.");
+        setError(data.error ?? "Request failed.");
         return;
       }
 
       if (data.result) {
-        setResult(data.result);
-        if (nextDryRun) {
-          setDryRun(false);
+        if (dryRun) {
+          setPreviewResult(data.result);
+        } else {
+          setImportResult(data.result);
+          setPreviewResult(null);
         }
       }
 
@@ -170,17 +200,37 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
       setRuns(Array.isArray(runsData.runs) ? runsData.runs : []);
     } catch {
       setError("Network error while importing data.");
+    } finally {
+      setIsRunning(false);
     }
   };
 
   const scopeLabel = IMPORT_SCOPES.find((s) => s.value === scope)?.label ?? scope;
+  const hasErrors = previewResult !== null && previewResult.rowsFailed > 0;
+
+  const viewDataLink = (() => {
+    switch (scope) {
+      case "employees":
+        return "/admin/headcount";
+      case "recruitment":
+        return "/admin/recruitment";
+      case "leave":
+        return "/admin/payroll-leave";
+      case "payroll":
+        return "/admin/payroll-leave";
+      default:
+        return "/admin";
+    }
+  })();
 
   return (
     <div className="space-y-4">
       <Card className="border-0 shadow-lg">
         <CardHeader>
           <CardTitle>Import Data</CardTitle>
-          <CardDescription>Upload a CSV file or paste data to import {scopeLabel.toLowerCase()}.</CardDescription>
+          <CardDescription>
+            Upload a CSV or DOCX file, or paste data to import {scopeLabel.toLowerCase()}.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -188,7 +238,11 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
               <span className="mb-1 block text-xs font-medium text-muted-foreground">What are you importing?</span>
               <select
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm"
-                onChange={(event) => setScope(event.target.value as HRImportScope)}
+                onChange={(event) => {
+                  setScope(event.target.value as HRImportScope);
+                  setPreviewResult(null);
+                  setImportResult(null);
+                }}
                 value={scope}
               >
                 {IMPORT_SCOPES.map((option) => (
@@ -197,21 +251,6 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">Mode</span>
-              <div className="flex items-center gap-2 rounded-lg border p-3">
-                <input
-                  checked={dryRun}
-                  className="size-4"
-                  onChange={(event) => setDryRun(event.target.checked)}
-                  type="checkbox"
-                  id="dry-run-toggle"
-                />
-                <label className="text-sm" htmlFor="dry-run-toggle">
-                  Preview first (don&apos;t save changes)
-                </label>
-              </div>
             </label>
           </div>
 
@@ -233,7 +272,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv"
+                accept=".csv,.docx,.txt,.md"
                 className="hidden"
                 onChange={handleFileUpload}
               />
@@ -242,9 +281,9 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
               </div>
               <div className="text-center">
                 <p className="text-sm font-medium text-slate-700">
-                  {fileName ? fileName : "Drop your CSV file here, or click to browse"}
+                    {fileName ? fileName : "Drop your CSV or DOCX file here, or click to browse"}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">.csv files only</p>
+                <p className="mt-1 text-xs text-slate-500">.csv, .docx, .txt, .md</p>
               </div>
             </div>
           </div>
@@ -262,8 +301,14 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
               onChange={(event) => {
                 setCsv(event.target.value);
                 setFileName(null);
+                setPreviewResult(null);
+                setImportResult(null);
+                const detected = detectScopeFromHeaders(event.target.value);
+                if (detected && detected !== scope) {
+                  setScope(detected);
+                }
               }}
-              placeholder="name,department,hire_date&#10;John Smith,CS,2024-01-15"
+              placeholder="employee_code,full_name,department,contract_type&#10;EMP-001,Jane Smith,Tech,full_time"
               value={csv}
             />
           </label>
@@ -286,51 +331,87 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
 
           <div className="flex flex-wrap gap-2">
             <Button
-              disabled={isPending}
-              onClick={() => void runImport(true)}
+              disabled={isRunning || !csv.trim()}
+              onClick={() => void runAction(true)}
               type="button"
               variant="outline"
             >
-              <Eye className="mr-2 h-4 w-4" />
+              {isRunning && importResult === null ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Eye className="mr-2 h-4 w-4" />
+              )}
               Preview
             </Button>
             <Button
-              disabled={isPending || dryRun}
-              onClick={() => void runImport(false)}
+              disabled={isRunning || !csv.trim() || (previewResult === null && importResult === null)}
+              onClick={() => void runAction(false)}
               type="button"
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Import
+              {isRunning && importResult === null ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
+              {importResult !== null
+                ? "Import Again"
+                : previewResult === null
+                  ? "Preview first"
+                  : hasErrors
+                    ? "Fix errors first"
+                    : "Import"}
             </Button>
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          {result ? (
-            <div className="space-y-2 rounded-xl border p-4 text-sm">
+          {previewResult ? (
+            <div className="space-y-3 rounded-xl border p-4 text-sm">
               <p className="font-medium">
-                {result.dryRun ? "Preview" : "Import"} complete for {scopeLabel.toLowerCase()}
+                Preview complete &mdash; {previewResult.rowsSuccess} of {previewResult.rowsTotal} rows are valid
               </p>
               <p className="text-xs text-muted-foreground">
-                Total: {result.rowsTotal} &bull; Success: {result.rowsSuccess} &bull; Failed:{" "}
-                {result.rowsFailed}
+                Success: {previewResult.rowsSuccess} &bull; Failed: {previewResult.rowsFailed}
               </p>
-              {result.errors.length > 0 ? (
+              {previewResult.errors.length > 0 ? (
                 <div className="space-y-1">
-                  {result.errors.slice(0, 20).map((entry, index) => (
+                  {previewResult.errors.slice(0, 20).map((entry, index) => (
                     <p key={`${entry.row}-${index}`} className="text-xs text-destructive">
                       Row {entry.row}: {entry.message}
                     </p>
                   ))}
-                  {result.errors.length > 20 ? (
+                  {previewResult.errors.length > 20 ? (
                     <p className="text-xs text-muted-foreground">
-                      {result.errors.length - 20} more error(s) omitted.
+                      {previewResult.errors.length - 20} more error(s) omitted.
                     </p>
                   ) : null}
                 </div>
               ) : (
-                <p className="text-xs text-emerald-700">No validation errors.</p>
+                <p className="text-xs text-emerald-700">No validation errors. Ready to import.</p>
               )}
+            </div>
+          ) : null}
+
+          {importResult ? (
+            <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <p className="font-semibold text-emerald-900">
+                  Import complete &mdash; {importResult.rowsSuccess} rows imported
+                </p>
+              </div>
+              {importResult.rowsFailed > 0 && (
+                <p className="text-xs text-emerald-700">
+                  {importResult.rowsFailed} row(s) skipped due to errors.
+                </p>
+              )}
+              <a
+                href={viewDataLink}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              >
+                View imported data
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
             </div>
           ) : null}
         </CardContent>

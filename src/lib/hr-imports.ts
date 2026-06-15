@@ -94,7 +94,10 @@ function ensureEnum<T extends readonly string[]>(
   field: string
 ): T[number] {
   if (!values.includes(value as T[number])) {
-    throw new Error(`Invalid ${field}: ${value}`);
+    const allowed = values.join(", ");
+    throw new Error(
+      `Invalid ${field}: "${value}". Must be one of: ${allowed}`
+    );
   }
   return value as T[number];
 }
@@ -717,12 +720,12 @@ export function getImportTemplate(scope: HRImportScope): string {
     case "employees":
       return [
         "employee_code,full_name,work_email,department,contract_type,employment_status,manager_employee_code,hire_date,probation_end_date,contract_end_date,exit_date,exit_type",
-        `EMP-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()},Jane Doe,jane@company.com,CS,full_time,active,,2026-01-05,2026-04-05,,,`,
+        `EMP-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()},Jane Doe,jane@company.com,Tech,full_time,active,,2026-01-05,2026-04-05,,,`,
       ].join("\n");
     case "recruitment":
       return [
         "role_title,department,vacancies,opened_at,hiring_stage,applicant_name,applicant_email,employment_track,current_stage,applied_at,offered_at,hired_at,offer_status",
-        "Finance & Compliance Manager,Ops,1,2026-03-10,interview_loop,Ada Mensah,ada@example.com,full_time,interviewed,2026-03-12,,,",
+        "Finance & Compliance Manager,Finance & Compliance,1,2026-03-10,interview_loop,Ada Mensah,ada@example.com,full_time,interviewed,2026-03-12,,,",
       ].join("\n");
     case "leave":
       return [

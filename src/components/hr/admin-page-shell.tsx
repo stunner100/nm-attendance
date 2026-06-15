@@ -20,11 +20,9 @@ export function AdminAppShell({ email, children }: AdminAppShellProps) {
       <div className="flex min-h-screen">
         <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
           <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-              <span className="text-sm font-bold text-white">NM</span>
-            </div>
+            <img src="/logo.jpg" alt="Logo" className="h-8 w-auto object-contain" />
             <div>
-              <p className="text-sm font-semibold text-slate-900">HR System</p>
+              <p className="text-sm font-semibold text-slate-900">Abonten Technologies</p>
               <p className="text-xs text-slate-500">Admin Portal</p>
             </div>
           </div>
@@ -43,10 +41,8 @@ export function AdminAppShell({ email, children }: AdminAppShellProps) {
           <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
             <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
               <div className="flex items-center gap-4 lg:hidden">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-                  <span className="text-sm font-bold text-white">NM</span>
-                </div>
-                <p className="text-sm font-semibold text-slate-900">HR System</p>
+                <img src="/logo.jpg" alt="Logo" className="h-8 w-auto object-contain" />
+                <p className="text-sm font-semibold text-slate-900">Abonten Technologies</p>
               </div>
 
               <div className="hidden lg:block" />

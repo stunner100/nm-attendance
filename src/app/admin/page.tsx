@@ -229,7 +229,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           initialDate={date}
           maxRows={8}
           title="Recent attendance"
-          description="Latest check-ins. Open the full attendance page for the complete log."
+          description="Latest attendance actions. Open the full attendance page for complete check-in/check-out history."
           viewAllHref="/admin/attendance"
         />
       </section>

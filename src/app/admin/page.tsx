@@ -151,11 +151,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         : "bg-rose-500",
             }))}
             ctaLabel="View scores"
-            onCtaClick={() => {
-              if (typeof window !== "undefined") {
-                window.location.href = "/admin/scores";
-              }
-            }}
+            ctaHref="/admin/scores"
           />
         </FadeIn>
       </section>

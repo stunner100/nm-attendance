@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +20,7 @@ type QuotaWidgetProps = {
   remainingLabel: string;
   segments?: ProgressSegment[];
   ctaLabel?: string;
-  onCtaClick?: () => void;
+  ctaHref?: string;
   className?: string;
 };
 
@@ -31,7 +33,7 @@ export function QuotaWidget({
   remainingLabel,
   segments,
   ctaLabel,
-  onCtaClick,
+  ctaHref,
   className,
 }: QuotaWidgetProps) {
   const pct = total <= 0 ? 0 : Math.min((used / total) * 100, 100);
@@ -101,13 +103,13 @@ export function QuotaWidget({
           </div>
         ) : null}
 
-        {ctaLabel ? (
-          <button
-            onClick={onCtaClick}
-            className="w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-slate-800"
+        {ctaLabel && ctaHref ? (
+          <Link
+            href={ctaHref}
+            className="flex w-full items-center justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-slate-800"
           >
             {ctaLabel}
-          </button>
+          </Link>
         ) : null}
       </CardContent>
     </Card>

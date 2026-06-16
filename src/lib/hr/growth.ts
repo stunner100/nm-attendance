@@ -32,7 +32,7 @@ export async function listGrowthPlans(options: {
 
   let query = `
     SELECT
-      g.id, g.employee_id, g.current_role, g.current_responsibilities, g.required_kpis,
+      g.id, g.employee_id, g."current_role", g.current_responsibilities, g.required_kpis,
       g.skills_to_improve, g.possible_next_role, g.promotion_requirements, g.training_needed,
       g.review_timeline, g.status, g.next_review_date, g.created_at, g.updated_at,
       e.full_name AS employee_name, e.department AS department
@@ -68,12 +68,12 @@ export async function createGrowthPlan(
   const result = await pool.query(
     `
       INSERT INTO hr_growth_plans (
-        employee_id, current_role, current_responsibilities, required_kpis,
+        employee_id, "current_role", current_responsibilities, required_kpis,
         skills_to_improve, possible_next_role, promotion_requirements, training_needed,
         review_timeline, status, next_review_date, updated_at
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
-      RETURNING id, employee_id, current_role, current_responsibilities, required_kpis,
+      RETURNING id, employee_id, "current_role", current_responsibilities, required_kpis,
         skills_to_improve, possible_next_role, promotion_requirements, training_needed,
         review_timeline, status, next_review_date, created_at, updated_at
     `,
@@ -108,7 +108,7 @@ export async function updateGrowthPlanStatus(
           next_review_date = COALESCE($3, next_review_date),
           updated_at = NOW()
       WHERE id = $1
-      RETURNING id, employee_id, current_role, current_responsibilities, required_kpis,
+      RETURNING id, employee_id, "current_role", current_responsibilities, required_kpis,
         skills_to_improve, possible_next_role, promotion_requirements, training_needed,
         review_timeline, status, next_review_date, created_at, updated_at
     `,

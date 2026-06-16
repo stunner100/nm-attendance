@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS hr_accountability_actions (
 CREATE TABLE IF NOT EXISTS hr_growth_plans (
   id                       SERIAL PRIMARY KEY,
   employee_id              INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
-  current_role             TEXT,
+  "current_role"           TEXT,
   current_responsibilities TEXT,
   required_kpis            TEXT,
   skills_to_improve        TEXT,

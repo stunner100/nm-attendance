@@ -21,3 +21,6 @@ export * from "@/lib/hr/framework-reference";
 export * from "@/lib/hr/modules";
 export * from "@/lib/hr/import-runs";
 export * from "@/lib/hr/dashboard";
+export * from "@/lib/hr/overview";
+export * from "@/lib/hr/at-risk-employees";
+export * from "@/lib/hr/recent-activity";

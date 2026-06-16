@@ -279,3 +279,42 @@ export const DEPARTMENT_FRAMEWORK: Record<HRDepartment, DepartmentFramework> = {
 export function currentPeriod(date: Date = new Date()): string {
   return date.toISOString().slice(0, 7);
 }
+
+const PERIOD_PATTERN = /^\d{4}-\d{2}$/;
+
+export function normalizePeriod(value: string | undefined | null): string {
+  const trimmed = value?.trim();
+  if (trimmed && PERIOD_PATTERN.test(trimmed)) {
+    return trimmed;
+  }
+
+  return currentPeriod();
+}
+
+export function previousPeriod(period: string): string {
+  const [yearText, monthText] = normalizePeriod(period).split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+
+  if (!Number.isFinite(year) || !Number.isFinite(month)) {
+    return currentPeriod();
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, 1));
+  date.setUTCMonth(date.getUTCMonth() - 1);
+  return date.toISOString().slice(0, 7);
+}
+
+export function formatPeriodLabel(period: string): string {
+  const normalized = normalizePeriod(period);
+  const [yearText, monthText] = normalized.split("-");
+  const date = new Date(Date.UTC(Number(yearText), Number(monthText) - 1, 1));
+
+  const monthLabel = new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+
+  return `${monthLabel} (${normalized})`;
+}

@@ -656,6 +656,14 @@ export type HRDashboardSummary = {
     open_accountability: number;
     growth_reviews_due: number;
     roadmaps_at_risk: number;
+    trends: {
+      total_employees_delta: number;
+      avg_score_delta: number;
+      excellent_delta: number;
+      strong_delta: number;
+      below_70_delta: number;
+      below_60_delta: number;
+    };
   };
   performance_alerts: Array<{
     id: string;
@@ -672,4 +680,30 @@ export type HRDashboardSummary = {
     due_on: string | null;
     severity: "low" | "medium" | "high";
   }>;
+};
+
+export type AtRiskEmployee = {
+  id: number;
+  full_name: string;
+  department: HRDepartment;
+  job_title: string | null;
+  latest_score: number;
+  months_below_threshold: number;
+  href: string;
+};
+
+export type ActivityItem = {
+  id: string;
+  label: string;
+  actor: string | null;
+  occurred_at: string;
+  href: string | null;
+};
+
+export type OverviewBundle = {
+  period: string;
+  summary: HRDashboardSummary;
+  at_risk_employees: AtRiskEmployee[];
+  recent_activity: ActivityItem[];
+  notification_count: number;
 };

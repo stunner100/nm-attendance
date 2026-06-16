@@ -17,7 +17,7 @@ import {
   HR_RECRUITMENT_STAGES,
   HRRoadmapHealth,
 } from "@/lib/types";
-import { currentPeriod } from "@/lib/hr/framework-reference";
+import { currentPeriod, normalizePeriod, previousPeriod } from "@/lib/hr/framework-reference";
 import { getLatestRoadmapByDepartment } from "@/lib/hr/department-goals";
 
 import {
@@ -28,11 +28,12 @@ import {
   type DbRow,
 } from "@/lib/hr/shared";
 
-export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
+export async function getHRDashboardSummary(periodInput?: string): Promise<HRDashboardSummary> {
   await ensureDbSchema();
   const pool = getDbPool();
 
-  const period = currentPeriod();
+  const period = normalizePeriod(periodInput);
+  const priorPeriod = previousPeriod(period);
 
   const [
     openRolesRes,
@@ -73,6 +74,8 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
     accountabilityOpenRes,
     growthDueRes,
     alertsRes,
+    prevMonthlyScoreRes,
+    periodHeadcountDeltaRes,
   ] = await Promise.all([
     pool.query(`
       SELECT
@@ -497,6 +500,31 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
       ORDER BY due_on ASC NULLS LAST
       LIMIT 12
     `),
+    pool.query(
+      `
+        SELECT
+          COUNT(*)::int AS scored_employees,
+          COALESCE(AVG(total_score), 0)::float AS avg_total,
+          COUNT(*) FILTER (WHERE total_score >= 90)::int AS excellent_count,
+          COUNT(*) FILTER (WHERE total_score >= 80 AND total_score < 90)::int AS strong_count,
+          COUNT(*) FILTER (WHERE total_score < 70)::int AS below_70_count,
+          COUNT(*) FILTER (WHERE total_score < 60)::int AS below_60_count
+        FROM hr_monthly_scores
+        WHERE period = $1
+      `,
+      [priorPeriod]
+    ),
+    pool.query(
+      `
+        SELECT
+          COUNT(*) FILTER (WHERE to_char(hire_date, 'YYYY-MM') = $1)::int AS hires,
+          COUNT(*) FILTER (
+            WHERE exit_date IS NOT NULL AND to_char(exit_date, 'YYYY-MM') = $1
+          )::int AS exits
+        FROM hr_employees
+      `,
+      [period]
+    ),
   ]);
 
   const funnelTemplate: Record<HRRecruitmentStage, number> = {
@@ -618,6 +646,10 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
   const csCompletionRate = csAssigned === 0 ? 0 : (csCompleted / csAssigned) * 100;
 
   const monthlyScoreRow = asRecordRows(monthlyScoreRes.rows)[0] as DbRow | undefined;
+  const prevMonthlyScoreRow = asRecordRows(prevMonthlyScoreRes.rows)[0] as DbRow | undefined;
+  const periodHeadcountDeltaRow = asRecordRows(periodHeadcountDeltaRes.rows)[0] as DbRow | undefined;
+  const hiresInPeriod = asNumber(periodHeadcountDeltaRow?.hires);
+  const exitsInPeriod = asNumber(periodHeadcountDeltaRow?.exits);
 
   const ratingDistribution = HR_RATING_BANDS.reduce(
     (acc, band) => {
@@ -780,6 +812,22 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
       roadmaps_at_risk: asNumber(
         (asRecordRows(roadmapsAtRiskRes.rows)[0] as DbRow)?.at_risk
       ),
+      trends: {
+        total_employees_delta: hiresInPeriod - exitsInPeriod,
+        avg_score_delta:
+          asNumber(monthlyScoreRow?.avg_total) - asNumber(prevMonthlyScoreRow?.avg_total),
+        excellent_delta:
+          asNumber(monthlyScoreRow?.excellent_count) -
+          asNumber(prevMonthlyScoreRow?.excellent_count),
+        strong_delta:
+          asNumber(monthlyScoreRow?.strong_count) - asNumber(prevMonthlyScoreRow?.strong_count),
+        below_70_delta:
+          asNumber(monthlyScoreRow?.below_70_count) -
+          asNumber(prevMonthlyScoreRow?.below_70_count),
+        below_60_delta:
+          asNumber(monthlyScoreRow?.below_60_count) -
+          asNumber(prevMonthlyScoreRow?.below_60_count),
+      },
     },
     performance_alerts: asRecordRows(performanceAlertsRes.rows).map((row) => ({
       id: asString(row.id),

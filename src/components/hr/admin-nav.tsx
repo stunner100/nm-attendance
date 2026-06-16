@@ -8,17 +8,18 @@ import {
   CheckSquare,
   Clock,
   DollarSign,
+  FileText,
   Flag,
   Gauge,
   GraduationCap,
   LayoutDashboard,
   Map,
   QrCode,
+  Settings,
   ShieldAlert,
   ShieldCheck,
   Sprout,
   Target,
-  TrendingUp,
   Upload,
   Users,
 } from "lucide-react";
@@ -27,39 +28,32 @@ import { cn } from "@/lib/utils";
 
 const NAV_GROUPS = [
   {
-    label: "Daily",
+    label: "Main",
     items: [
       { href: "/admin", label: "Overview", icon: LayoutDashboard },
-      { href: "/admin/attendance", label: "Attendance", icon: Clock },
-    ],
-  },
-  {
-    label: "People",
-    items: [
-      { href: "/admin/roster", label: "Roster", icon: Users },
       { href: "/admin/headcount", label: "Employees", icon: Briefcase },
-      { href: "/admin/recruitment", label: "Recruitment", icon: Users },
     ],
   },
   {
     label: "Performance",
     items: [
       { href: "/admin/company-goals", label: "Company goals", icon: Flag },
-      { href: "/admin/department-roadmap", label: "Dept roadmap", icon: Map },
+      { href: "/admin/department-roadmap", label: "Department goals", icon: Map },
       { href: "/admin/kpi-cards", label: "KPI cards", icon: Target },
       { href: "/admin/tasks", label: "Tasks", icon: CheckSquare },
       { href: "/admin/scores", label: "Monthly scores", icon: Gauge },
       { href: "/admin/rewards", label: "Rewards", icon: Award },
       { href: "/admin/accountability", label: "Accountability", icon: ShieldAlert },
       { href: "/admin/growth", label: "Growth plans", icon: Sprout },
+      { href: "/admin/training", label: "Training", icon: GraduationCap },
     ],
   },
   {
-    label: "Management",
+    label: "People operations",
     items: [
+      { href: "/admin/attendance", label: "Attendance", icon: Clock },
+      { href: "/admin/recruitment", label: "Recruitment", icon: Users },
       { href: "/admin/payroll-leave", label: "Payroll & leave", icon: DollarSign },
-      { href: "/admin/performance", label: "Performance", icon: TrendingUp },
-      { href: "/admin/training", label: "Training", icon: GraduationCap },
       { href: "/admin/compliance", label: "Compliance", icon: ShieldCheck },
     ],
   },
@@ -67,7 +61,9 @@ const NAV_GROUPS = [
     label: "Tools",
     items: [
       { href: "/admin/imports", label: "Imports", icon: Upload },
+      { href: "/admin/reports", label: "Reports", icon: FileText },
       { href: "/admin/qr", label: "QR code", icon: QrCode },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },
 ];

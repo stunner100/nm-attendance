@@ -1,13 +1,5 @@
 import { ensureDbSchema, getDbPool } from "@/lib/db";
 import type { HRDashboardSummary } from "@/lib/types";
-import {
-  HR_CONTRACT_TYPES,
-  HR_DEPARTMENTS,
-  HR_DISCIPLINARY_STATUSES,
-  HR_PAYROLL_STATUSES,
-  HR_RATING_BANDS,
-  HR_RECRUITMENT_STAGES,
-} from "@/lib/types";
 import type {
   HRContractType,
   HRDepartment,
@@ -16,7 +8,17 @@ import type {
   HRRecruitmentStage,
   HRPayrollStatus,
 } from "@/lib/types";
+import {
+  HR_CONTRACT_TYPES,
+  HR_DEPARTMENTS,
+  HR_DISCIPLINARY_STATUSES,
+  HR_PAYROLL_STATUSES,
+  HR_RATING_BANDS,
+  HR_RECRUITMENT_STAGES,
+  HRRoadmapHealth,
+} from "@/lib/types";
 import { currentPeriod } from "@/lib/hr/framework-reference";
+import { getLatestRoadmapByDepartment } from "@/lib/hr/department-goals";
 
 import {
   asNullableString,
@@ -60,7 +62,13 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
     deptScoreRes,
     kpiCardRes,
     overdueTaskRes,
-    presentationPendingRes,
+    kpiPendingRes,
+    scorePendingRes,
+    rewardPendingRes,
+    roadmapsAtRiskRes,
+    rewardEligibleDeptRes,
+    accountabilityDeptRes,
+    performanceAlertsRes,
     rewardsMonthRes,
     accountabilityOpenRes,
     growthDueRes,
@@ -228,6 +236,11 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
           COUNT(*)::int AS scored_employees,
           COALESCE(AVG(total_score), 0)::float AS avg_total,
           COUNT(*) FILTER (WHERE total_score >= 90)::int AS excellent_count,
+          COUNT(*) FILTER (WHERE total_score >= 80 AND total_score < 90)::int AS strong_count,
+          COUNT(*) FILTER (WHERE total_score >= 70 AND total_score < 80)::int AS acceptable_count,
+          COUNT(*) FILTER (WHERE total_score >= 60 AND total_score < 70)::int AS below_expectation_count,
+          COUNT(*) FILTER (WHERE total_score < 70)::int AS below_70_count,
+          COUNT(*) FILTER (WHERE total_score < 60)::int AS below_60_count,
           COUNT(*) FILTER (WHERE total_score >= 80)::int AS bonus_eligible_count,
           COUNT(*) FILTER (WHERE total_score < 60)::int AS poor_count
         FROM hr_monthly_scores
@@ -262,18 +275,48 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
     pool.query(`
       SELECT COUNT(*)::int AS overdue_tasks
       FROM hr_tasks
-      WHERE status <> 'completed'
+      WHERE status NOT IN ('completed')
         AND due_date IS NOT NULL
         AND due_date < CURRENT_DATE
     `),
+    pool.query(`
+      SELECT COUNT(*)::int AS pending
+      FROM hr_kpi_cards
+      WHERE status IN ('submitted', 'hr_reviewed')
+    `),
+    pool.query(`
+      SELECT COUNT(*)::int AS pending
+      FROM hr_monthly_scores
+      WHERE approval_status IN ('submitted', 'hr_reviewed')
+    `),
+    pool.query(`
+      SELECT COUNT(*)::int AS pending
+      FROM hr_rewards
+      WHERE reward_status IN ('recommended', 'pending_approval')
+    `),
+    pool.query(`
+      SELECT COUNT(*)::int AS at_risk
+      FROM hr_department_goals
+      WHERE roadmap_health IN ('at_risk', 'delayed', 'blocked')
+        AND status = 'active'
+    `),
     pool.query(
       `
-        SELECT COUNT(*)::int AS pending
-        FROM hr_presentations
-        WHERE period = $1 AND status <> 'reviewed'
+        SELECT e.department AS department, COUNT(*)::int AS count
+        FROM hr_monthly_scores s
+        INNER JOIN hr_employees e ON e.id = s.employee_id
+        WHERE s.period = $1 AND s.total_score >= 80
+        GROUP BY e.department
       `,
       [period]
     ),
+    pool.query(`
+      SELECT e.department AS department, COUNT(*)::int AS count
+      FROM hr_accountability_actions a
+      INNER JOIN hr_employees e ON e.id = a.employee_id
+      WHERE a.status IN ('open', 'escalated')
+      GROUP BY e.department
+    `),
     pool.query(`
       SELECT COUNT(*)::int AS rewards_month
       FROM hr_rewards
@@ -291,6 +334,123 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
         AND next_review_date IS NOT NULL
         AND next_review_date <= CURRENT_DATE + INTERVAL '30 days'
     `),
+    pool.query(
+      `
+        SELECT *
+        FROM (
+          SELECT
+            CONCAT('kpi-', c.id::text) AS id,
+            'kpi_approval' AS type,
+            CONCAT(e.full_name, ' KPI awaiting approval') AS label,
+            c.period AS due_on,
+            'high' AS severity,
+            '/admin/kpi-cards' AS href
+          FROM hr_kpi_cards c
+          INNER JOIN hr_employees e ON e.id = c.employee_id
+          WHERE c.status IN ('submitted', 'hr_reviewed')
+
+          UNION ALL
+
+          SELECT
+            CONCAT('task-', t.id::text) AS id,
+            'overdue_task' AS type,
+            CONCAT(e.full_name, ': ', t.title) AS label,
+            t.due_date::text AS due_on,
+            'high' AS severity,
+            '/admin/tasks' AS href
+          FROM hr_tasks t
+          INNER JOIN hr_employees e ON e.id = t.employee_id
+          WHERE t.status NOT IN ('completed')
+            AND t.due_date IS NOT NULL
+            AND t.due_date < CURRENT_DATE
+
+          UNION ALL
+
+          SELECT
+            CONCAT('roadmap-', d.id::text) AS id,
+            'roadmap_delay' AS type,
+            CONCAT(d.department, ' roadmap ', d.roadmap_health) AS label,
+            d.period AS due_on,
+            'medium' AS severity,
+            '/admin/department-roadmap' AS href
+          FROM hr_department_goals d
+          WHERE d.roadmap_health IN ('at_risk', 'delayed', 'blocked')
+            AND d.status = 'active'
+
+          UNION ALL
+
+          SELECT
+            CONCAT('score-low-', s.employee_id::text) AS id,
+            'low_score_streak' AS type,
+            CONCAT(e.full_name, ' below 70 two months') AS label,
+            s.period AS due_on,
+            'high' AS severity,
+            CONCAT('/admin/headcount/', s.employee_id::text) AS href
+          FROM hr_monthly_scores s
+          INNER JOIN hr_employees e ON e.id = s.employee_id
+          INNER JOIN hr_monthly_scores prev
+            ON prev.employee_id = s.employee_id
+           AND prev.period < s.period
+          WHERE s.period = $1
+            AND s.total_score < 70
+            AND prev.total_score < 70
+            AND NOT EXISTS (
+              SELECT 1 FROM hr_monthly_scores mid
+              WHERE mid.employee_id = s.employee_id
+                AND mid.period > prev.period
+                AND mid.period < s.period
+            )
+
+          UNION ALL
+
+          SELECT
+            CONCAT('pip-', p.id::text) AS id,
+            'pip_followup' AS type,
+            CONCAT(e.full_name, ' PIP follow-up due') AS label,
+            p.end_date::text AS due_on,
+            'high' AS severity,
+            '/admin/accountability' AS href
+          FROM hr_pips p
+          INNER JOIN hr_employees e ON e.id = p.employee_id
+          WHERE p.status IN ('active', 'improving')
+            AND p.end_date IS NOT NULL
+            AND p.end_date <= CURRENT_DATE + INTERVAL '7 days'
+
+          UNION ALL
+
+          SELECT
+            CONCAT('reward-', r.id::text) AS id,
+            'reward_approval' AS type,
+            CONCAT(e.full_name, ' reward awaiting approval') AS label,
+            r.awarded_on::text AS due_on,
+            'medium' AS severity,
+            '/admin/rewards' AS href
+          FROM hr_rewards r
+          INNER JOIN hr_employees e ON e.id = r.employee_id
+          WHERE r.reward_status IN ('recommended', 'pending_approval')
+
+          UNION ALL
+
+          SELECT
+            CONCAT('growth-', g.id::text) AS id,
+            'growth_review' AS type,
+            CONCAT(e.full_name, ' growth review due') AS label,
+            g.next_review_date::text AS due_on,
+            'medium' AS severity,
+            '/admin/growth' AS href
+          FROM hr_growth_plans g
+          INNER JOIN hr_employees e ON e.id = g.employee_id
+          WHERE g.status = 'active'
+            AND g.next_review_date IS NOT NULL
+            AND g.next_review_date <= CURRENT_DATE + INTERVAL '14 days'
+        ) performance_alerts
+        ORDER BY
+          CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+          due_on ASC NULLS LAST
+        LIMIT 20
+      `,
+      [period]
+    ),
     pool.query(`
       SELECT *
       FROM (
@@ -487,6 +647,36 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
     }
   }
 
+  const rewardEligibleByDepartment = HR_DEPARTMENTS.reduce(
+    (acc, department) => {
+      acc[department] = 0;
+      return acc;
+    },
+    {} as Record<HRDepartment, number>
+  );
+  for (const row of asRecordRows(rewardEligibleDeptRes.rows)) {
+    const department = asString(row.department) as HRDepartment;
+    if (department in rewardEligibleByDepartment) {
+      rewardEligibleByDepartment[department] = asNumber(row.count);
+    }
+  }
+
+  const accountabilityByDepartment = HR_DEPARTMENTS.reduce(
+    (acc, department) => {
+      acc[department] = 0;
+      return acc;
+    },
+    {} as Record<HRDepartment, number>
+  );
+  for (const row of asRecordRows(accountabilityDeptRes.rows)) {
+    const department = asString(row.department) as HRDepartment;
+    if (department in accountabilityByDepartment) {
+      accountabilityByDepartment[department] = asNumber(row.count);
+    }
+  }
+
+  const roadmapHealthByDepartment = await getLatestRoadmapByDepartment(period);
+
   return {
     recruitment: {
       open_roles: asNumber((asRecordRows(openRolesRes.rows)[0] as DbRow)?.open_roles),
@@ -550,18 +740,33 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
       scored_employees: asNumber(monthlyScoreRow?.scored_employees),
       avg_monthly_score: asNumber(monthlyScoreRow?.avg_total),
       excellent_count: asNumber(monthlyScoreRow?.excellent_count),
+      strong_count: asNumber(monthlyScoreRow?.strong_count),
+      acceptable_count: asNumber(monthlyScoreRow?.acceptable_count),
+      below_expectation_count: asNumber(monthlyScoreRow?.below_expectation_count),
+      below_70_count: asNumber(monthlyScoreRow?.below_70_count),
+      below_60_count: asNumber(monthlyScoreRow?.below_60_count),
       bonus_eligible_count: asNumber(monthlyScoreRow?.bonus_eligible_count),
       poor_count: asNumber(monthlyScoreRow?.poor_count),
       rating_distribution: ratingDistribution,
       avg_score_by_department: avgScoreByDepartment,
+      headcount_by_department: byDepartment,
+      reward_eligible_by_department: rewardEligibleByDepartment,
+      accountability_by_department: accountabilityByDepartment,
+      roadmap_health_by_department: roadmapHealthByDepartment,
       active_kpi_cards: asNumber(
         (asRecordRows(kpiCardRes.rows)[0] as DbRow)?.active_cards
       ),
+      pending_kpi_approvals: asNumber(
+        (asRecordRows(kpiPendingRes.rows)[0] as DbRow)?.pending
+      ),
+      pending_score_reviews: asNumber(
+        (asRecordRows(scorePendingRes.rows)[0] as DbRow)?.pending
+      ),
+      pending_reward_approvals: asNumber(
+        (asRecordRows(rewardPendingRes.rows)[0] as DbRow)?.pending
+      ),
       overdue_tasks: asNumber(
         (asRecordRows(overdueTaskRes.rows)[0] as DbRow)?.overdue_tasks
-      ),
-      presentations_pending: asNumber(
-        (asRecordRows(presentationPendingRes.rows)[0] as DbRow)?.pending
       ),
       rewards_this_month: asNumber(
         (asRecordRows(rewardsMonthRes.rows)[0] as DbRow)?.rewards_month
@@ -572,7 +777,18 @@ export async function getHRDashboardSummary(): Promise<HRDashboardSummary> {
       growth_reviews_due: asNumber(
         (asRecordRows(growthDueRes.rows)[0] as DbRow)?.due_reviews
       ),
+      roadmaps_at_risk: asNumber(
+        (asRecordRows(roadmapsAtRiskRes.rows)[0] as DbRow)?.at_risk
+      ),
     },
+    performance_alerts: asRecordRows(performanceAlertsRes.rows).map((row) => ({
+      id: asString(row.id),
+      type: asString(row.type),
+      label: asString(row.label),
+      due_on: asNullableString(row.due_on),
+      severity: (asString(row.severity) as "low" | "medium" | "high") || "medium",
+      href: asNullableString(row.href),
+    })),
     alerts: asRecordRows(alertsRes.rows).map((row) => ({
       id: asString(row.id),
       type: asString(row.type),

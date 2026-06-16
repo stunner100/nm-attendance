@@ -85,8 +85,11 @@ export async function createKpiCard(input: CreateKpiCardInput): Promise<HRKpiCar
   );
   const result = await pool.query(
     `
-      INSERT INTO hr_kpi_cards (employee_id, period, role_title, company_goal, status, updated_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO hr_kpi_cards (
+        employee_id, period, role_title, company_goal, company_goal_id,
+        department_goal_id, status, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       RETURNING id, employee_id, period, role_title, company_goal, status, created_at, updated_at
     `,
     [
@@ -94,6 +97,8 @@ export async function createKpiCard(input: CreateKpiCardInput): Promise<HRKpiCar
       input.period.trim(),
       input.roleTitle?.trim() || null,
       input.companyGoal?.trim() || null,
+      input.companyGoalId ?? null,
+      input.departmentGoalId ?? null,
       status,
     ]
   );

@@ -368,6 +368,12 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
                 key={employee.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
               >
+                <Link
+                  href={`/admin/headcount/${employee.id}`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  View profile
+                </Link>
                 <form action={updateEmployeeAction} className="grid w-full gap-2 sm:grid-cols-4">
                   <input name="employeeId" type="hidden" value={employee.id} />
                   <Input

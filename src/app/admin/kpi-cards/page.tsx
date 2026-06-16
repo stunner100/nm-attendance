@@ -14,6 +14,8 @@ import {
   createKpiCard,
   currentPeriod,
   DEPARTMENT_FRAMEWORK,
+  listActiveCompanyGoalOptions,
+  listDepartmentGoalOptions,
   listHREmployeeOptions,
   listKpiCardItems,
   listKpiCards,
@@ -33,6 +35,8 @@ async function createCardAction(formData: FormData): Promise<void> {
   const employeeId = Number(formData.get("employeeId") ?? "");
   const period = String(formData.get("period") ?? "").trim();
   const roleTitle = String(formData.get("roleTitle") ?? "").trim();
+  const companyGoalIdRaw = Number(formData.get("companyGoalId") ?? "");
+  const departmentGoalIdRaw = Number(formData.get("departmentGoalId") ?? "");
   const companyGoal = String(formData.get("companyGoal") ?? "").trim();
   const status = String(formData.get("status") ?? "draft").trim();
 
@@ -48,6 +52,8 @@ async function createCardAction(formData: FormData): Promise<void> {
     period,
     roleTitle: roleTitle || null,
     companyGoal: companyGoal || null,
+    companyGoalId: Number.isFinite(companyGoalIdRaw) ? companyGoalIdRaw : null,
+    departmentGoalId: Number.isFinite(departmentGoalIdRaw) ? departmentGoalIdRaw : null,
     status: status as (typeof HR_KPI_CARD_STATUSES)[number],
   });
 
@@ -102,9 +108,11 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
   const statusFilter = params.status?.trim() || "";
   const periodFilter = params.period?.trim() || "";
 
-  const [cards, employees] = await Promise.all([
+  const [cards, employees, companyGoals, departmentGoals] = await Promise.all([
     listKpiCards({ status: statusFilter, period: periodFilter }),
     listHREmployeeOptions(),
+    listActiveCompanyGoalOptions(),
+    listDepartmentGoalOptions(periodFilter || currentPeriod()),
   ]);
 
   const items = await Promise.all(
@@ -192,10 +200,34 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
                 </option>
               ))}
             </select>
+            <select
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+              defaultValue=""
+              name="companyGoalId"
+            >
+              <option value="">Link company goal</option>
+              {companyGoals.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.title} ({goal.period})
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+              defaultValue=""
+              name="departmentGoalId"
+            >
+              <option value="">Link department goal</option>
+              {departmentGoals.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.department}: {goal.title}
+                </option>
+              ))}
+            </select>
             <Textarea
               className="sm:col-span-2"
               name="companyGoal"
-              placeholder="Connected company goal (e.g. reduce delayed orders)"
+              placeholder="Legacy goal text (optional if linked above)"
             />
             <div className="sm:col-span-2">
               <Button type="submit">Create Card</Button>

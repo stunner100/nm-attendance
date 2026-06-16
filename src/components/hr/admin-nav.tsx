@@ -5,12 +5,14 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   Briefcase,
+  CheckSquare,
   Clock,
   DollarSign,
+  Flag,
   Gauge,
   GraduationCap,
   LayoutDashboard,
-  Presentation,
+  Map,
   QrCode,
   ShieldAlert,
   ShieldCheck,
@@ -42,9 +44,11 @@ const NAV_GROUPS = [
   {
     label: "Performance",
     items: [
+      { href: "/admin/company-goals", label: "Company goals", icon: Flag },
+      { href: "/admin/department-roadmap", label: "Dept roadmap", icon: Map },
       { href: "/admin/kpi-cards", label: "KPI cards", icon: Target },
+      { href: "/admin/tasks", label: "Tasks", icon: CheckSquare },
       { href: "/admin/scores", label: "Monthly scores", icon: Gauge },
-      { href: "/admin/presentations", label: "Presentations", icon: Presentation },
       { href: "/admin/rewards", label: "Rewards", icon: Award },
       { href: "/admin/accountability", label: "Accountability", icon: ShieldAlert },
       { href: "/admin/growth", label: "Growth plans", icon: Sprout },

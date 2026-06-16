@@ -59,7 +59,7 @@ export async function createTask(input: CreateTaskInput): Promise<HRTask> {
   await ensureDbSchema();
   const pool = getDbPool();
   const status = ensureEnumValue(
-    input.status || "assigned",
+    input.status || "not_started",
     HR_TASK_STATUSES,
     "taskStatus"
   );

@@ -16,6 +16,7 @@ import { getHRDashboardSummary } from "@/lib/hr-db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RATING_BANDS } from "@/lib/hr/framework-reference";
+import { humanizeLabel } from "@/lib/labels";
 import {
   Users,
   AlertCircle,
@@ -25,14 +26,25 @@ import {
   Download,
   Gauge,
   Target,
-  Presentation,
   ShieldAlert,
   Sprout,
+  CheckSquare,
+  Flag,
 } from "lucide-react";
 
 type AdminPageProps = {
   searchParams: Promise<{ date?: string }>;
 };
+
+const EXPORT_LINKS = [
+  { label: "Monthly scores", href: "/api/hr/export/monthly-scores" },
+  { label: "KPI cards", href: "/api/hr/export/kpi-cards" },
+  { label: "Rewards", href: "/api/hr/export/rewards" },
+  { label: "Accountability", href: "/api/hr/export/accountability" },
+  { label: "Growth plans", href: "/api/hr/export/growth-plans" },
+  { label: "Dept roadmap", href: "/api/hr/export/department-roadmap" },
+  { label: "Employee performance", href: "/api/hr/export/employee-performance" },
+];
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
@@ -45,50 +57,44 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const maxDeptCount = Math.max(...Object.values(summary.headcount.by_department), 1);
   const framework = summary.framework;
   const departmentLabels = Object.keys(framework.avg_score_by_department);
-  const sampleCsvLinks = [
-    {
-      label: "Employees sample",
-      href: "/api/hr/import/employees?download=1",
-      description: "Employee master import template",
-    },
-    {
-      label: "Recruitment sample",
-      href: "/api/hr/import/recruitment?download=1",
-      description: "Roles and applicant pipeline template",
-    },
-    {
-      label: "Leave sample",
-      href: "/api/hr/import/leave?download=1",
-      description: "Leave balances and requests template",
-    },
-    {
-      label: "Payroll sample",
-      href: "/api/hr/import/payroll?download=1",
-      description: "Payroll cycle and anomaly template",
-    },
-  ];
 
-  const operationsSnapshot = [
-    { label: "Active KPI cards", value: String(framework.active_kpi_cards) },
-    { label: "Presentations pending", value: String(framework.presentations_pending) },
-    { label: "Rewards this month", value: String(framework.rewards_this_month) },
-    { label: "Growth reviews due", value: String(framework.growth_reviews_due) },
-    { label: "Overdue tasks", value: String(framework.overdue_tasks) },
+  const actionMetrics = [
+    { label: "Total employees", value: String(summary.headcount.total_active) },
+    { label: "Avg performance", value: framework.avg_monthly_score.toFixed(1) },
+    { label: "Scoring 90+", value: String(framework.excellent_count) },
+    { label: "Scoring 80–89", value: String(framework.strong_count) },
+    { label: "Below 70", value: String(framework.below_70_count) },
+    { label: "Below 60", value: String(framework.below_60_count) },
     { label: "Active PIPs", value: String(summary.performance.active_pips) },
+    { label: "Pending KPI approvals", value: String(framework.pending_kpi_approvals) },
+    { label: "Pending score reviews", value: String(framework.pending_score_reviews) },
+    { label: "Pending reward approvals", value: String(framework.pending_reward_approvals) },
+    { label: "Open accountability", value: String(framework.open_accountability) },
+    { label: "Overdue tasks", value: String(framework.overdue_tasks) },
+    { label: "Growth reviews due", value: String(framework.growth_reviews_due) },
+    { label: "Roadmaps at risk", value: String(framework.roadmaps_at_risk) },
   ];
 
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Performance framework dashboard"
-        description="Night Market staff performance, rewards, accountability, and growth at a glance."
+        title="HR performance overview"
+        description="What needs attention now — scores, approvals, accountability, and department health."
         actions={
-          <Button asChild>
-            <Link href="/admin/scores">
-              <Gauge className="h-4 w-4" />
-              Record scores
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href="/admin/company-goals">
+                <Flag className="h-4 w-4" />
+                Company goals
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/scores">
+                <Gauge className="h-4 w-4" />
+                Record scores
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -118,14 +124,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <MetricBadge
                 icon={<AlertCircle className="h-4 w-4" />}
                 iconColor="text-rose-600"
-                value={String(framework.poor_count)}
-                label="Poor performance (under 60)"
+                value={String(framework.below_60_count)}
+                label="Poor performance (&lt;60)"
               />
             </div>
             {departmentLabels.length > 0 ? (
               <div className="rounded-lg border border-border bg-muted p-4">
                 <p className="mb-3 text-sm text-muted-foreground">
-                  Department focus · avg{" "}
+                  Company average ·{" "}
                   <span className="tabular-nums">{framework.avg_monthly_score.toFixed(0)}%</span>
                 </p>
                 <LabeledProgressIndicator
@@ -165,82 +171,65 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <WatermelonStatCard
-          icon={<Gauge className="h-4 w-4" />}
-          label="Avg monthly score"
-          metric={framework.avg_monthly_score.toFixed(1)}
-          subLabel={`${framework.scored_employees} scored`}
-          description="Weighted: KPI 50%, Tasks 25%, Comms 15%, Teamwork 10%"
-          theme={STAT_THEMES.emerald}
+          icon={<Target className="h-4 w-4" />}
+          label="Pending KPI approvals"
+          metric={String(framework.pending_kpi_approvals)}
+          subLabel={`${framework.active_kpi_cards} active cards`}
+          description="KPIs awaiting HR or management approval"
+          theme={STAT_THEMES.amber}
         />
         <WatermelonStatCard
-          icon={<Award className="h-4 w-4" />}
-          label="Bonus eligible (80+)"
-          metric={String(framework.bonus_eligible_count)}
-          subLabel={`Top 90+: ${framework.excellent_count}`}
-          description="Employees scoring 80+ qualify for monthly bonus"
-          theme={STAT_THEMES.cyan}
+          icon={<CheckSquare className="h-4 w-4" />}
+          label="Overdue tasks"
+          metric={String(framework.overdue_tasks)}
+          subLabel="Requires manager follow-up"
+          description="Incomplete tasks past deadline"
+          theme={STAT_THEMES.rose}
         />
         <WatermelonStatCard
           icon={<ShieldAlert className="h-4 w-4" />}
           label="Open accountability"
           metric={String(framework.open_accountability)}
-          subLabel="Coaching to final review"
-          description="Progressive ladder from coaching through final review"
+          subLabel={`${summary.performance.active_pips} active PIPs`}
+          description="Coaching through investigation stages"
           theme={STAT_THEMES.rose}
         />
         <WatermelonStatCard
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="Review completion"
-          metric={`${summary.performance.review_completion_rate.toFixed(1)}%`}
-          subLabel={`${summary.performance.active_pips} active PIPs`}
-          description="Scheduled performance reviews completed vs assigned"
+          icon={<Sprout className="h-4 w-4" />}
+          label="Growth reviews due"
+          metric={String(framework.growth_reviews_due)}
+          subLabel={`${framework.roadmaps_at_risk} roadmaps at risk`}
+          description="Growth plans and department roadmaps needing review"
           theme={STAT_THEMES.indigo}
         />
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Operations snapshot</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-3 sm:grid-cols-2">
-              {operationsSnapshot.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
-                >
-                  <dt className="text-sm text-muted-foreground">{item.label}</dt>
-                  <dd className="tabular-nums text-sm font-semibold">{item.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Import workflow</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>1. Download the sample CSV that matches the data you want to import.</p>
-            <p>2. Replace the example rows with your HR data and keep the header columns unchanged.</p>
-            <p>3. Open the imports module to run a dry-run first, then commit valid rows.</p>
-            <Button asChild>
-              <Link href="/admin/imports">
-                <FileText className="h-4 w-4" />
-                Open imports
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Action summary</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Connected performance health for period {framework.period}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {actionMetrics.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
+              >
+                <dt className="text-sm text-muted-foreground">{item.label}</dt>
+                <dd className="tabular-nums text-sm font-semibold">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Average score by department</CardTitle>
-            <p className="text-sm text-muted-foreground">Period {framework.period}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {Object.entries(framework.avg_score_by_department).map(([department, avg], index) => (
@@ -258,10 +247,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         <Card>
           <CardHeader>
             <CardTitle>Headcount by department</CardTitle>
-            <p className="text-sm text-muted-foreground">{summary.headcount.total_active} total active</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {Object.entries(summary.headcount.by_department).map(([department, count], index) => (
+            {Object.entries(framework.headcount_by_department).map(([department, count], index) => (
               <div key={department} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{department}</span>
@@ -279,22 +267,57 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </Card>
       </section>
 
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Reward eligibility (80+) by department</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {Object.entries(framework.reward_eligible_by_department).map(([dept, count]) => (
+              <div key={dept} className="flex justify-between text-sm">
+                <span>{dept}</span>
+                <span className="tabular-nums font-medium">{count}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Roadmap health by department</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {Object.entries(framework.roadmap_health_by_department).map(([dept, health]) => (
+              <div key={dept} className="flex items-center justify-between gap-2 text-sm">
+                <span>{dept}</span>
+                {health ? (
+                  <StatusBadge status={health} />
+                ) : (
+                  <span className="text-muted-foreground">Not set</span>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </section>
+
       <section className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
-              <CardTitle>Key alerts & tasks</CardTitle>
+              <CardTitle>Key alerts</CardTitle>
             </div>
+            <p className="text-sm text-muted-foreground">Urgent HR and management actions</p>
           </CardHeader>
           <CardContent>
-            {summary.alerts.length === 0 ? (
+            {summary.performance_alerts.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted p-6 text-center text-sm text-muted-foreground">
-                No near-term alerts.
+                No urgent performance alerts.
               </div>
             ) : (
               <div className="space-y-2">
-                {summary.alerts.map((alert) => (
+                {summary.performance_alerts.map((alert) => (
                   <div
                     key={alert.id}
                     className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 transition-[background-color] hover:bg-muted"
@@ -302,11 +325,18 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{alert.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        {alert.type.replaceAll("_", " ")}
-                        {alert.due_on ? ` · Due ${alert.due_on}` : ""}
+                        {humanizeLabel(alert.type)}
+                        {alert.due_on ? ` · ${alert.due_on}` : ""}
                       </p>
                     </div>
-                    <StatusBadge status={alert.severity} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={alert.severity} />
+                      {alert.href ? (
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={alert.href}>Open</Link>
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -319,7 +349,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           initialDate={date}
           maxRows={8}
           title="Recent attendance"
-          description="Latest attendance actions. Open the full attendance page for complete check-in/check-out history."
+          description="Latest check-ins. Open attendance for full history."
           viewAllHref="/admin/attendance"
         />
       </section>
@@ -328,25 +358,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Download className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>Sample CSV downloads</CardTitle>
+            <CardTitle>Performance exports</CardTitle>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Download the exact CSV structures admins can use before running imports.
-          </p>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          {sampleCsvLinks.map((item) => (
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {EXPORT_LINKS.map((item) => (
             <a
               key={item.href}
               href={item.href}
               className="rounded-lg border border-border bg-card p-4 transition-[background-color] hover:bg-muted"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.description}</p>
-                </div>
-                <Download className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium">{item.label}</p>
+                <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
               </div>
             </a>
           ))}

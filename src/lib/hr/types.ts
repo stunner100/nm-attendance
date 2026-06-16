@@ -175,6 +175,8 @@ export type CreateKpiCardInput = {
   period: string;
   roleTitle?: string | null;
   companyGoal?: string | null;
+  companyGoalId?: number | null;
+  departmentGoalId?: number | null;
   status?: HRKpiCardStatus;
 };
 

@@ -1,0 +1,3 @@
+ALTER TABLE attendance
+  ADD COLUMN IF NOT EXISTS checkout_latitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS checkout_longitude DOUBLE PRECISION;

@@ -1,0 +1,2 @@
+ALTER TABLE attendance
+  ADD COLUMN IF NOT EXISTS checkout_location TEXT;

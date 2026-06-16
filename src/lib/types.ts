@@ -7,7 +7,10 @@ export type AttendanceRow = {
   checkout_timestamp: string | null;
   latitude: number | null;
   longitude: number | null;
+  checkout_latitude: number | null;
+  checkout_longitude: number | null;
   location: string | null;
+  checkout_location: string | null;
   created_at: string;
 };
 

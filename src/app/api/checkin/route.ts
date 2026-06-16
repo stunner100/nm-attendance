@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { getPunctualityMessage } from "@/lib/attendance-punctuality";
 import { CheckinRejectedError, insertAttendance } from "@/lib/db";
+import { asLatitude, asLongitude } from "@/lib/geo-coords";
 
 type CheckinPayload = {
   name?: unknown;
@@ -9,54 +11,6 @@ type CheckinPayload = {
   longitude?: unknown;
   location?: unknown;
 };
-
-const CHECKIN_TIMEZONE = process.env.CHECKIN_TIMEZONE || "Africa/Accra";
-
-function asLatitude(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  if (typeof value !== "number" || Number.isNaN(value) || value < -90 || value > 90) {
-    return null;
-  }
-
-  return value;
-}
-
-function asLongitude(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  if (
-    typeof value !== "number" ||
-    Number.isNaN(value) ||
-    value < -180 ||
-    value > 180
-  ) {
-    return null;
-  }
-
-  return value;
-}
-
-function getPunctualityMessage(timestamp: string): string {
-  const checkedAt = new Date(timestamp);
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: CHECKIN_TIMEZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(checkedAt);
-  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
-  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
-  const isLate = hour * 60 + minute > 8 * 60;
-
-  return isLate ? "You are late" : "You are on time";
-}
 
 export async function POST(request: Request) {
   let payload: CheckinPayload;

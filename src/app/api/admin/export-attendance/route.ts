@@ -36,7 +36,10 @@ export async function GET(request: Request) {
         checkout_timestamp: record.checkout_timestamp,
         latitude: record.latitude,
         longitude: record.longitude,
+        checkout_latitude: record.checkout_latitude,
+        checkout_longitude: record.checkout_longitude,
         location: record.location,
+        checkout_location: record.checkout_location,
         created_at: record.created_at,
       }));
 

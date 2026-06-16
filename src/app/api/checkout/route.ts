@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { CheckinRejectedError, checkoutAttendance } from "@/lib/db";
+import { asLatitude, asLongitude } from "@/lib/geo-coords";
 
 type CheckoutPayload = {
   name?: unknown;
   scanToken?: unknown;
+  latitude?: unknown;
+  longitude?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -38,6 +41,18 @@ export async function POST(request: Request) {
     );
   }
 
+  const latitude = asLatitude(payload.latitude);
+  const longitude = asLongitude(payload.longitude);
+  if (latitude === null || longitude === null) {
+    return NextResponse.json(
+      {
+        error:
+          "Location is required for check-out. Please allow GPS access and try again.",
+      },
+      { status: 400 }
+    );
+  }
+
   const timestamp = new Date().toISOString();
 
   try {
@@ -45,6 +60,8 @@ export async function POST(request: Request) {
       name,
       scanToken,
       timestamp,
+      latitude,
+      longitude,
     });
   } catch (error) {
     if (

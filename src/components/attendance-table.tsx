@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, MapPin, ExternalLink, Download, Trash2 } from "lucide-react";
+import { Clock, ExternalLink, Download, Trash2 } from "lucide-react";
 
+import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
+import { formatCoordinatesLabel } from "@/lib/reverse-geocode";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +35,22 @@ type AttendanceTableProps = {
   basePath?: string;
   viewAllHref?: string;
 };
+
+function resolveLocationLabel(record: AttendanceRow, kind: "checkin" | "checkout"): string {
+  if (kind === "checkin") {
+    return (
+      record.location?.trim() ||
+      formatCoordinatesLabel(record.latitude, record.longitude) ||
+      "—"
+    );
+  }
+
+  return (
+    record.checkout_location?.trim() ||
+    formatCoordinatesLabel(record.checkout_latitude, record.checkout_longitude) ||
+    "—"
+  );
+}
 
 export function AttendanceTable({
   initialRecords,
@@ -143,18 +161,11 @@ export function AttendanceTable({
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           ) : null}
-          <Button
-            onClick={handleExportCsv}
-            size="sm"
-          >
+          <Button onClick={handleExportCsv} size="sm">
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
-          <Button
-            onClick={handleClearAll}
-            variant="destructive"
-            size="sm"
-          >
+          <Button onClick={handleClearAll} variant="destructive" size="sm">
             <Trash2 className="h-4 w-4" />
             Clear All Data
           </Button>
@@ -174,7 +185,7 @@ export function AttendanceTable({
               <TableHead>Check-in</TableHead>
               <TableHead>Check-out</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>GPS</TableHead>
+              <TableHead>Location</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -186,10 +197,13 @@ export function AttendanceTable({
               </TableRow>
             ) : (
               visibleRecords.map((record) => {
-                const hasGps =
-                  typeof record.latitude === "number" &&
-                  typeof record.longitude === "number";
                 const hasCheckout = typeof record.checkout_timestamp === "string";
+                const punctuality = getCheckinPunctualityLabel(record.timestamp);
+                const isLate = punctuality === "Late";
+                const checkInLocation = resolveLocationLabel(record, "checkin");
+                const checkOutLocation = hasCheckout
+                  ? resolveLocationLabel(record, "checkout")
+                  : null;
 
                 return (
                   <TableRow key={record.id}>
@@ -216,30 +230,27 @@ export function AttendanceTable({
                       <Badge
                         variant="outline"
                         className={
-                          hasCheckout
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-sky-200 text-sky-700"
+                          isLate
+                            ? "border-amber-200 bg-amber-50 text-amber-800"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
                         }
                       >
-                        {hasCheckout ? "Completed" : "Active"}
+                        {punctuality}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {hasGps ? (
-                        <Link
-                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-950"
-                          href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <MapPin className="h-3.5 w-3.5" />
-                          View Map
-                        </Link>
-                      ) : (
-                        <Badge variant="outline" className="border-neutral-200 text-neutral-500">
-                          No GPS
-                        </Badge>
-                      )}
+                    <TableCell className="max-w-xs">
+                      <div className="space-y-1 text-sm text-neutral-700">
+                        <p>
+                          <span className="text-xs font-medium text-muted-foreground">In: </span>
+                          {checkInLocation}
+                        </p>
+                        {checkOutLocation ? (
+                          <p>
+                            <span className="text-xs font-medium text-muted-foreground">Out: </span>
+                            {checkOutLocation}
+                          </p>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

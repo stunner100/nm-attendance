@@ -211,7 +211,7 @@ export function CheckinForm() {
       return;
     }
 
-    if (action === "checkin" && (gpsStatus !== "granted" || !coordinates)) {
+    if (gpsStatus !== "granted" || !coordinates) {
       setError("Location access is required. Please allow location access and try again.");
       return;
     }
@@ -230,12 +230,8 @@ export function CheckinForm() {
         body: JSON.stringify({
           name: name.trim(),
           scanToken,
-          ...(action === "checkin"
-            ? {
-                latitude: coordinates?.lat ?? null,
-                longitude: coordinates?.lng ?? null,
-              }
-            : {}),
+          latitude: coordinates?.lat ?? null,
+          longitude: coordinates?.lng ?? null,
         }),
       });
 
@@ -446,15 +442,15 @@ export function CheckinForm() {
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <p className="text-sm font-medium">
-                    Location {action === "checkin" ? <span className="text-destructive">*</span> : null}
+                    Location <span className="text-destructive">*</span>
                   </p>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {action === "checkout"
-                    ? "Optional for check-out. You can proceed without GPS."
-                    : gpsStatus === "granted"
-                      ? "Your GPS coordinates will be attached to this check-in."
-                      : "Required. Tap the button to share your location."}
+                  {gpsStatus === "granted"
+                    ? action === "checkout"
+                      ? "Your GPS coordinates will be attached to this check-out."
+                      : "Your GPS coordinates will be attached to this check-in."
+                    : "Required. Tap the button to share your location."}
                 </p>
               </div>
 

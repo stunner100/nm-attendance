@@ -6,6 +6,7 @@ import {
   createRawCheckinScanToken,
   hashCheckinScanToken,
 } from "@/lib/checkin-tokens";
+import { resolveLocationLabel } from "@/lib/reverse-geocode";
 import { runMigrations } from "@/lib/migrate";
 import type { AttendanceRow } from "@/lib/types";
 import {
@@ -27,6 +28,8 @@ type CheckoutAttendanceInput = {
   name: string;
   scanToken: string;
   timestamp: string;
+  latitude: number;
+  longitude: number;
 };
 
 type AttendanceRowDb = Omit<AttendanceRow, "created_at"> & {
@@ -197,6 +200,17 @@ function normalizeAttendanceRow(row: AttendanceRowDb): AttendanceRow {
     ...row,
     latitude: row.latitude === null ? null : Number(row.latitude),
     longitude: row.longitude === null ? null : Number(row.longitude),
+    checkout_latitude:
+      row.checkout_latitude === null || row.checkout_latitude === undefined
+        ? null
+        : Number(row.checkout_latitude),
+    checkout_longitude:
+      row.checkout_longitude === null || row.checkout_longitude === undefined
+        ? null
+        : Number(row.checkout_longitude),
+    checkout_location: row.checkout_location
+      ? String(row.checkout_location)
+      : null,
     created_at:
       typeof row.created_at === "string"
         ? row.created_at
@@ -233,6 +247,11 @@ export async function insertAttendance(input: CheckinAttendanceInput): Promise<v
   }
 
   const scanTokenHash = hashCheckinScanToken(scanToken);
+  const locationLabel =
+    input.location?.trim() ||
+    (input.latitude !== null && input.longitude !== null
+      ? await resolveLocationLabel(input.latitude, input.longitude)
+      : null);
   const pool = getPool();
   const client = await pool.connect();
 
@@ -306,7 +325,7 @@ export async function insertAttendance(input: CheckinAttendanceInput): Promise<v
         input.timestamp,
         input.latitude,
         input.longitude,
-        input.location ?? null,
+        locationLabel,
       ]
     );
 
@@ -339,6 +358,10 @@ export async function checkoutAttendance(input: CheckoutAttendanceInput): Promis
   }
 
   const scanTokenHash = hashCheckinScanToken(scanToken);
+  const checkoutLocation = await resolveLocationLabel(
+    input.latitude,
+    input.longitude
+  );
   const pool = getPool();
   const client = await pool.connect();
 
@@ -366,7 +389,10 @@ export async function checkoutAttendance(input: CheckoutAttendanceInput): Promis
     const checkoutResult = await client.query(
       `
         UPDATE attendance
-        SET checkout_timestamp = $2
+        SET checkout_timestamp = $2,
+            checkout_latitude = $3,
+            checkout_longitude = $4,
+            checkout_location = $5
         WHERE id = (
           SELECT id
           FROM attendance
@@ -377,7 +403,7 @@ export async function checkoutAttendance(input: CheckoutAttendanceInput): Promis
         )
         RETURNING id
       `,
-      [attendeeName, input.timestamp]
+      [attendeeName, input.timestamp, input.latitude, input.longitude, checkoutLocation]
     );
 
     if ((checkoutResult.rowCount ?? 0) === 0) {
@@ -403,7 +429,8 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
   if (date) {
     const result = await pool.query<AttendanceRowDb>(
       `
-        SELECT id, name, timestamp, checkout_timestamp, latitude, longitude, location, created_at
+        SELECT id, name, timestamp, checkout_timestamp, latitude, longitude,
+          checkout_latitude, checkout_longitude, location, checkout_location, created_at
         FROM attendance
         WHERE LEFT(timestamp, 10) = $1
         ORDER BY timestamp DESC
@@ -415,7 +442,8 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
 
   const result = await pool.query<AttendanceRowDb>(
     `
-      SELECT id, name, timestamp, checkout_timestamp, latitude, longitude, location, created_at
+      SELECT id, name, timestamp, checkout_timestamp, latitude, longitude,
+        checkout_latitude, checkout_longitude, location, checkout_location, created_at
       FROM attendance
       ORDER BY timestamp DESC
     `

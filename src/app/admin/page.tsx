@@ -75,7 +75,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         actions={
           <Link
             href="/admin/scores"
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+            className="inline-flex items-center gap-2 rounded-full bg-neutral-950 px-4 py-2.5 text-sm font-semibold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_24px_rgba(15,23,42,0.18)] transition-colors hover:bg-neutral-800"
           >
             <Gauge className="h-4 w-4" />
             Record scores
@@ -85,10 +85,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       <section className="grid gap-4 lg:grid-cols-3">
         <FadeIn className="col-span-1 lg:col-span-2">
-          <Card className="h-full overflow-hidden border-0 bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg">
+          <Card className="h-full">
           <CardHeader className="pb-3">
-            <p className="text-sm font-medium text-slate-400">Performance period {framework.period}</p>
-            <CardTitle className="text-2xl font-semibold text-white sm:text-3xl">
+            <p className="text-sm font-semibold text-neutral-500">Performance period {framework.period}</p>
+            <CardTitle className="text-2xl font-semibold sm:text-3xl">
               Average monthly score {framework.avg_monthly_score.toFixed(1)} / 100
             </CardTitle>
           </CardHeader>
@@ -114,8 +114,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               />
             </div>
             {departmentLabels.length > 0 ? (
-              <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">
+              <div className="rounded-[22px] bg-neutral-100 p-4 shadow-[inset_0_1px_3px_rgba(15,23,42,0.04)]">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-neutral-500">
                   Live department focus &middot; avg {framework.avg_monthly_score.toFixed(0)}%
                 </p>
                 <LabeledProgressIndicator
@@ -241,22 +241,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <FadeIn delay={0.5}>
-          <Card className="border-0 shadow-lg">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold">Average Score by Department</CardTitle>
-              <p className="text-sm text-slate-500">Period {framework.period}</p>
+              <p className="text-sm font-medium text-neutral-500">Period {framework.period}</p>
             </CardHeader>
             <CardContent className="space-y-3">
               {Object.entries(framework.avg_score_by_department).map(([department, avg], index) => (
                 <div key={department} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{department}</span>
-                    <span className="text-slate-500">{avg.toFixed(1)}</span>
+                    <span className="font-semibold text-neutral-700">{department}</span>
+                    <span className="font-medium text-neutral-500">{avg.toFixed(1)}</span>
                   </div>
                   <AnimatedBar
                     value={avg}
                     max={100}
-                    colorClass="bg-emerald-500"
+                    colorClass="bg-neutral-950"
                     delay={0.5 + index * 0.06}
                   />
                 </div>
@@ -266,22 +266,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </FadeIn>
 
         <FadeIn delay={0.6}>
-          <Card className="border-0 shadow-lg">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold">Headcount by Department</CardTitle>
-              <p className="text-sm text-slate-500">{summary.headcount.total_active} total active</p>
+              <p className="text-sm font-medium text-neutral-500">{summary.headcount.total_active} total active</p>
             </CardHeader>
             <CardContent className="space-y-3">
               {Object.entries(summary.headcount.by_department).map(([department, count], index) => (
                 <div key={department} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{department}</span>
-                    <span className="text-slate-500">{count}</span>
+                    <span className="font-semibold text-neutral-700">{department}</span>
+                    <span className="font-medium text-neutral-500">{count}</span>
                   </div>
                   <AnimatedBar
                     value={count}
                     max={maxDeptCount}
-                    colorClass="bg-sky-500"
+                    colorClass="bg-neutral-950"
                     delay={0.6 + index * 0.06}
                   />
                 </div>
@@ -293,7 +293,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       <section className="grid gap-4 xl:grid-cols-2">
         <FadeIn delay={0.6}>
-          <Card className="border-0 shadow-lg">
+          <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
@@ -302,7 +302,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </CardHeader>
           <CardContent>
             {summary.alerts.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              <div className="rounded-[22px] border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center text-sm font-medium text-neutral-500">
                 No near-term alerts.
               </div>
             ) : (
@@ -310,11 +310,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 {summary.alerts.map((alert) => (
                   <div
                     key={alert.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 transition-colors hover:bg-slate-50"
+                    className="flex items-center justify-between gap-3 rounded-[22px] border border-neutral-200/70 bg-neutral-50 p-3 transition-colors hover:bg-neutral-100"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{alert.label}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-semibold text-neutral-950">{alert.label}</p>
+                      <p className="text-xs font-medium text-neutral-500">
                         {alert.type.replaceAll("_", " ")}
                         {alert.due_on ? ` • Due ${alert.due_on}` : ""}
                       </p>
@@ -342,13 +342,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <FadeIn delay={0.8}>
-          <Card className="border-0 shadow-lg">
+          <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Download className="h-5 w-5 text-emerald-600" />
+              <Download className="h-5 w-5 text-neutral-500" />
               <CardTitle className="text-lg font-semibold">Sample CSV Downloads</CardTitle>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm font-medium text-neutral-500">
               Download the exact CSV structures admins can use before running imports.
             </p>
           </CardHeader>
@@ -357,14 +357,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <a
                 key={item.href}
                 href={item.href}
-                className="rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40"
+                className="rounded-[22px] border border-neutral-200/70 bg-neutral-50 p-4 transition-colors hover:bg-neutral-100"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{item.description}</p>
+                    <p className="text-sm font-semibold text-neutral-950">{item.label}</p>
+                    <p className="mt-1 text-xs font-medium leading-5 text-neutral-500">{item.description}</p>
                   </div>
-                  <Download className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <Download className="mt-0.5 h-4 w-4 shrink-0 text-neutral-500" />
                 </div>
               </a>
             ))}
@@ -373,17 +373,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </FadeIn>
 
         <FadeIn delay={0.9}>
-          <Card className="border-0 shadow-lg">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold">Import Workflow</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-slate-600">
+          <CardContent className="space-y-3 text-sm font-medium text-neutral-600">
             <p>1. Download the sample CSV that matches the data you want to import.</p>
             <p>2. Replace the example rows with your HR data and keep the header columns unchanged.</p>
             <p>3. Open the imports module to run a dry-run first, then commit valid rows.</p>
             <Link
               href="/admin/imports"
-              className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-full bg-neutral-950 px-4 py-2.5 text-sm font-semibold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-colors hover:bg-neutral-800"
             >
               <FileText className="h-4 w-4" />
               Open imports

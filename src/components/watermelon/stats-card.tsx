@@ -77,42 +77,24 @@ export function WatermelonStatCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border-0 shadow-md transition-shadow hover:shadow-lg",
+        "group relative transition-transform duration-300 hover:-translate-y-0.5",
         className
       )}
     >
-      {/* Accent bar */}
-      <div
-        className={cn(
-          "absolute left-0 top-0 h-1 w-full bg-gradient-to-r",
-          theme.accentGradient
-        )}
-      />
-
-      <CardContent className="relative z-10 space-y-3 p-5 pt-6">
-        <div className="flex items-center gap-3">
+      <CardContent className="relative z-10 flex min-h-52 flex-col justify-between space-y-5 p-5">
+        <div className="flex items-start justify-between gap-3">
           <div
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+              "flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-[0_14px_28px_rgba(15,23,42,0.16)]",
               theme.gradientFrom,
               theme.gradientTo
             )}
           >
             {icon}
           </div>
-          <span className="text-sm font-medium text-slate-500">{label}</span>
-        </div>
-
-        <div>
-          <p className="text-3xl font-bold tracking-tight text-slate-900">
-            {metric}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
           <span
             className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+              "rounded-full px-2.5 py-1 text-[11px] font-bold tracking-tight",
               theme.pillBg,
               theme.pillText
             )}
@@ -121,7 +103,20 @@ export function WatermelonStatCard({
           </span>
         </div>
 
-        <p className="text-xs leading-relaxed text-slate-400">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-neutral-500">{label}</p>
+          <p className="text-4xl font-bold tracking-tight text-neutral-950">
+            {metric}
+          </p>
+          <div
+            className={cn(
+              "h-1.5 w-20 rounded-full bg-gradient-to-r",
+              theme.accentGradient
+            )}
+          />
+        </div>
+
+        <p className="text-xs leading-relaxed text-neutral-500">
           {description}
         </p>
       </CardContent>

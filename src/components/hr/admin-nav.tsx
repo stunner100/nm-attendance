@@ -55,13 +55,13 @@ export function HrAdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+    <nav className="flex-1 space-y-5 overflow-y-auto px-2 py-4">
       {NAV_GROUPS.map((group) => (
         <div key={group.label}>
-          <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <p className="mb-2 px-4 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
             {group.label}
           </p>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {group.items.map((item) => {
               const isActive =
                 item.href === "/admin"
@@ -76,13 +76,22 @@ export function HrAdminNav() {
                   prefetch
                   scroll={false}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "group/nav flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold tracking-tight transition-all duration-200",
                     isActive
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-white text-neutral-950 shadow-[inset_0_1px_3px_rgba(15,23,42,0.035),0_10px_24px_rgba(15,23,42,0.06)] ring-1 ring-neutral-200/70"
+                      : "text-neutral-500 hover:bg-white/70 hover:text-neutral-950"
                   )}
                 >
-                  <Icon className={cn("h-4 w-4", isActive ? "text-emerald-600" : "text-slate-400")} />
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
+                      isActive
+                        ? "bg-neutral-950 text-white"
+                        : "bg-white/70 text-neutral-400 group-hover/nav:text-neutral-700"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
                   {item.label}
                 </Link>
               );

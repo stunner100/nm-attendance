@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Clock, MapPin, ExternalLink, Download, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -106,11 +107,11 @@ export function AttendanceTable({
   };
 
   return (
-    <Card className="border-0 shadow-lg">
+    <Card>
       <CardHeader className="gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-slate-400" />
+            <Clock className="h-5 w-5 text-neutral-400" />
             <CardTitle className="text-lg font-semibold">{title}</CardTitle>
           </div>
           <CardDescription>
@@ -135,27 +136,28 @@ export function AttendanceTable({
           </div>
           {viewAllHref ? (
             <Link
-              className="flex items-center gap-1 pb-2 text-sm font-medium text-emerald-600 transition-colors hover:text-emerald-700"
+              className="flex items-center gap-1 pb-2 text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-950"
               href={viewAllHref}
             >
               View all
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           ) : null}
-          <button
+          <Button
             onClick={handleExportCsv}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+            size="sm"
           >
             <Download className="h-4 w-4" />
             Export CSV
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleClearAll}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            variant="destructive"
+            size="sm"
           >
             <Trash2 className="h-4 w-4" />
             Clear All Data
-          </button>
+          </Button>
         </div>
       </CardHeader>
 
@@ -193,15 +195,15 @@ export function AttendanceTable({
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.name}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm text-slate-600">
-                        <Clock className="h-3.5 w-3.5 text-slate-400" />
+                      <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-600">
+                        <Clock className="h-3.5 w-3.5 text-neutral-400" />
                         {formatter.format(new Date(record.timestamp))}
                       </div>
                     </TableCell>
                     <TableCell>
                       {hasCheckout ? (
-                        <div className="flex items-center gap-1.5 text-sm text-slate-600">
-                          <Clock className="h-3.5 w-3.5 text-slate-400" />
+                        <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-600">
+                          <Clock className="h-3.5 w-3.5 text-neutral-400" />
                           {formatter.format(new Date(record.checkout_timestamp as string))}
                         </div>
                       ) : (
@@ -215,7 +217,7 @@ export function AttendanceTable({
                         variant="outline"
                         className={
                           hasCheckout
-                            ? "border-emerald-200 text-emerald-700"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                             : "border-sky-200 text-sky-700"
                         }
                       >
@@ -225,7 +227,7 @@ export function AttendanceTable({
                     <TableCell>
                       {hasGps ? (
                         <Link
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 transition-colors hover:text-emerald-700"
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-950"
                           href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -234,7 +236,7 @@ export function AttendanceTable({
                           View Map
                         </Link>
                       ) : (
-                        <Badge variant="outline" className="border-slate-200 text-slate-500">
+                        <Badge variant="outline" className="border-neutral-200 text-neutral-500">
                           No GPS
                         </Badge>
                       )}

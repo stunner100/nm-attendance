@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { Clock, ExternalLink, Download, Trash2 } from "lucide-react";
 
 import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
-import { formatCoordinatesLabel } from "@/lib/reverse-geocode";
+import {
+  formatCoordinatesLabel,
+  looksLikeCoordinatesLabel,
+} from "@/lib/reverse-geocode";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,15 +41,23 @@ type AttendanceTableProps = {
 
 function resolveLocationLabel(record: AttendanceRow, kind: "checkin" | "checkout"): string {
   if (kind === "checkin") {
+    const stored = record.location?.trim();
+    if (stored && !looksLikeCoordinatesLabel(stored)) {
+      return stored;
+    }
+
     return (
-      record.location?.trim() ||
       formatCoordinatesLabel(record.latitude, record.longitude) ||
       "—"
     );
   }
 
+  const stored = record.checkout_location?.trim();
+  if (stored && !looksLikeCoordinatesLabel(stored)) {
+    return stored;
+  }
+
   return (
-    record.checkout_location?.trim() ||
     formatCoordinatesLabel(record.checkout_latitude, record.checkout_longitude) ||
     "—"
   );

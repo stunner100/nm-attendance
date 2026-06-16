@@ -6,7 +6,10 @@ import {
   createRawCheckinScanToken,
   hashCheckinScanToken,
 } from "@/lib/checkin-tokens";
-import { resolveLocationLabel } from "@/lib/reverse-geocode";
+import {
+  needsLocationBackfill,
+  resolveLocationLabel,
+} from "@/lib/reverse-geocode";
 import { runMigrations } from "@/lib/migrate";
 import type { AttendanceRow } from "@/lib/types";
 import {
@@ -30,6 +33,7 @@ type CheckoutAttendanceInput = {
   timestamp: string;
   latitude: number;
   longitude: number;
+  location?: string | null;
 };
 
 type AttendanceRowDb = Omit<AttendanceRow, "created_at"> & {
@@ -358,10 +362,9 @@ export async function checkoutAttendance(input: CheckoutAttendanceInput): Promis
   }
 
   const scanTokenHash = hashCheckinScanToken(scanToken);
-  const checkoutLocation = await resolveLocationLabel(
-    input.latitude,
-    input.longitude
-  );
+  const checkoutLocation =
+    input.location?.trim() ||
+    (await resolveLocationLabel(input.latitude, input.longitude));
   const pool = getPool();
   const client = await pool.connect();
 
@@ -426,30 +429,97 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
 
   const pool = getPool();
 
-  if (date) {
-    const result = await pool.query<AttendanceRowDb>(
-      `
+  const query = date
+    ? {
+        sql: `
         SELECT id, name, timestamp, checkout_timestamp, latitude, longitude,
           checkout_latitude, checkout_longitude, location, checkout_location, created_at
         FROM attendance
         WHERE LEFT(timestamp, 10) = $1
         ORDER BY timestamp DESC
       `,
-      [date]
-    );
-    return result.rows.map(normalizeAttendanceRow);
-  }
-
-  const result = await pool.query<AttendanceRowDb>(
-    `
+        params: [date] as const,
+      }
+    : {
+        sql: `
       SELECT id, name, timestamp, checkout_timestamp, latitude, longitude,
         checkout_latitude, checkout_longitude, location, checkout_location, created_at
       FROM attendance
       ORDER BY timestamp DESC
-    `
-  );
+    `,
+        params: [] as const,
+      };
 
-  return result.rows.map(normalizeAttendanceRow);
+  const result = await pool.query<AttendanceRowDb>(query.sql, [...query.params]);
+  const rows = result.rows.map(normalizeAttendanceRow);
+
+  return hydrateAttendanceLocations(pool, rows);
+}
+
+async function hydrateAttendanceLocations(
+  pool: Pool,
+  rows: AttendanceRow[]
+): Promise<AttendanceRow[]> {
+  const targets = rows
+    .filter(
+      (row) =>
+        needsLocationBackfill(row.location, row.latitude, row.longitude) ||
+        (row.checkout_timestamp &&
+          needsLocationBackfill(
+            row.checkout_location,
+            row.checkout_latitude,
+            row.checkout_longitude
+          ))
+    )
+    .slice(0, 25);
+
+  if (targets.length === 0) {
+    return rows;
+  }
+
+  const updates = new Map<number, Partial<AttendanceRow>>();
+
+  for (const row of targets) {
+    const patch: Partial<AttendanceRow> = {};
+
+    if (needsLocationBackfill(row.location, row.latitude, row.longitude)) {
+      const location = await resolveLocationLabel(row.latitude as number, row.longitude as number);
+      patch.location = location;
+      await pool.query(`UPDATE attendance SET location = $2 WHERE id = $1`, [row.id, location]);
+    }
+
+    if (
+      row.checkout_timestamp &&
+      needsLocationBackfill(
+        row.checkout_location,
+        row.checkout_latitude,
+        row.checkout_longitude
+      )
+    ) {
+      const checkoutLocation = await resolveLocationLabel(
+        row.checkout_latitude as number,
+        row.checkout_longitude as number
+      );
+      patch.checkout_location = checkoutLocation;
+      await pool.query(`UPDATE attendance SET checkout_location = $2 WHERE id = $1`, [
+        row.id,
+        checkoutLocation,
+      ]);
+    }
+
+    if (Object.keys(patch).length > 0) {
+      updates.set(row.id, patch);
+    }
+  }
+
+  if (updates.size === 0) {
+    return rows;
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    ...updates.get(row.id),
+  }));
 }
 
 export async function getEmployeeNames(): Promise<string[]> {

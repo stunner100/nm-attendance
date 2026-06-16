@@ -8,6 +8,7 @@ type CheckoutPayload = {
   scanToken?: unknown;
   latitude?: unknown;
   longitude?: unknown;
+  location?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
   }
 
   const timestamp = new Date().toISOString();
+  const location =
+    typeof payload.location === "string" ? payload.location.trim().slice(0, 200) : null;
 
   try {
     await checkoutAttendance({
@@ -62,6 +65,7 @@ export async function POST(request: Request) {
       timestamp,
       latitude,
       longitude,
+      location: location || null,
     });
   } catch (error) {
     if (

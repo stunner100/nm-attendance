@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { GpsStatus } from "@/lib/types";
+import { reverseGeocode } from "@/lib/reverse-geocode";
 
 type Coordinates = {
   lat: number;
@@ -36,6 +37,7 @@ export function CheckinForm() {
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>("loading");
   const [name, setName] = useState("");
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
   const [employees, setEmployees] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -173,22 +175,31 @@ export function CheckinForm() {
     if (!navigator.geolocation) {
       setGpsStatus("denied");
       setCoordinates(null);
+      setLocationLabel(null);
       return;
     }
 
     setGpsStatus("loading");
+    setLocationLabel(null);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCoordinates({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        setCoordinates({ lat, lng });
         setGpsStatus("granted");
+
+        void reverseGeocode(lat, lng).then((label) => {
+          if (label) {
+            setLocationLabel(label);
+          }
+        });
       },
       () => {
         setGpsStatus("denied");
         setCoordinates(null);
+        setLocationLabel(null);
       },
       {
         enableHighAccuracy: true,
@@ -230,8 +241,9 @@ export function CheckinForm() {
         body: JSON.stringify({
           name: name.trim(),
           scanToken,
-          latitude: coordinates?.lat ?? null,
-          longitude: coordinates?.lng ?? null,
+          latitude: coordinates.lat,
+          longitude: coordinates.lng,
+          location: locationLabel,
         }),
       });
 
@@ -447,9 +459,11 @@ export function CheckinForm() {
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {gpsStatus === "granted"
-                    ? action === "checkout"
-                      ? "Your GPS coordinates will be attached to this check-out."
-                      : "Your GPS coordinates will be attached to this check-in."
+                    ? locationLabel
+                      ? locationLabel
+                      : action === "checkout"
+                        ? "Resolving your check-out location..."
+                        : "Resolving your check-in location..."
                     : "Required. Tap the button to share your location."}
                 </p>
               </div>

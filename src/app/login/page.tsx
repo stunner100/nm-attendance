@@ -25,15 +25,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-emerald-50">
-      <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10 sm:px-6">
-        <div className="mb-8 text-center">
-          <img src="/logo.jpg" alt="Abonten Technologies Logo" className="mx-auto mb-4 h-16 w-auto object-contain" />
-            
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+    <main className="flex min-h-screen items-center justify-center bg-muted px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="mb-8">
+          <img
+            src="/logo.jpg"
+            alt="Abonten Technologies"
+            className="mb-4 h-12 w-auto object-contain"
+          />
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
             Abonten Technologies
           </h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             Sign in to manage HR operations and attendance.
           </p>
         </div>

@@ -19,16 +19,16 @@ export function MetricBadge({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-[22px] border border-neutral-200/70 bg-white px-4 py-3 shadow-[inset_0_1px_3px_rgba(15,23,42,0.035),0_10px_24px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[inset_0_1px_3px_rgba(15,23,42,0.035),0_16px_32px_rgba(15,23,42,0.08)]",
+        "flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3",
         className
       )}
     >
-      <div className={cn("flex h-9 w-9 items-center justify-center rounded-2xl bg-neutral-100", iconColor)}>
+      <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg bg-muted", iconColor)}>
         {icon}
       </div>
       <div>
-        <p className="text-lg font-bold tracking-tight text-neutral-950">{value}</p>
-        <p className="text-xs font-medium text-neutral-500">{label}</p>
+        <p className="tabular-nums text-lg font-semibold tracking-tight text-foreground">{value}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
       </div>
     </div>
   );
@@ -48,12 +48,12 @@ export function EndorsementBadge({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5",
+        "flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5",
         className
       )}
     >
-      <span className="text-sm font-bold text-neutral-800">{score}</span>
-      <span className="text-xs font-medium text-neutral-500">{name}</span>
+      <span className="tabular-nums text-sm font-semibold text-foreground">{score}</span>
+      <span className="text-xs text-muted-foreground">{name}</span>
     </div>
   );
 }

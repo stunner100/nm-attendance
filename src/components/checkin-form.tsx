@@ -4,7 +4,6 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  Clock,
   Loader2,
   LogOut,
   MapPin,
@@ -166,45 +165,6 @@ export function CheckinForm() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!submittedAt || punctualityMessage !== "You are on time") {
-      return;
-    }
-
-    let active = true;
-
-    const triggerConfetti = async () => {
-      try {
-        const confettiModule = await import("canvas-confetti");
-        if (!active) {
-          return;
-        }
-
-        confettiModule.default({
-          particleCount: 42,
-          spread: 68,
-          origin: { y: 0.62 },
-          colors: ["#10b981", "#14b8a6", "#34d399"],
-        });
-      } catch (confettiError) {
-        console.error("Failed to load confetti", confettiError);
-      }
-    };
-
-    const timer = window.setTimeout(() => {
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          void triggerConfetti();
-        });
-      });
-    }, 260);
-
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [punctualityMessage, submittedAt]);
-
   function requestLocation() {
     if (gpsStatus === "loading" || gpsStatus === "granted") {
       return;
@@ -340,140 +300,94 @@ export function CheckinForm() {
   const isLate = submittedAction === "checkin" && punctualityMessage === "You are late";
 
   if (submittedAt) {
+    const statusTone = isCheckout
+      ? "border-sky-200 bg-sky-50 text-sky-800"
+      : isLate
+        ? "border-destructive/20 bg-destructive/10 text-destructive"
+        : "border-primary/20 bg-primary/10 text-primary";
+
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <Card className="overflow-hidden border-0 shadow-xl">
+      <Card>
+        <CardHeader className="space-y-4">
           <div
-            className={
-              isCheckout
-                ? "relative bg-gradient-to-br from-sky-50 via-cyan-50 to-white"
-                : isLate
-                ? "relative bg-gradient-to-br from-orange-50 via-red-50 to-white"
-                : "relative bg-gradient-to-br from-emerald-50 via-teal-50 to-white"
-            }
+            className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${statusTone}`}
           >
-            <CardHeader className="relative z-10 px-6 pb-12 pt-8 text-center sm:px-10">
-              <div
-                className={
-                  isCheckout
-                    ? "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-500 to-cyan-500 shadow-lg"
-                    : isLate
-                    ? "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg"
-                    : "mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg"
-                }
-              >
-                {isCheckout ? (
-                  <LogOut className="h-10 w-10 text-white" strokeWidth={2.4} />
-                ) : isLate ? (
-                  <AlertTriangle className="h-10 w-10 text-white" strokeWidth={2.4} />
-                ) : (
-                  <CheckCircle2 className="h-10 w-10 text-white" strokeWidth={2.4} />
-                )}
-              </div>
-
-              <CardTitle className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                {isCheckout ? "Check-out complete" : isLate ? "You are late" : "You are on time"}
-              </CardTitle>
-              <CardDescription className="mt-3 text-base text-slate-600 sm:text-lg">
-                {name} {isCheckout ? "checked out" : "checked in"} at{" "}
-                {new Date(submittedAt).toLocaleTimeString()}
-              </CardDescription>
-
-              <div
-                className={
-                  isCheckout
-                    ? "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-sky-700 shadow-sm duration-500"
-                    : isLate
-                    ? "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-red-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-red-700 shadow-sm duration-500"
-                    : "animate-in zoom-in-95 mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/85 px-5 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm duration-500"
-                }
-              >
-                {isCheckout ? (
-                  <LogOut className="h-4 w-4" />
-                ) : isLate ? (
-                  <AlertTriangle className="h-4 w-4" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" />
-                )}
-                <span>{isCheckout ? statusMessage : punctualityMessage}</span>
-              </div>
-
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={() => resetForAnother("checkin")}
-                >
-                  Record check-in
-                </Button>
-                <Button
-                  type="button"
-                  className="rounded-full bg-slate-900 text-white hover:bg-slate-800"
-                  onClick={() => resetForAnother("checkout")}
-                >
-                  Record check-out
-                </Button>
-              </div>
-            </CardHeader>
+            {isCheckout ? (
+              <LogOut className="h-4 w-4" />
+            ) : isLate ? (
+              <AlertTriangle className="h-4 w-4" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            <span>{isCheckout ? statusMessage : punctualityMessage}</span>
           </div>
-        </Card>
-      </div>
+
+          <div>
+            <CardTitle className="text-2xl sm:text-3xl">
+              {isCheckout ? "Check-out complete" : isLate ? "You are late" : "You are on time"}
+            </CardTitle>
+            <CardDescription className="mt-2 text-base">
+              {name} {isCheckout ? "checked out" : "checked in"} at{" "}
+              <span className="tabular-nums">{new Date(submittedAt).toLocaleTimeString()}</span>
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex flex-wrap gap-3">
+          <Button type="button" variant="outline" onClick={() => resetForAnother("checkin")}>
+            Record check-in
+          </Button>
+          <Button type="button" onClick={() => resetForAnother("checkout")}>
+            Record check-out
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <Card className="overflow-hidden border-0 shadow-xl">
-      <div className="relative overflow-hidden bg-gradient-to-b from-slate-800 to-slate-900">
-        <CardHeader className="relative z-10 px-6 pb-8 pt-8 text-center sm:px-8 sm:pt-9">
-          <div className="mx-auto mb-5 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-3xl bg-white/10 shadow-inner">
-            <Clock className="h-9 w-9 text-white" />
-          </div>
-          <CardTitle className="text-3xl font-semibold tracking-tight text-white">
-            Office Attendance
-          </CardTitle>
-          <CardDescription className="mt-3 text-base leading-7 text-slate-300">
-            Enter your name and choose check-in or check-out.
-          </CardDescription>
-        </CardHeader>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Record attendance</CardTitle>
+        <CardDescription>Choose an action, enter your name, and submit.</CardDescription>
+      </CardHeader>
 
-      <CardContent className="space-y-5 px-5 py-6 sm:px-8 sm:py-8">
+      <CardContent className="space-y-5">
         <form className="space-y-5" onSubmit={onSubmit}>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
-            <div className="grid grid-cols-2 gap-1.5">
+          <div className="rounded-lg border border-border bg-muted p-1">
+            <div className="grid min-w-0 grid-cols-2 gap-1">
               <button
                 type="button"
                 onClick={() => setAction("checkin")}
                 className={
                   action === "checkin"
-                    ? "rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm"
-                    : "rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-600"
+                    ? "rounded-md bg-primary px-3 py-2 text-sm font-semibold whitespace-nowrap text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                    : "rounded-md bg-card px-3 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
                 }
               >
-                Check In
+                Check in
               </button>
               <button
                 type="button"
                 onClick={() => setAction("checkout")}
                 className={
                   action === "checkout"
-                    ? "rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm"
-                    : "rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-600"
+                    ? "rounded-md bg-primary px-3 py-2 text-sm font-semibold whitespace-nowrap text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                    : "rounded-md bg-card px-3 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
                 }
               >
-                Check Out
+                Check out
               </button>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-900" htmlFor="name">
-              Full Name
+            <label className="text-sm font-medium" htmlFor="name">
+              Full name
             </label>
 
             <div className="relative" ref={wrapperRef}>
-              <User className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="name"
                 name="name"
@@ -494,12 +408,12 @@ export function CheckinForm() {
                 }}
                 autoComplete="off"
                 required
-                className="h-14 rounded-2xl border-slate-200 bg-white pl-12 text-lg shadow-sm transition-colors focus:border-emerald-400"
+                className="h-12 pl-10"
               />
 
               {isDropdownOpen && employees.length > 0 ? (
-                <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                  <div className="max-h-60 overflow-y-auto p-1.5">
+                <div className="absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-lg border border-border bg-card shadow-md">
+                  <div className="max-h-60 overflow-y-auto p-1">
                     {filteredEmployees.length > 0 ? (
                       filteredEmployees.map((employee) => (
                         <button
@@ -509,14 +423,14 @@ export function CheckinForm() {
                             setName(employee);
                             setIsDropdownOpen(false);
                           }}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm transition-colors hover:bg-slate-50"
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm transition-[background-color] hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
                         >
-                          <Search className="h-4 w-4 text-slate-400" />
-                          <span className="font-medium text-slate-800">{employee}</span>
+                          <Search className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{employee}</span>
                         </button>
                       ))
                     ) : (
-                      <div className="px-3 py-3 text-sm text-slate-500">
+                      <div className="px-3 py-3 text-sm text-muted-foreground">
                         No matching names found.
                       </div>
                     )}
@@ -526,16 +440,16 @@ export function CheckinForm() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <div className="rounded-lg border border-border bg-muted p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-slate-500" />
-                  <p className="text-sm font-medium text-slate-900">
-                    Location {action === "checkin" ? <span className="text-red-500">*</span> : null}
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">
+                    Location {action === "checkin" ? <span className="text-destructive">*</span> : null}
                   </p>
                 </div>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {action === "checkout"
                     ? "Optional for check-out. You can proceed without GPS."
                     : gpsStatus === "granted"
@@ -549,7 +463,7 @@ export function CheckinForm() {
                 variant={gpsStatus === "granted" ? "secondary" : "default"}
                 onClick={requestLocation}
                 disabled={gpsStatus === "loading"}
-                className="min-w-40"
+                className="min-w-40 whitespace-nowrap"
               >
                 {gpsStatus === "loading" ? (
                   <>
@@ -572,9 +486,9 @@ export function CheckinForm() {
           </div>
 
           {error ? (
-            <div className="animate-in fade-in slide-in-from-top-1 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 duration-300">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5" />
+                <AlertTriangle className="h-5 w-5 shrink-0" />
                 <p className="font-medium">{error}</p>
               </div>
             </div>
@@ -583,7 +497,7 @@ export function CheckinForm() {
           <Button
             disabled={submitting || tokenStatus !== "ready"}
             type="submit"
-            className="h-14 w-full rounded-2xl bg-slate-950 text-lg font-semibold shadow-lg shadow-slate-200 transition-transform hover:translate-y-[-1px] hover:bg-slate-900"
+            className="h-12 w-full whitespace-nowrap text-base"
           >
             {submitting ? (
               <>
@@ -597,7 +511,7 @@ export function CheckinForm() {
                 ) : (
                   <CheckCircle2 className="h-5 w-5" />
                 )}
-                {action === "checkout" ? "Check Out" : "Check In"}
+                {action === "checkout" ? "Check out" : "Check in"}
               </>
             ) : (
               <>

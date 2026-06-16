@@ -1,0 +1,49 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: design.md · designed-as-app
+ * theme: custom (Abonten HR · paper oklch(99% 0.006 155) · accent oklch(52% 0.14 160) emerald · Space Grotesk + Inter)
+ * pre-emit critique: P4 H4 E4 S5 R4 V4
+ */
+
+:root {
+  --color-paper: oklch(0.99 0.006 155);
+  --color-paper-2: oklch(0.97 0.008 155);
+  --color-paper-3: oklch(0.94 0.01 155);
+  --color-ink: oklch(0.2 0.02 260);
+  --color-ink-2: oklch(0.42 0.015 260);
+  --color-ink-muted: oklch(0.52 0.012 260);
+  --color-rule: oklch(0.91 0.006 260);
+  --color-accent: oklch(0.52 0.14 160);
+  --color-accent-ink: oklch(0.99 0.006 155);
+  --color-focus: oklch(0.52 0.14 160);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-ink: oklch(0.99 0.006 155);
+
+  --font-display: var(--font-display-loaded), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-body-loaded), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-loaded), ui-monospace, monospace;
+
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --dur-short: 180ms;
+  --dur-medium: 280ms;
+
+  --radius-input: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-pill: 9999px;
+  --radius-shell: 1rem;
+}

@@ -57,9 +57,9 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
   };
 
   return (
-    <Card className="border-0 shadow-xl">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-semibold">Sign in</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle>Sign in</CardTitle>
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={onSubmit}>
@@ -75,7 +75,6 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
-              className="h-11 rounded-lg border-slate-200 bg-white px-4 text-base shadow-sm"
             />
           </div>
 
@@ -91,25 +90,20 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required
-              className="h-11 rounded-lg border-slate-200 bg-white px-4 text-base shadow-sm"
             />
           </div>
 
           {error ? (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           ) : null}
 
-          <Button
-            className="h-11 w-full rounded-lg bg-emerald-600 text-base font-semibold shadow-md hover:bg-emerald-700"
-            type="submit"
-            disabled={submitting}
-          >
-            {submitting ? "Signing in..." : "Sign in"}
+          <Button className="h-11 w-full whitespace-nowrap" type="submit" disabled={submitting}>
+            {submitting ? "Signing in…" : "Sign in"}
           </Button>
 
-          <p className="text-center text-xs text-slate-400">
+          <p className="text-center text-xs text-muted-foreground">
             Contact your system administrator for login credentials.
           </p>
         </form>

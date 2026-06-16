@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Clock, ExternalLink, Download, Trash2 } from "lucide-react";
 
 import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
+import { buildOpenStreetMapUrl } from "@/lib/geo-coords";
 import {
   formatCoordinatesLabel,
   looksLikeCoordinatesLabel,
@@ -60,6 +61,41 @@ function resolveLocationLabel(record: AttendanceRow, kind: "checkin" | "checkout
   return (
     formatCoordinatesLabel(record.checkout_latitude, record.checkout_longitude) ||
     "—"
+  );
+}
+
+function LocationLine({
+  prefix,
+  locationText,
+  latitude,
+  longitude,
+}: {
+  prefix: string;
+  locationText: string;
+  latitude: number | null;
+  longitude: number | null;
+}) {
+  const mapUrl = buildOpenStreetMapUrl(latitude, longitude);
+
+  return (
+    <p>
+      <span className="text-xs font-medium text-muted-foreground">{prefix}: </span>
+      {locationText}
+      {mapUrl ? (
+        <>
+          {" "}
+          <a
+            href={mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 text-xs font-medium text-neutral-600 underline-offset-2 hover:text-neutral-950 hover:underline"
+          >
+            View on map
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </>
+      ) : null}
+    </p>
   );
 }
 
@@ -251,15 +287,19 @@ export function AttendanceTable({
                     </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="space-y-1 text-sm text-neutral-700">
-                        <p>
-                          <span className="text-xs font-medium text-muted-foreground">In: </span>
-                          {checkInLocation}
-                        </p>
+                        <LocationLine
+                          prefix="In"
+                          locationText={checkInLocation}
+                          latitude={record.latitude}
+                          longitude={record.longitude}
+                        />
                         {checkOutLocation ? (
-                          <p>
-                            <span className="text-xs font-medium text-muted-foreground">Out: </span>
-                            {checkOutLocation}
-                          </p>
+                          <LocationLine
+                            prefix="Out"
+                            locationText={checkOutLocation}
+                            latitude={record.checkout_latitude}
+                            longitude={record.checkout_longitude}
+                          />
                         ) : null}
                       </div>
                     </TableCell>

@@ -26,3 +26,17 @@ export function asLongitude(value: unknown): number | null {
 
   return value;
 }
+
+export function buildOpenStreetMapUrl(
+  latitude: number | null,
+  longitude: number | null
+): string | null {
+  if (typeof latitude !== "number" || typeof longitude !== "number") {
+    return null;
+  }
+
+  const lat = latitude.toFixed(6);
+  const lon = longitude.toFixed(6);
+
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`;
+}

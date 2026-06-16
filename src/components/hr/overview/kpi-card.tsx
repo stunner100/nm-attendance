@@ -1,4 +1,5 @@
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -8,6 +9,9 @@ type OverviewKpiCardProps = {
   delta: number;
   invertTrend?: boolean;
   href?: string;
+  icon?: ReactNode;
+  tone?: "emerald" | "blue" | "green" | "amber" | "rose";
+  trendContext?: "this month" | "from last month";
 };
 
 function formatDelta(delta: number): string {
@@ -25,37 +29,55 @@ export function OverviewKpiCard({
   delta,
   invertTrend = false,
   href,
+  icon,
+  tone = "emerald",
+  trendContext = "this month",
 }: OverviewKpiCardProps) {
   const isPositive = delta > 0;
   const isNegative = delta < 0;
   const isGood = invertTrend ? isNegative : isPositive;
   const isBad = invertTrend ? isPositive : isNegative;
 
-  const TrendIcon = isPositive ? ArrowUpRight : isNegative ? ArrowDownRight : Minus;
+  const TrendIcon = isPositive ? ArrowUp : isNegative ? ArrowDown : Minus;
   const trendLabel =
     delta === 0
       ? "No change from last month"
       : `${isPositive ? "Up" : "Down"} ${formatDelta(delta)} from last month`;
+  const toneClass = {
+    emerald: "bg-emerald-50 text-emerald-600",
+    blue: "bg-blue-50 text-blue-600",
+    green: "bg-green-50 text-green-600",
+    amber: "bg-amber-50 text-amber-600",
+    rose: "bg-rose-50 text-rose-600",
+  }[tone];
 
   const content = (
-    <article className="flex h-full flex-col justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition-[box-shadow] hover:shadow-md">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <div className="mt-3 flex items-end justify-between gap-3">
-        <p className="text-3xl font-semibold tracking-tight tabular-nums">{value}</p>
-        <div
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
-            isGood && "bg-emerald-50 text-emerald-700",
-            isBad && "bg-rose-50 text-rose-700",
-            !isGood && !isBad && "bg-muted text-muted-foreground"
-          )}
-          aria-label={trendLabel}
-        >
-          <TrendIcon className="h-3.5 w-3.5" />
-          <span>{delta === 0 ? "0" : `${isPositive ? "+" : "-"}${formatDelta(delta)}`}</span>
+    <article className="flex h-[110px] flex-col justify-between rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-5 shadow-[0_2px_8px_rgba(15,23,42,0.05)] transition-[box-shadow] hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
+      <div className="flex items-start gap-3">
+        <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", toneClass)}>
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="text-2xl leading-none font-semibold tracking-tight text-[#0f172a] tabular-nums">
+            {value}
+          </p>
+          <p className="mt-2 whitespace-nowrap text-xs font-medium leading-tight text-[#1e293b]">{label}</p>
         </div>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">vs previous month</p>
+      <div
+        className={cn(
+          "ml-[55px] inline-flex items-center gap-1 text-xs font-medium",
+          isGood && "text-[#00a76f]",
+          isBad && "text-[#ff3045]",
+          !isGood && !isBad && "text-[#64748b]"
+        )}
+        aria-label={trendLabel}
+      >
+        <TrendIcon className="h-3 w-3" />
+        <span>
+          {delta === 0 ? "No change" : `${formatDelta(delta)} ${trendContext}`}
+        </span>
+      </div>
     </article>
   );
 
@@ -64,7 +86,7 @@ export function OverviewKpiCard({
   }
 
   return (
-    <a href={href} className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40">
+    <a href={href} className="block h-full rounded-[8px] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40">
       {content}
     </a>
   );

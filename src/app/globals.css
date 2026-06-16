@@ -135,4 +135,10 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+  .dashboard-sidebar-scroll {
+    scrollbar-width: none;
+  }
+  .dashboard-sidebar-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }

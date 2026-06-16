@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -20,26 +19,27 @@ export function OverviewActionTile({
   iconClassName,
 }: OverviewActionTileProps) {
   return (
-    <article className="flex h-full flex-col justify-between rounded-xl border border-border bg-card p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <article className="flex h-[104px] flex-col justify-between rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-5 shadow-[0_2px_8px_rgba(15,23,42,0.05)]">
+      <div className="flex items-start gap-3">
         <div
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-lg bg-muted",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
             iconClassName
           )}
         >
           {icon}
         </div>
-        <p className="text-2xl font-semibold tabular-nums">{count}</p>
+        <div className="min-w-0">
+          <p className="text-2xl leading-none font-semibold tracking-tight text-[#0f172a] tabular-nums">{count}</p>
+          <p className="mt-2 whitespace-nowrap text-[11px] font-medium leading-tight text-[#1e293b]">{label}</p>
+        </div>
       </div>
-      <div className="mt-4 flex items-end justify-between gap-3">
-        <p className="text-sm font-medium text-foreground">{label}</p>
+      <div className="ml-[55px]">
         <Link
           href={href}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          className="text-xs font-medium text-[#006ce5] transition-colors hover:text-[#0057b8]"
         >
           View all
-          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
     </article>

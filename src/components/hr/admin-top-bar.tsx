@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Bell, Gauge, Search } from "lucide-react";
+import { BarChart3, Bell, ChevronDown, Menu, Search } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { LogoutButton } from "@/components/logout-button";
@@ -47,6 +47,10 @@ function resolvePageTitle(pathname: string): string {
 }
 
 function displayNameFromEmail(email: string): string {
+  if (email.trim().toLowerCase() === "admin@nm-hr.com") {
+    return "HR Admin";
+  }
+
   const local = email.split("@")[0]?.trim();
   if (!local) {
     return "HR Admin";
@@ -99,8 +103,12 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
 
   useEffect(() => {
     if (query.trim().length < 2) {
-      setResults([]);
-      return;
+      const timeout = window.setTimeout(() => {
+        setResults([]);
+        setSearchOpen(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeout);
     }
 
     const controller = new AbortController();
@@ -141,74 +149,68 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card">
-      <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <header className="sticky top-0 z-40 border-b border-[#e5e7eb] bg-white">
+      <div className="flex min-h-20 items-center gap-4 px-4 sm:px-6 lg:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-5">
+          <button aria-label="Open menu" className="hidden text-[#475569] lg:block">
+            <Menu className="h-5 w-5" strokeWidth={2} />
+          </button>
           <div className="min-w-0">
-            <h1 className="font-heading text-xl font-semibold tracking-tight sm:text-2xl">
+            <h1 className="font-heading text-xl font-semibold tracking-tight text-[#0f172a]">
               {pageTitle}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">Welcome back, {displayName}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            {isOverview ? <PeriodSelector period={period} /> : null}
-            <Button asChild size="sm">
-              <Link href="/admin/scores">
-                <Gauge className="h-4 w-4" />
-                Record scores
-              </Link>
-            </Button>
+            <p className="mt-0.5 text-xs text-[#64748b]">Welcome back, {displayName}</p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <form className="relative min-w-0 flex-1 sm:max-w-md" onSubmit={onSearchSubmit}>
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="hidden flex-1 justify-center lg:flex">
+          <form className="relative w-full max-w-[296px]" onSubmit={onSearchSubmit}>
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onFocus={() => setSearchOpen(results.length > 0)}
               onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
               placeholder="Search employees, KPIs, tasks..."
-              className="h-10 pl-9"
+              className="h-9 rounded-[6px] border-[#d7dde7] bg-[#fbfcfe] pl-10 text-[13px] shadow-none placeholder:text-[#7b8497]"
             />
             {searchOpen && results.length > 0 ? (
-              <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+              <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-lg border border-[#e5e7eb] bg-white shadow-lg">
                 {results.map((result) => (
                   <Link
                     key={`${result.group}-${result.href}`}
                     href={result.href}
-                    className="block border-b border-border px-3 py-2 text-sm last:border-b-0 hover:bg-muted"
+                    className="block border-b border-[#eef2f7] px-3 py-2 text-sm last:border-b-0 hover:bg-[#f8fafc]"
                     onMouseDown={(event) => event.preventDefault()}
                   >
                     <p className="font-medium">{result.label}</p>
-                    <p className="text-xs text-muted-foreground">{result.group}</p>
+                    <p className="text-xs text-[#64748b]">{result.group}</p>
                   </Link>
                 ))}
               </div>
             ) : null}
           </form>
+        </div>
 
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
             <Button
               asChild
-              variant="outline"
               size="icon"
-              className={cn("relative", notificationCount > 0 && "border-rose-200")}
+              variant="ghost"
+              className={cn("relative h-9 w-9 rounded-full text-[#334155] hover:bg-[#f1f5f9]", notificationCount > 0 && "text-[#0f172a]")}
             >
               <Link href="/admin#alerts" aria-label="View alerts">
                 <Bell className="h-4 w-4" />
                 {notificationCount > 0 ? (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ff3b4f] px-1 text-[10px] font-semibold text-white">
                     {notificationCount > 9 ? "9+" : notificationCount}
                   </span>
                 ) : null}
               </Link>
             </Button>
 
-            <div className="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 sm:flex">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+            <div className="hidden items-center gap-3 sm:flex">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(145deg,#8b4f2d,#321407)] text-xs font-semibold text-white ring-2 ring-white shadow-sm">
                 {displayName
                   .split(" ")
                   .map((part) => part[0])
@@ -216,13 +218,23 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
                   .slice(0, 2)}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{displayName}</p>
-                <p className="truncate text-xs text-muted-foreground">Super Admin</p>
+                <p className="truncate text-[13px] font-semibold text-[#0f172a]">{displayName}</p>
+                <p className="truncate text-xs text-[#64748b]">Super Admin</p>
               </div>
+              <ChevronDown className="h-4 w-4 text-[#334155]" />
             </div>
-
-            <LogoutButton />
-          </div>
+        </div>
+      </div>
+      <div className="flex min-h-10 items-center justify-end gap-3 border-t border-[#eef2f7] bg-[#f8fafc] px-4 sm:px-6 lg:px-4">
+        {isOverview ? <PeriodSelector period={period} /> : null}
+        <Button asChild size="sm" className="h-8 rounded-[6px] bg-[#00965f] px-4 text-xs font-semibold text-white shadow-[0_6px_14px_rgba(0,150,95,0.24)] hover:bg-[#008955]">
+          <Link href="/admin/scores">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Record Scores
+          </Link>
+        </Button>
+        <div className="sr-only">
+          <LogoutButton />
         </div>
       </div>
     </header>

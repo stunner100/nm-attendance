@@ -21,15 +21,17 @@ function clampPercent(value: number): number {
 
 export function computeWeightedTotal(input: {
   kpiScore: number;
-  taskScore: number;
-  commsScore: number;
-  teamworkScore: number;
+  disciplineScore: number;
+  attendanceScore: number;
+  hygieneScore: number;
+  extracurricularScore: number;
 }): number {
   const total =
     (clampPercent(input.kpiScore) * SCORE_WEIGHTS.kpi +
-      clampPercent(input.taskScore) * SCORE_WEIGHTS.task +
-      clampPercent(input.commsScore) * SCORE_WEIGHTS.comms +
-      clampPercent(input.teamworkScore) * SCORE_WEIGHTS.teamwork) /
+      clampPercent(input.disciplineScore) * SCORE_WEIGHTS.discipline +
+      clampPercent(input.attendanceScore) * SCORE_WEIGHTS.attendance +
+      clampPercent(input.hygieneScore) * SCORE_WEIGHTS.hygiene +
+      clampPercent(input.extracurricularScore) * SCORE_WEIGHTS.extracurricular) /
     100;
   return Math.round(total * 100) / 100;
 }
@@ -56,7 +58,8 @@ export async function listMonthlyScores(options: {
   let query = `
     SELECT
       s.id, s.employee_id, s.period, s.kpi_score, s.task_score, s.comms_score,
-      s.teamwork_score, s.total_score, s.rating, s.notes, s.scored_by, s.created_at,
+      s.hygiene_score, s.extracurricular_score,
+      s.total_score, s.rating, s.notes, s.scored_by, s.created_at,
       e.full_name AS employee_name, e.department AS department
     FROM hr_monthly_scores s
     INNER JOIN hr_employees e ON e.id = s.employee_id
@@ -88,28 +91,33 @@ export async function upsertMonthlyScore(
     `
       INSERT INTO hr_monthly_scores (
         employee_id, period, kpi_score, task_score, comms_score, teamwork_score,
+        hygiene_score, extracurricular_score,
         total_score, rating, notes, scored_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, $9, $10, $11)
       ON CONFLICT (employee_id, period) DO UPDATE
       SET kpi_score = EXCLUDED.kpi_score,
           task_score = EXCLUDED.task_score,
           comms_score = EXCLUDED.comms_score,
-          teamwork_score = EXCLUDED.teamwork_score,
+          teamwork_score = 0,
+          hygiene_score = EXCLUDED.hygiene_score,
+          extracurricular_score = EXCLUDED.extracurricular_score,
           total_score = EXCLUDED.total_score,
           rating = EXCLUDED.rating,
           notes = EXCLUDED.notes,
           scored_by = EXCLUDED.scored_by
       RETURNING id, employee_id, period, kpi_score, task_score, comms_score,
-        teamwork_score, total_score, rating, notes, scored_by, created_at
+        hygiene_score, extracurricular_score,
+        total_score, rating, notes, scored_by, created_at
     `,
     [
       input.employeeId,
       input.period.trim(),
       clampPercent(input.kpiScore),
-      clampPercent(input.taskScore),
-      clampPercent(input.commsScore),
-      clampPercent(input.teamworkScore),
+      clampPercent(input.disciplineScore),
+      clampPercent(input.attendanceScore),
+      clampPercent(input.hygieneScore),
+      clampPercent(input.extracurricularScore),
       total,
       rating,
       input.notes?.trim() || null,

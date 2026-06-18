@@ -5,7 +5,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SCORE_WEIGHTS, computeRating, RATING_BANDS } from "@/lib/hr/framework-reference";
+import {
+  SCORE_DIMENSIONS,
+  SCORE_WEIGHTS,
+  computeRating,
+  RATING_BANDS,
+} from "@/lib/hr/framework-reference";
 
 type EmployeeOption = {
   id: number;
@@ -23,23 +28,39 @@ function clamp(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+const formFieldByKey: Record<(typeof SCORE_DIMENSIONS)[number]["key"], string> = {
+  kpi: "kpiScore",
+  discipline: "disciplineScore",
+  attendance: "attendanceScore",
+  hygiene: "hygieneScore",
+  extracurricular: "extracurricularScore",
+};
+
 export function ScoreForm({ employees, defaultPeriod, action }: ScoreFormProps) {
-  const [kpi, setKpi] = useState(0);
-  const [task, setTask] = useState(0);
-  const [comms, setComms] = useState(0);
-  const [teamwork, setTeamwork] = useState(0);
+  const [scores, setScores] = useState({
+    kpi: 0,
+    discipline: 0,
+    attendance: 0,
+    hygiene: 0,
+    extracurricular: 0,
+  });
 
   const total =
     Math.round(
-      ((clamp(kpi) * SCORE_WEIGHTS.kpi +
-        clamp(task) * SCORE_WEIGHTS.task +
-        clamp(comms) * SCORE_WEIGHTS.comms +
-        clamp(teamwork) * SCORE_WEIGHTS.teamwork) /
+      ((clamp(scores.kpi) * SCORE_WEIGHTS.kpi +
+        clamp(scores.discipline) * SCORE_WEIGHTS.discipline +
+        clamp(scores.attendance) * SCORE_WEIGHTS.attendance +
+        clamp(scores.hygiene) * SCORE_WEIGHTS.hygiene +
+        clamp(scores.extracurricular) * SCORE_WEIGHTS.extracurricular) /
         100) *
         100
     ) / 100;
   const rating = computeRating(total);
   const ratingLabel = RATING_BANDS.find((band) => band.band === rating)?.label ?? rating;
+
+  const setDimension = (key: keyof typeof scores, value: number) => {
+    setScores((current) => ({ ...current, [key]: value }));
+  };
 
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
@@ -60,58 +81,24 @@ export function ScoreForm({ employees, defaultPeriod, action }: ScoreFormProps) 
       </select>
       <Input defaultValue={defaultPeriod} name="period" placeholder="2026-06" required />
 
-      <label className="text-sm">
-        <span className="mb-1 block text-xs text-muted-foreground">
-          KPI performance ({SCORE_WEIGHTS.kpi}%)
-        </span>
-        <Input
-          max={100}
-          min={0}
-          name="kpiScore"
-          onChange={(event) => setKpi(Number(event.target.value))}
-          type="number"
-          value={kpi}
-        />
-      </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-xs text-muted-foreground">
-          Task completion ({SCORE_WEIGHTS.task}%)
-        </span>
-        <Input
-          max={100}
-          min={0}
-          name="taskScore"
-          onChange={(event) => setTask(Number(event.target.value))}
-          type="number"
-          value={task}
-        />
-      </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-xs text-muted-foreground">
-          Communication & reporting ({SCORE_WEIGHTS.comms}%)
-        </span>
-        <Input
-          max={100}
-          min={0}
-          name="commsScore"
-          onChange={(event) => setComms(Number(event.target.value))}
-          type="number"
-          value={comms}
-        />
-      </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-xs text-muted-foreground">
-          Teamwork, ownership & discipline ({SCORE_WEIGHTS.teamwork}%)
-        </span>
-        <Input
-          max={100}
-          min={0}
-          name="teamworkScore"
-          onChange={(event) => setTeamwork(Number(event.target.value))}
-          type="number"
-          value={teamwork}
-        />
-      </label>
+      {SCORE_DIMENSIONS.map((dimension) => {
+        const fieldName = formFieldByKey[dimension.key];
+        return (
+          <label key={dimension.key} className="text-sm">
+            <span className="mb-1 block text-xs text-muted-foreground">
+              {dimension.label} ({dimension.weight}%)
+            </span>
+            <Input
+              max={100}
+              min={0}
+              name={fieldName}
+              onChange={(event) => setDimension(dimension.key, Number(event.target.value))}
+              type="number"
+              value={scores[dimension.key]}
+            />
+          </label>
+        );
+      })}
 
       <Input className="sm:col-span-2" name="scoredBy" placeholder="Scored by (name)" />
       <Textarea className="sm:col-span-2" name="notes" placeholder="Notes (optional)" />

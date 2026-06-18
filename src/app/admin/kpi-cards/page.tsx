@@ -2,11 +2,11 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { StatusBadge } from "@/components/hr/status-badge";
+import { AddKpiCardStack } from "@/components/hr/add-kpi-card-stack";
+import { KpiCardListAccordion } from "@/components/hr/kpi-card-list-accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
@@ -121,7 +121,9 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
       list: await listKpiCardItems(card.id),
     }))
   );
-  const itemsByCard = new Map(items.map((entry) => [entry.cardId, entry.list]));
+  const itemsByCard = Object.fromEntries(
+    items.map((entry) => [entry.cardId, entry.list])
+  );
 
   return (
     <div className="space-y-6">
@@ -170,68 +172,13 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
           <CardTitle>Create KPI Card</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createCardAction} className="grid gap-3 sm:grid-cols-2">
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue=""
-              name="employeeId"
-              required
-            >
-              <option disabled value="">
-                Select employee
-              </option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.full_name}
-                </option>
-              ))}
-            </select>
-            <Input defaultValue={currentPeriod()} name="period" placeholder="2026-06" required />
-            <Input name="roleTitle" placeholder="Role title" />
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue="draft"
-              name="status"
-            >
-              {HR_KPI_CARD_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {humanizeLabel(status)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue=""
-              name="companyGoalId"
-            >
-              <option value="">Link company goal</option>
-              {companyGoals.map((goal) => (
-                <option key={goal.id} value={goal.id}>
-                  {goal.title} ({goal.period})
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue=""
-              name="departmentGoalId"
-            >
-              <option value="">Link department goal</option>
-              {departmentGoals.map((goal) => (
-                <option key={goal.id} value={goal.id}>
-                  {goal.department}: {goal.title}
-                </option>
-              ))}
-            </select>
-            <Textarea
-              className="sm:col-span-2"
-              name="companyGoal"
-              placeholder="Legacy goal text (optional if linked above)"
-            />
-            <div className="sm:col-span-2">
-              <Button type="submit">Create Card</Button>
-            </div>
-          </form>
+          <AddKpiCardStack
+            companyGoals={companyGoals}
+            createCardAction={createCardAction}
+            defaultPeriod={currentPeriod()}
+            departmentGoals={departmentGoals}
+            employeeOptions={employees}
+          />
         </CardContent>
       </Card>
 
@@ -239,84 +186,13 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
         <CardHeader>
           <CardTitle>KPI Cards ({cards.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {cards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No KPI cards yet.</p>
-          ) : (
-            cards.map((card) => (
-              <div key={card.id} className="rounded-lg border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {card.employee_name}
-                      <span className="text-muted-foreground"> &middot; {card.period}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {card.role_title || "Role not set"}
-                      {card.company_goal ? ` \u2022 Goal: ${card.company_goal}` : ""}
-                    </p>
-                  </div>
-                  <form action={updateCardStatusAction} className="flex items-center gap-2">
-                    <input name="cardId" type="hidden" value={card.id} />
-                    <select
-                      className="h-8 rounded-md border bg-background px-2 text-xs"
-                      defaultValue={card.status}
-                      name="status"
-                    >
-                      {HR_KPI_CARD_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {humanizeLabel(status)}
-                        </option>
-                      ))}
-                    </select>
-                    <Button size="sm" type="submit" variant="outline">
-                      Save
-                    </Button>
-                    <StatusBadge status={card.status} />
-                  </form>
-                </div>
-
-                <div className="mt-3 space-y-1.5">
-                  {(itemsByCard.get(card.id) ?? []).length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No KPIs added to this card yet.</p>
-                  ) : (
-                    (itemsByCard.get(card.id) ?? []).map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-start justify-between gap-3 rounded-[var(--radius-sm)] bg-muted px-3 py-2 text-sm"
-                      >
-                        <div>
-                          <p className="font-medium text-foreground">{item.kpi_text}</p>
-                          {item.target_measure ? (
-                            <p className="text-xs text-muted-foreground">Target: {item.target_measure}</p>
-                          ) : null}
-                        </div>
-                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                          {item.weight}%
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <form action={addItemAction} className="mt-3 grid gap-2 sm:grid-cols-[2fr_1.4fr_0.6fr_auto]">
-                  <input name="cardId" type="hidden" value={card.id} />
-                  <Input className="h-8 text-xs" name="kpiText" placeholder="SMART KPI" required />
-                  <Input className="h-8 text-xs" name="targetMeasure" placeholder="Target / measure" />
-                  <Input
-                    className="h-8 text-xs"
-                    name="weight"
-                    placeholder="Weight %"
-                    step="1"
-                    type="number"
-                  />
-                  <Button size="sm" type="submit" variant="outline">
-                    Add KPI
-                  </Button>
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <KpiCardListAccordion
+            addItemAction={addItemAction}
+            cards={cards}
+            itemsByCard={itemsByCard}
+            updateCardStatusAction={updateCardStatusAction}
+          />
         </CardContent>
       </Card>
 

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { AdminTopBar } from "@/components/hr/admin-top-bar";
 import { HrAdminNav } from "@/components/hr/admin-nav";
+import { BrandLogo } from "@/components/hr/brand-logo";
 import { cn } from "@/lib/utils";
 
 type AdminAppShellProps = {
@@ -24,13 +25,9 @@ export function AdminAppShell({ email, children }: AdminAppShellProps) {
       <div className="flex min-h-screen">
         <aside className="fixed inset-y-0 left-0 z-50 hidden w-60 flex-col border-r border-[var(--color-rule)] bg-[var(--color-paper)] md:flex">
           <div className="flex h-16 items-center gap-3 border-b border-[var(--color-rule)] px-5">
-            <img
-              src="/logo.jpg"
-              alt=""
-              className="h-8 w-8 rounded-full object-cover object-left"
-            />
+            <BrandLogo className="h-8 w-8 rounded-full object-cover object-left" />
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[var(--color-ink)]">Night Market</p>
+              <p className="truncate text-sm font-medium text-[var(--color-ink)]">Abonten Technologies</p>
               <p className="truncate text-xs text-[var(--color-ink-muted)]">HR workspace</p>
             </div>
           </div>
@@ -38,7 +35,7 @@ export function AdminAppShell({ email, children }: AdminAppShellProps) {
           <HrAdminNav />
 
           <div className="mt-auto border-t border-[var(--color-rule)] p-4">
-            <p className="text-xs text-[var(--color-ink-muted)]">Performance &amp; people ops</p>
+            <p className="text-xs text-[var(--color-ink-muted)]">Performance & people ops</p>
           </div>
         </aside>
 

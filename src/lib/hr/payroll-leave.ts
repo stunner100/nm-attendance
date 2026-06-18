@@ -7,7 +7,7 @@ import type {
   HRPayrollCycle,
   HRPayrollStatus,
 } from "@/lib/types";
-import { HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
+import { HR_LEAVE_REQUEST_STATUSES } from "@/lib/types";
 import {
   applyListLimit,
   asDateOnly,

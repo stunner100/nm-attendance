@@ -2,11 +2,9 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { StatusBadge } from "@/components/hr/status-badge";
-import { Button } from "@/components/ui/button";
+import { AddCompanyGoalStack } from "@/components/hr/add-company-goal-stack";
+import { CompanyGoalsListAccordion } from "@/components/hr/company-goals-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
@@ -16,7 +14,6 @@ import {
   updateCompanyGoal,
 } from "@/lib/hr-db";
 import { HR_GOAL_PRIORITIES, HR_GOAL_STATUSES } from "@/lib/types";
-import { humanizeLabel } from "@/lib/labels";
 
 type PageProps = {
   searchParams: Promise<{ period?: string; status?: string; error?: string }>;
@@ -99,42 +96,10 @@ export default async function CompanyGoalsPage({ searchParams }: PageProps) {
           <CardTitle>Create company goal</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createGoalAction} className="grid gap-4 md:grid-cols-2">
-            <Input name="title" placeholder="Goal title" required />
-            <Input name="period" defaultValue={currentPeriod()} placeholder="2026-06" required />
-            <select
-              name="priority"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              defaultValue="medium"
-            >
-              {HR_GOAL_PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {humanizeLabel(p)}
-                </option>
-              ))}
-            </select>
-            <Input name="owner" placeholder="Owner" />
-            <select
-              name="status"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              defaultValue="draft"
-            >
-              {HR_GOAL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {humanizeLabel(s)}
-                </option>
-              ))}
-            </select>
-            <Textarea
-              name="description"
-              placeholder="Description"
-              className="md:col-span-2"
-              rows={3}
-            />
-            <Button type="submit" className="md:col-span-2 w-fit">
-              Save goal
-            </Button>
-          </form>
+          <AddCompanyGoalStack
+            defaultPeriod={currentPeriod()}
+            createGoalAction={createGoalAction}
+          />
         </CardContent>
       </Card>
 
@@ -142,41 +107,8 @@ export default async function CompanyGoalsPage({ searchParams }: PageProps) {
         <CardHeader>
           <CardTitle>Goals ({goals.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {goals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No company goals yet.</p>
-          ) : (
-            goals.map((goal) => (
-              <div
-                key={goal.id}
-                className="rounded-lg border border-border p-4 space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{goal.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {goal.period} · {goal.owner || "No owner"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={goal.priority} />
-                    <StatusBadge status={goal.status} />
-                  </div>
-                </div>
-                {goal.description ? (
-                  <p className="text-sm text-muted-foreground">{goal.description}</p>
-                ) : null}
-                {goal.status === "draft" ? (
-                  <form action={approveGoalAction}>
-                    <input type="hidden" name="goalId" value={goal.id} />
-                    <Button type="submit" size="sm" variant="outline">
-                      Approve & activate
-                    </Button>
-                  </form>
-                ) : null}
-              </div>
-            ))
-          )}
+        <CardContent>
+          <CompanyGoalsListAccordion goals={goals} approveGoalAction={approveGoalAction} />
         </CardContent>
       </Card>
     </div>

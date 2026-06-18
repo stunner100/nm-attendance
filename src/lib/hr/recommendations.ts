@@ -22,7 +22,8 @@ export async function getPerformanceRecommendations(
   const scoresRes = await pool.query(
     `
       SELECT s.employee_id, s.total_score, s.kpi_score, s.task_score,
-        s.comms_score, s.teamwork_score, e.full_name, e.department
+        s.comms_score, s.hygiene_score, s.extracurricular_score,
+        e.full_name, e.department
       FROM hr_monthly_scores s
       INNER JOIN hr_employees e ON e.id = s.employee_id
       WHERE s.period = $1
@@ -67,7 +68,7 @@ export async function getPerformanceRecommendations(
         period,
         kind: "accountability",
         label: "Coaching or improvement note",
-        reason: `Scored ${total.toFixed(1)} (60–69: Below expectation)`,
+        reason: `Scored ${total.toFixed(1)} (60–69: Below Expectation)`,
         severity: "medium",
       });
     } else if (total < 60) {
@@ -78,36 +79,36 @@ export async function getPerformanceRecommendations(
         period,
         kind: "accountability",
         label: "Formal review or PIP consideration",
-        reason: `Scored ${total.toFixed(1)} (under 60: Poor performance)`,
+        reason: `Scored ${total.toFixed(1)} (below 60: Poor)`,
         severity: "high",
       });
     }
 
-    const comms = asNumber(row.comms_score);
-    const task = asNumber(row.task_score);
+    const attendance = asNumber(row.comms_score);
+    const discipline = asNumber(row.task_score);
     const kpi = asNumber(row.kpi_score);
 
-    if (comms > 0 && comms < 70) {
+    if (attendance > 0 && attendance < 70) {
       recommendations.push({
         employeeId,
         employeeName,
         department,
         period,
         kind: "training",
-        label: "Communication & reporting training",
-        reason: `Communication score ${comms.toFixed(1)} is below 70`,
+        label: "Attendance improvement coaching",
+        reason: `Attendance score ${attendance.toFixed(1)} is below 70`,
         severity: "medium",
       });
     }
-    if (task > 0 && task < 70) {
+    if (discipline > 0 && discipline < 70) {
       recommendations.push({
         employeeId,
         employeeName,
         department,
         period,
         kind: "training",
-        label: "Productivity or role-specific training",
-        reason: `Task completion score ${task.toFixed(1)} is below 70`,
+        label: "Discipline & conduct coaching",
+        reason: `Discipline score ${discipline.toFixed(1)} is below 70`,
         severity: "medium",
       });
     }

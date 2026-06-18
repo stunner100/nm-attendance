@@ -47,7 +47,8 @@ export async function GET(
     case "monthly-scores": {
       const res = await pool.query(`
         SELECT e.full_name, e.department, s.period, s.kpi_score, s.task_score,
-          s.comms_score, s.teamwork_score, s.total_score, s.rating, s.approval_status
+          s.comms_score, s.hygiene_score, s.extracurricular_score,
+          s.total_score, s.rating, s.approval_status
         FROM hr_monthly_scores s
         INNER JOIN hr_employees e ON e.id = s.employee_id
         ORDER BY s.period DESC, s.total_score DESC
@@ -58,9 +59,10 @@ export async function GET(
           "Department",
           "Period",
           "KPI",
-          "Tasks",
-          "Comms",
-          "Teamwork",
+          "Discipline",
+          "Attendance",
+          "Hygiene & appearance",
+          "Extra curricular",
           "Total",
           "Rating",
           "Approval",
@@ -72,7 +74,8 @@ export async function GET(
           String(r.kpi_score),
           String(r.task_score),
           String(r.comms_score),
-          String(r.teamwork_score),
+          String(r.hygiene_score ?? 0),
+          String(r.extracurricular_score ?? 0),
           String(r.total_score),
           String(r.rating),
           String(r.approval_status ?? "draft"),

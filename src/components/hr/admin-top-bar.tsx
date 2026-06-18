@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, Bell, Search } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 
 import { AdminMobileNav } from "@/components/hr/admin-mobile-nav";
+import { BrandLogo } from "@/components/hr/brand-logo";
+import { ThemePickerMenu } from "@/components/hr/theme-picker";
 import { LogoutButton } from "@/components/logout-button";
 import { PeriodSelector } from "@/components/hr/period-selector";
 import { Button } from "@/components/ui/button";
@@ -151,6 +153,11 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const isOverview = pathname === "/admin";
   const period =
@@ -238,11 +245,7 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
       <div className="flex h-16 items-center gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
         <div className="flex shrink-0 items-center gap-2 md:hidden">
           <AdminMobileNav email={email} />
-          <img
-            src="/logo.jpg"
-            alt=""
-            className="h-8 w-8 rounded-full object-cover object-left"
-          />
+          <BrandLogo className="h-8 w-8 rounded-full object-cover object-left" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -266,42 +269,57 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-          <Dialog
-            open={mobileSearchOpen}
-            onOpenChange={(open) => {
-              setMobileSearchOpen(open);
-              if (!open) {
-                setSearchOpen(false);
-                setQuery("");
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full text-[var(--color-ink-2)] md:hidden"
-                aria-label="Search"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="gap-4 sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-[var(--color-ink)]">Search</DialogTitle>
-              </DialogHeader>
-              <AdminSearchField
-                query={query}
-                setQuery={setQuery}
-                results={results}
-                searchOpen={searchOpen}
-                setSearchOpen={setSearchOpen}
-                onSearchSubmit={onSearchSubmit}
-                onResultNavigate={closeMobileSearch}
-              />
-            </DialogContent>
-          </Dialog>
+          {mounted ? (
+            <Dialog
+              open={mobileSearchOpen}
+              onOpenChange={(open) => {
+                setMobileSearchOpen(open);
+                if (!open) {
+                  setSearchOpen(false);
+                  setQuery("");
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-10 w-10 rounded-full text-[var(--color-ink-2)] md:hidden"
+                  aria-label="Search"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="gap-4 sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-[var(--color-ink)]">Search</DialogTitle>
+                </DialogHeader>
+                <AdminSearchField
+                  query={query}
+                  setQuery={setQuery}
+                  results={results}
+                  searchOpen={searchOpen}
+                  setSearchOpen={setSearchOpen}
+                  onSearchSubmit={onSearchSubmit}
+                  onResultNavigate={closeMobileSearch}
+                />
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 rounded-full text-[var(--color-ink-2)] md:hidden"
+              aria-label="Search"
+              disabled
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          )}
+
+          <ThemePickerMenu />
 
           <Button
             asChild

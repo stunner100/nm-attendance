@@ -2,6 +2,10 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
+import { CreatePipStack } from "@/components/hr/create-pip-stack";
+import { CreateReviewStack } from "@/components/hr/create-review-stack";
+import { PerformancePipAccordion } from "@/components/hr/performance-pip-accordion";
+import { PerformanceReviewAccordion } from "@/components/hr/performance-review-accordion";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -224,35 +228,10 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
             <CardTitle>Schedule Review</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createReviewAction} className="grid gap-3">
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue=""
-                name="employeeId"
-                required
-              >
-                <option disabled value="">
-                  Select employee
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="reviewPeriod" placeholder="Review period (Q2 2026)" required />
-              <Input name="dueDate" type="date" required />
-              <select className="h-9 rounded-md border bg-background px-3 text-sm" defaultValue="" name="reviewerEmployeeId">
-                <option value="">Reviewer (optional)</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="notes" placeholder="Notes (optional)" />
-              <Button type="submit">Create Review</Button>
-            </form>
+            <CreateReviewStack
+              employeeOptions={employees}
+              createReviewAction={createReviewAction}
+            />
           </CardContent>
         </Card>
 
@@ -261,38 +240,10 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
             <CardTitle>Create Improvement Plan</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createPipAction} className="grid gap-3">
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue=""
-                name="employeeId"
-                required
-              >
-                <option disabled value="">
-                  Select employee
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="active"
-                name="status"
-              >
-                {HR_PIP_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {humanizeLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <Input name="startDate" type="date" required />
-              <Input name="endDate" type="date" />
-              <Input name="progressNote" placeholder="Progress note" />
-              <Button type="submit">Create Improvement Plan</Button>
-            </form>
+            <CreatePipStack
+              employeeOptions={employees}
+              createPipAction={createPipAction}
+            />
           </CardContent>
         </Card>
 
@@ -327,89 +278,35 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance Reviews ({data.reviews.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {data.reviews.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Start by scheduling a review for an employee.</p>
-          ) : (
-            data.reviews.map((review) => (
-              <div key={review.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{review.review_period}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Due {review.due_date}
-                    {review.completed_at ? ` \u2022 Completed ${review.completed_at}` : ""}
-                  </p>
-                </div>
-                <form action={updateReviewStatusAction} className="flex items-center gap-2">
-                  <input name="reviewId" type="hidden" value={review.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={review.status}
-                    name="status"
-                  >
-                    {HR_REVIEW_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={review.status} />
-                </form>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <h2 className="text-sm font-medium text-foreground">Reviews &amp; improvement plans</h2>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Improvement Plans ({data.pips.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {data.pips.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No improvement plans active.</p>
-          ) : (
-            data.pips.map((pip) => (
-              <div key={pip.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">PIP started {pip.start_date}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {pip.start_date}
-                    {pip.end_date ? ` to ${pip.end_date}` : ""}
-                    {pip.progress_note ? ` \u2022 ${pip.progress_note}` : ""}
-                  </p>
-                </div>
-                <form action={updatePipStatusAction} className="flex flex-wrap items-center gap-2">
-                  <input name="pipId" type="hidden" value={pip.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={pip.status}
-                    name="status"
-                  >
-                    {HR_PIP_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Input className="h-8 w-40 text-xs" name="progressNote" placeholder="Progress note" />
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={pip.status} />
-                </form>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance Reviews ({data.reviews.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PerformanceReviewAccordion
+              reviews={data.reviews}
+              employeeOptions={employees}
+              updateReviewStatusAction={updateReviewStatusAction}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Improvement Plans ({data.pips.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PerformancePipAccordion
+              pips={data.pips}
+              employeeOptions={employees}
+              updatePipStatusAction={updatePipStatusAction}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>

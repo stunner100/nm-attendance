@@ -1,4 +1,5 @@
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
+import { ThemePicker } from "@/components/hr/theme-picker";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { CHECKIN_TIMEZONE } from "@/lib/attendance-punctuality";
 import { currentPeriod, formatPeriodLabel } from "@/lib/hr/framework-reference";
@@ -11,8 +12,17 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        description="Operational defaults for Night Market HR. Advanced configuration will expand here."
+        description="Operational defaults for Abonten Technologies HR. Advanced configuration will expand here."
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ThemePicker />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

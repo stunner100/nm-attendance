@@ -2,7 +2,9 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
+import { AssignTrainingStack } from "@/components/hr/assign-training-stack";
 import { StatusBadge } from "@/components/hr/status-badge";
+import { TrainingAssignmentAccordion } from "@/components/hr/training-assignment-accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -218,51 +220,11 @@ export default async function TrainingPage({ searchParams }: TrainingPageProps) 
             <CardTitle>Assign to Employee</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createAssignmentAction} className="grid gap-3">
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue=""
-                name="employeeId"
-                required
-              >
-                <option disabled value="">
-                  Select employee
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue=""
-                name="moduleId"
-                required
-              >
-                <option disabled value="">
-                  Select module
-                </option>
-                {moduleOptions.map((module) => (
-                  <option key={module.id} value={module.id}>
-                    {module.code} - {module.title}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="assigned"
-                name="status"
-              >
-                {HR_TRAINING_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {humanizeLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <Input name="assignedAt" type="date" />
-              <Button type="submit">Create Assignment</Button>
-            </form>
+            <AssignTrainingStack
+              employees={employees}
+              moduleOptions={moduleOptions}
+              createAssignmentAction={createAssignmentAction}
+            />
           </CardContent>
         </Card>
 
@@ -332,40 +294,13 @@ export default async function TrainingPage({ searchParams }: TrainingPageProps) 
         <CardHeader>
           <CardTitle>Assignments ({data.assignments.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {data.assignments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Assign a training module to an employee to get started.</p>
-          ) : (
-            data.assignments.map((assignment) => (
-              <div key={assignment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">Training assignment</p>
-                  <p className="text-xs text-muted-foreground">
-                    Assigned {assignment.assigned_at}
-                    {assignment.completed_at ? ` {"\u2022"} Completed ${assignment.completed_at}` : ""}
-                  </p>
-                </div>
-                <form action={updateAssignmentStatusAction} className="flex items-center gap-2">
-                  <input name="assignmentId" type="hidden" value={assignment.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={assignment.status}
-                    name="status"
-                  >
-                    {HR_TRAINING_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={assignment.status} />
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <TrainingAssignmentAccordion
+            assignments={data.assignments}
+            employees={employees}
+            moduleOptions={moduleOptions}
+            updateAssignmentStatusAction={updateAssignmentStatusAction}
+          />
         </CardContent>
       </Card>
 

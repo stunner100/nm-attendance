@@ -2,10 +2,19 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { StatusBadge } from "@/components/hr/status-badge";
+import {
+  CreateLeaveRequestStack,
+  CreatePayrollAnomalyStack,
+  CreatePayrollCycleStack,
+  UpsertLeaveBalanceStack,
+} from "@/components/hr/payroll-leave-create-stacks";
+import {
+  LeaveRequestsAccordion,
+  PayrollAnomaliesAccordion,
+  PayrollCyclesAccordion,
+} from "@/components/hr/payroll-leave-list-accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import { humanizeLabel } from "@/lib/labels";
@@ -277,25 +286,7 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
             <CardTitle>Create Payroll Cycle</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createCycleAction} className="grid gap-3 sm:grid-cols-2">
-              <Input name="cycleMonth" type="date" required />
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="pending"
-                name="status"
-              >
-                {HR_PAYROLL_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {humanizeLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <Input name="processedAt" type="date" />
-              <Input name="notes" placeholder="Notes (optional)" />
-              <div className="sm:col-span-2">
-                <Button type="submit">Save Cycle</Button>
-              </div>
-            </form>
+            <CreatePayrollCycleStack createCycleAction={createCycleAction} />
           </CardContent>
         </Card>
 
@@ -304,44 +295,11 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
             <CardTitle>Report Payroll Issue</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createAnomalyAction} className="grid gap-3 sm:grid-cols-2">
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm sm:col-span-2"
-                defaultValue=""
-                name="payrollCycleId"
-                required
-              >
-                <option disabled value="">
-                  Select payroll cycle
-                </option>
-                {payrollCycleOptions.map((cycle) => (
-                  <option key={cycle.id} value={cycle.id}>
-                    {cycle.cycle_month} ({humanizeLabel(cycle.status)})
-                  </option>
-                ))}
-              </select>
-              <select className="h-9 rounded-md border bg-background px-3 text-sm" defaultValue="" name="employeeId">
-                <option value="">Employee (optional)</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="anomalyType" placeholder="Anomaly type" required />
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="open"
-                name="status"
-              >
-                <option value="open">{humanizeLabel("open")}</option>
-                <option value="resolved">{humanizeLabel("resolved")}</option>
-              </select>
-              <Input name="details" placeholder="Details" />
-              <div className="sm:col-span-2">
-                <Button type="submit">Save Anomaly</Button>
-              </div>
-            </form>
+            <CreatePayrollAnomalyStack
+              employeeOptions={employees}
+              payrollCycleOptions={payrollCycleOptions}
+              createAnomalyAction={createAnomalyAction}
+            />
           </CardContent>
         </Card>
       </div>
@@ -352,29 +310,10 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
             <CardTitle>Update Leave Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={upsertBalanceAction} className="grid gap-3 sm:grid-cols-2">
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm sm:col-span-2"
-                defaultValue=""
-                name="employeeId"
-                required
-              >
-                <option disabled value="">
-                  Select employee
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="annualDays" placeholder="Annual days" step="0.25" type="number" required />
-              <Input name="usedDays" placeholder="Used days" step="0.25" type="number" />
-              <Input name="carryDays" placeholder="Carry days" step="0.25" type="number" />
-              <div className="sm:col-span-2">
-                <Button type="submit">Save Balance</Button>
-              </div>
-            </form>
+            <UpsertLeaveBalanceStack
+              employeeOptions={employees}
+              upsertBalanceAction={upsertBalanceAction}
+            />
           </CardContent>
         </Card>
 
@@ -383,41 +322,10 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
             <CardTitle>Create Leave Request</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createLeaveRequestAction} className="grid gap-3 sm:grid-cols-2">
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm sm:col-span-2"
-                defaultValue=""
-                name="employeeId"
-                required
-              >
-                <option disabled value="">
-                  Select employee
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="leaveType" placeholder="Leave type" required />
-              <Input name="days" placeholder="Days" step="0.25" type="number" required />
-              <Input name="startDate" type="date" required />
-              <Input name="endDate" type="date" required />
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm sm:col-span-2"
-                defaultValue="pending"
-                name="status"
-              >
-                {HR_LEAVE_REQUEST_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {humanizeLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <div className="sm:col-span-2">
-                <Button type="submit">Create Leave Request</Button>
-              </div>
-            </form>
+            <CreateLeaveRequestStack
+              employeeOptions={employees}
+              createLeaveRequestAction={createLeaveRequestAction}
+            />
           </CardContent>
         </Card>
       </div>
@@ -426,39 +334,11 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
         <CardHeader>
           <CardTitle>Payroll Cycles ({data.payrollCycles.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {data.payrollCycles.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No payroll cycles yet. Create one above.</p>
-          ) : (
-            data.payrollCycles.map((cycle) => (
-              <div key={cycle.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{cycle.cycle_month}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Processed {cycle.processed_at ?? "n/a"}
-                  </p>
-                </div>
-                <form action={updateCycleStatusAction} className="flex items-center gap-2">
-                  <input name="cycleId" type="hidden" value={cycle.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={cycle.status}
-                    name="status"
-                  >
-                    {HR_PAYROLL_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={cycle.status} />
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <PayrollCyclesAccordion
+            payrollCycles={data.payrollCycles}
+            updateCycleStatusAction={updateCycleStatusAction}
+          />
         </CardContent>
       </Card>
 
@@ -466,39 +346,11 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
         <CardHeader>
           <CardTitle>Leave Requests ({data.leaveRequests.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {data.leaveRequests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No leave requests yet. Create one above.</p>
-          ) : (
-            data.leaveRequests.map((leaveRequest) => (
-              <div key={leaveRequest.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{leaveRequest.leave_type}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {leaveRequest.start_date} to {leaveRequest.end_date} &bull; {leaveRequest.days} day(s)
-                  </p>
-                </div>
-                <form action={updateLeaveStatusAction} className="flex items-center gap-2">
-                  <input name="leaveRequestId" type="hidden" value={leaveRequest.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={leaveRequest.status}
-                    name="status"
-                  >
-                    {HR_LEAVE_REQUEST_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={leaveRequest.status} />
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <LeaveRequestsAccordion
+            leaveRequests={data.leaveRequests}
+            updateLeaveStatusAction={updateLeaveStatusAction}
+          />
         </CardContent>
       </Card>
 
@@ -506,34 +358,11 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
         <CardHeader>
           <CardTitle>Payroll Anomalies ({data.payrollAnomalies.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {data.payrollAnomalies.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No payroll issues yet. Report one above.</p>
-          ) : (
-            data.payrollAnomalies.map((anomaly) => (
-              <div key={anomaly.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{anomaly.anomaly_type}</p>
-                  <p className="text-xs text-muted-foreground">{anomaly.details ?? "No details"}</p>
-                </div>
-                <form action={updateAnomalyStatusAction} className="flex items-center gap-2">
-                  <input name="anomalyId" type="hidden" value={anomaly.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={anomaly.status}
-                    name="status"
-                  >
-                    <option value="open">{humanizeLabel("open")}</option>
-                    <option value="resolved">{humanizeLabel("resolved")}</option>
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={anomaly.status} />
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <PayrollAnomaliesAccordion
+            payrollAnomalies={data.payrollAnomalies}
+            updateAnomalyStatusAction={updateAnomalyStatusAction}
+          />
         </CardContent>
       </Card>
     </div>

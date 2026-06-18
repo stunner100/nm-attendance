@@ -1,13 +1,13 @@
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
+import { AddEmployeeStack } from "@/components/hr/add-employee-stack";
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
+import { EmployeeListAccordion } from "@/components/hr/employee-list-accordion";
 import { KpiCard } from "@/components/hr/kpi-card";
-import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
@@ -269,83 +269,10 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
           <CardTitle>Add Employee</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createEmployeeAction} className="grid gap-3 sm:grid-cols-3">
-            <Input name="employeeCode" placeholder="Employee code (optional)" />
-            <Input name="fullName" placeholder="Full name" required />
-            <Input name="workEmail" placeholder="Work email" type="email" />
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue="Tech"
-              name="department"
-              required
-            >
-              {HR_DEPARTMENTS.map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue="full_time"
-              name="contractType"
-              required
-            >
-              {HR_CONTRACT_TYPES.map((contractType) => (
-                <option key={contractType} value={contractType}>
-                  {humanizeLabel(contractType)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue="active"
-              name="employmentStatus"
-            >
-              {HR_EMPLOYMENT_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {humanizeLabel(status)}
-                </option>
-                ))}
-              </select>
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="onsite"
-                name="workMode"
-              >
-                {HR_WORK_MODES.map((workMode) => (
-                  <option key={workMode} value={workMode}>
-                    {humanizeLabel(workMode)}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue=""
-                name="managerEmployeeId"
-              >
-              <option value="">No manager</option>
-              {employeeOptions.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.full_name} ({employee.employee_code})
-                </option>
-              ))}
-            </select>
-            <label className="space-y-1 text-sm">
-              <span className="block text-xs text-muted-foreground">Contract start date</span>
-              <Input name="contractStartDate" type="date" />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="block text-xs text-muted-foreground">Contract end date</span>
-              <Input name="contractEndDate" type="date" />
-            </label>
-            <p className="sm:col-span-3 -mt-1 text-xs text-muted-foreground">
-              Contract end date is optional for permanent (full-time) employees.
-            </p>
-            <div className="sm:col-span-3">
-              <Button type="submit">Add Employee</Button>
-            </div>
-          </form>
+          <AddEmployeeStack
+            createEmployeeAction={createEmployeeAction}
+            employeeOptions={employeeOptions}
+          />
         </CardContent>
       </Card>
 
@@ -353,149 +280,12 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
         <CardHeader>
           <CardTitle>Employees ({moduleData.employees.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {moduleData.employees.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No employees found. Add your first employee above.
-            </p>
-          ) : (
-            moduleData.employees.map((employee) => (
-              <div
-                key={employee.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-              >
-                <Link
-                  href={`/admin/headcount/${employee.id}`}
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  View profile
-                </Link>
-                <form action={updateEmployeeAction} className="grid w-full gap-2 sm:grid-cols-4">
-                  <input name="employeeId" type="hidden" value={employee.id} />
-                  <Input
-                    className="h-8 text-xs"
-                    defaultValue={employee.employee_code}
-                    name="employeeCode"
-                    placeholder="Employee code"
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    defaultValue={employee.full_name}
-                    name="fullName"
-                    placeholder="Full name"
-                    required
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    defaultValue={employee.work_email ?? ""}
-                    name="workEmail"
-                    placeholder="Work email"
-                    type="email"
-                  />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={employee.department}
-                    name="department"
-                  >
-                    {HR_DEPARTMENTS.map((department) => (
-                      <option key={department} value={department}>
-                        {department}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={employee.contract_type}
-                    name="contractType"
-                  >
-                    {HR_CONTRACT_TYPES.map((contractType) => (
-                      <option key={contractType} value={contractType}>
-                        {humanizeLabel(contractType)}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={employee.work_mode}
-                    name="workMode"
-                  >
-                    {HR_WORK_MODES.map((workMode) => (
-                      <option key={workMode} value={workMode}>
-                        {humanizeLabel(workMode)}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={employee.employment_status}
-                    name="employmentStatus"
-                  >
-                    {HR_EMPLOYMENT_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={employee.manager_employee_id ?? ""}
-                    name="managerEmployeeId"
-                  >
-                    <option value="">No manager</option>
-                    {employeeOptions
-                      .filter((managerOption) => managerOption.id !== employee.id)
-                      .map((managerOption) => (
-                        <option key={managerOption.id} value={managerOption.id}>
-                          {managerOption.full_name} ({managerOption.employee_code})
-                        </option>
-                      ))}
-                  </select>
-                  <label className="space-y-1 text-xs">
-                    <span className="text-muted-foreground">Contract start</span>
-                    <Input
-                      className="h-8 text-xs"
-                      defaultValue={employee.hire_date}
-                      name="contractStartDate"
-                      type="date"
-                    />
-                  </label>
-                  <label className="space-y-1 text-xs">
-                    <span className="text-muted-foreground">Contract end</span>
-                    <Input
-                      className="h-8 text-xs"
-                      defaultValue={employee.contract_end_date ?? ""}
-                      name="contractEndDate"
-                      type="date"
-                    />
-                  </label>
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={employee.exit_type ?? ""}
-                    name="exitType"
-                  >
-                    <option value="">No exit type</option>
-                    {HR_EXIT_TYPES.map((exitType) => (
-                      <option key={exitType} value={exitType}>
-                        {humanizeLabel(exitType)}
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    className="h-8 text-xs"
-                    defaultValue={employee.exit_date ?? ""}
-                    name="exitDate"
-                    type="date"
-                  />
-                  <div className="sm:col-span-4 flex flex-wrap items-center gap-2">
-                    <Button size="sm" type="submit" variant="outline">
-                      Save details
-                    </Button>
-                    <StatusBadge status={employee.employment_status} />
-                  </div>
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <EmployeeListAccordion
+            employees={moduleData.employees}
+            employeeOptions={employeeOptions}
+            updateEmployeeAction={updateEmployeeAction}
+          />
         </CardContent>
       </Card>
     </div>

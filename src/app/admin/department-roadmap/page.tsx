@@ -2,11 +2,9 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { StatusBadge } from "@/components/hr/status-badge";
-import { Button } from "@/components/ui/button";
+import { AddDepartmentGoalStack } from "@/components/hr/add-department-goal-stack";
+import { DepartmentRoadmapListAccordion } from "@/components/hr/department-roadmap-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
@@ -16,8 +14,7 @@ import {
   listDepartmentGoals,
   updateDepartmentGoalRoadmap,
 } from "@/lib/hr-db";
-import { HR_DEPARTMENTS, HR_GOAL_STATUSES, HR_ROADMAP_HEALTH } from "@/lib/types";
-import { humanizeLabel } from "@/lib/labels";
+import { HR_DEPARTMENTS, HR_ROADMAP_HEALTH } from "@/lib/types";
 
 type PageProps = {
   searchParams: Promise<{ period?: string; department?: string; error?: string }>;
@@ -107,43 +104,11 @@ export default async function DepartmentRoadmapPage({ searchParams }: PageProps)
           <CardTitle>Create department goal</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createDeptGoalAction} className="grid gap-4 md:grid-cols-2">
-            <select
-              name="department"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              required
-            >
-              <option value="">Select department</option>
-              {HR_DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <select
-              name="companyGoalId"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="">Link company goal (optional)</option>
-              {companyGoals.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.title} ({g.period})
-                </option>
-              ))}
-            </select>
-            <Input name="title" placeholder="Department goal title" required />
-            <Input name="period" defaultValue={periodFilter} required />
-            <Input name="owner" placeholder="Owner / HOD" />
-            <Textarea
-              name="description"
-              placeholder="Description"
-              className="md:col-span-2"
-              rows={2}
-            />
-            <Button type="submit" className="w-fit">
-              Save department goal
-            </Button>
-          </form>
+          <AddDepartmentGoalStack
+            defaultPeriod={periodFilter}
+            companyGoals={companyGoals}
+            createDeptGoalAction={createDeptGoalAction}
+          />
         </CardContent>
       </Card>
 
@@ -151,62 +116,11 @@ export default async function DepartmentRoadmapPage({ searchParams }: PageProps)
         <CardHeader>
           <CardTitle>Roadmap health · {periodFilter}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {goals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No department goals for this period.</p>
-          ) : (
-            goals.map((goal) => (
-              <div key={goal.id} className="rounded-lg border border-border p-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">
-                      {goal.department}: {goal.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {goal.company_goal_title
-                        ? `Linked to ${goal.company_goal_title}`
-                        : "No linked company goal"}
-                    </p>
-                  </div>
-                  <StatusBadge status={goal.roadmap_health} />
-                </div>
-                <form action={updateRoadmapAction} className="grid gap-3 md:grid-cols-2">
-                  <input type="hidden" name="goalId" value={goal.id} />
-                  <select
-                    name="roadmapHealth"
-                    defaultValue={goal.roadmap_health}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    {HR_ROADMAP_HEALTH.map((h) => (
-                      <option key={h} value={h}>
-                        {humanizeLabel(h)}
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    name="statusReason"
-                    defaultValue={goal.status_reason ?? ""}
-                    placeholder="Status reason"
-                  />
-                  <Textarea
-                    name="keyBlockers"
-                    defaultValue={goal.key_blockers ?? ""}
-                    placeholder="Key blockers"
-                    rows={2}
-                  />
-                  <Textarea
-                    name="nextPriorities"
-                    defaultValue={goal.next_priorities ?? ""}
-                    placeholder="Next priorities"
-                    rows={2}
-                  />
-                  <Button type="submit" size="sm" className="md:col-span-2 w-fit">
-                    Update roadmap health
-                  </Button>
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <DepartmentRoadmapListAccordion
+            goals={goals}
+            updateRoadmapAction={updateRoadmapAction}
+          />
         </CardContent>
       </Card>
     </div>

@@ -2,8 +2,8 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { ScoreForm } from "@/components/hr/score-form";
-import { StatusBadge } from "@/components/hr/status-badge";
+import { ScoreListAccordion } from "@/components/hr/score-list-accordion";
+import { ScoreStack } from "@/components/hr/score-stack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,10 @@ import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
   currentPeriod,
+  formatMonthlyScoreFormula,
   listHREmployeeOptions,
   listMonthlyScores,
   RATING_BANDS,
-  SCORE_WEIGHTS,
   upsertMonthlyScore,
 } from "@/lib/hr-db";
 import { HR_RATING_BANDS } from "@/lib/types";
@@ -31,9 +31,10 @@ async function saveScoreAction(formData: FormData): Promise<void> {
   const employeeId = Number(formData.get("employeeId") ?? "");
   const period = String(formData.get("period") ?? "").trim();
   const kpiScore = Number(formData.get("kpiScore") ?? "0");
-  const taskScore = Number(formData.get("taskScore") ?? "0");
-  const commsScore = Number(formData.get("commsScore") ?? "0");
-  const teamworkScore = Number(formData.get("teamworkScore") ?? "0");
+  const disciplineScore = Number(formData.get("disciplineScore") ?? "0");
+  const attendanceScore = Number(formData.get("attendanceScore") ?? "0");
+  const hygieneScore = Number(formData.get("hygieneScore") ?? "0");
+  const extracurricularScore = Number(formData.get("extracurricularScore") ?? "0");
   const notes = String(formData.get("notes") ?? "").trim();
   const scoredBy = String(formData.get("scoredBy") ?? "").trim();
 
@@ -45,9 +46,10 @@ async function saveScoreAction(formData: FormData): Promise<void> {
     employeeId,
     period,
     kpiScore,
-    taskScore,
-    commsScore,
-    teamworkScore,
+    disciplineScore,
+    attendanceScore,
+    hygieneScore,
+    extracurricularScore,
     notes: notes || null,
     scoredBy: scoredBy || null,
   });
@@ -69,7 +71,7 @@ export default async function ScoresPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        description={`Scored out of 100: KPI ${SCORE_WEIGHTS.kpi}%, Tasks ${SCORE_WEIGHTS.task}%, Communication ${SCORE_WEIGHTS.comms}%, Teamwork ${SCORE_WEIGHTS.teamwork}%. Rating is derived automatically.`}
+        description={`Monthly score out of 100: ${formatMonthlyScoreFormula()}. Rating is derived automatically.`}
       />
 
       <AdminFormAlert message={readFormError(params)} />
@@ -113,10 +115,10 @@ export default async function ScoresPage({ searchParams }: PageProps) {
           <CardTitle>Record Monthly Score</CardTitle>
         </CardHeader>
         <CardContent>
-          <ScoreForm
-            action={saveScoreAction}
+          <ScoreStack
+            employeeOptions={employees}
             defaultPeriod={currentPeriod()}
-            employees={employees}
+            saveScoreAction={saveScoreAction}
           />
         </CardContent>
       </Card>
@@ -125,35 +127,8 @@ export default async function ScoresPage({ searchParams }: PageProps) {
         <CardHeader>
           <CardTitle>Monthly Scores ({scores.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {scores.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No monthly scores recorded yet.</p>
-          ) : (
-            scores.map((score) => (
-              <div
-                key={score.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {score.employee_name}
-                    <span className="text-muted-foreground"> &middot; {score.period}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {score.department} &bull; KPI {score.kpi_score} &middot; Tasks {score.task_score} &middot;
-                    Comms {score.comms_score} &middot; Teamwork {score.teamwork_score}
-                    {score.scored_by ? ` \u2022 by ${score.scored_by}` : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-medium tabular-nums text-foreground">
-                    {score.total_score.toFixed(1)}
-                  </span>
-                  <StatusBadge status={score.rating} />
-                </div>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <ScoreListAccordion scores={scores} />
         </CardContent>
       </Card>
 
@@ -166,8 +141,11 @@ export default async function ScoresPage({ searchParams }: PageProps) {
             <div key={band.band} className="rounded-lg border p-3 text-center">
               <p className="text-sm font-medium text-foreground">{band.label}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {band.min}
-                {band.max >= 100 ? "+" : `-${band.max}`}
+                {band.min === 0
+                  ? `Below ${band.max + 1}`
+                  : band.max >= 100
+                    ? `${band.min}–${band.max}`
+                    : `${band.min}–${band.max}`}
               </p>
             </div>
           ))}

@@ -2,11 +2,10 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { StatusBadge } from "@/components/hr/status-badge";
+import { AccountabilityActionAccordion } from "@/components/hr/accountability-action-accordion";
+import { AccountabilityActionStack } from "@/components/hr/accountability-action-stack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
@@ -149,40 +148,10 @@ export default async function AccountabilityPage({ searchParams }: PageProps) {
           <CardTitle>Record Accountability Action</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createActionAction} className="grid gap-3 sm:grid-cols-2">
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue=""
-              name="employeeId"
-              required
-            >
-              <option disabled value="">
-                Select employee
-              </option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.full_name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue="coaching"
-              name="stage"
-            >
-              {HR_ACCOUNTABILITY_STAGES.map((stage) => (
-                <option key={stage} value={stage}>
-                  {humanizeLabel(stage)}
-                </option>
-              ))}
-            </select>
-            <Input name="issuedOn" type="date" />
-            <Input name="reason" placeholder="Reason" required />
-            <Textarea className="sm:col-span-2" name="notes" placeholder="Notes" />
-            <div className="sm:col-span-2">
-              <Button type="submit">Save Action</Button>
-            </div>
-          </form>
+          <AccountabilityActionStack
+            employeeOptions={employees}
+            createActionAction={createActionAction}
+          />
         </CardContent>
       </Card>
 
@@ -190,49 +159,11 @@ export default async function AccountabilityPage({ searchParams }: PageProps) {
         <CardHeader>
           <CardTitle>Accountability Actions ({actions.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {actions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No accountability actions recorded.</p>
-          ) : (
-            actions.map((action) => (
-              <div
-                key={action.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {action.employee_name}
-                    <span className="text-muted-foreground">
-                      {" "}
-                      &middot; {humanizeLabel(action.stage)}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Issued {action.issued_on} &bull; {action.reason}
-                    {action.notes ? ` \u2022 ${action.notes}` : ""}
-                  </p>
-                </div>
-                <form action={updateStatusAction} className="flex items-center gap-2">
-                  <input name="actionId" type="hidden" value={action.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={action.status}
-                    name="status"
-                  >
-                    {HR_ACCOUNTABILITY_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={action.status} />
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <AccountabilityActionAccordion
+            actions={actions}
+            updateStatusAction={updateStatusAction}
+          />
         </CardContent>
       </Card>
 

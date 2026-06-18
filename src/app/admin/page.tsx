@@ -53,7 +53,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           value={String(framework.below_70_count)}
           delta={trends.below_70_delta}
           invertTrend
-          variant="signature"
           trendContext="from last month"
           href="/admin/scores"
         />

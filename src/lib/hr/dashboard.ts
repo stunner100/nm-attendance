@@ -9,15 +9,10 @@ import type {
   HRPayrollStatus,
 } from "@/lib/types";
 import {
-  HR_CONTRACT_TYPES,
   HR_DEPARTMENTS,
-  HR_DISCIPLINARY_STATUSES,
-  HR_PAYROLL_STATUSES,
   HR_RATING_BANDS,
-  HR_RECRUITMENT_STAGES,
-  HRRoadmapHealth,
 } from "@/lib/types";
-import { currentPeriod, normalizePeriod, previousPeriod } from "@/lib/hr/framework-reference";
+import { normalizePeriod, previousPeriod } from "@/lib/hr/framework-reference";
 import { getLatestRoadmapByDepartment } from "@/lib/hr/department-goals";
 
 import {

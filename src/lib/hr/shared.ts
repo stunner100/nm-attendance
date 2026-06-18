@@ -10,7 +10,6 @@ import type {
   HRDisciplinaryStatus,
   HREmployee,
   HREmploymentStatus,
-  HRJobLevel,
   HRExitType,
   HRFollowupAction,
   HRGrowthPlan,
@@ -48,17 +47,6 @@ import type {
   HRTrainingModule,
   HRTrainingStatus,
   HRWorkMode,
-} from "@/lib/types";
-import {
-  HR_CONTRACT_TYPES,
-  HR_DEPARTMENTS,
-  HR_DISCIPLINARY_STATUSES,
-  HR_EMPLOYMENT_STATUSES,
-  HR_LEAVE_REQUEST_STATUSES,
-  HR_PIP_STATUSES,
-  HR_RECRUITMENT_STAGES,
-  HR_TRAINING_STATUSES,
-  HR_WORK_MODES,
 } from "@/lib/types";
 
 export type DbRow = Record<string, unknown>;
@@ -414,9 +402,10 @@ export function normalizeMonthlyScore(row: DbRow): HRMonthlyScore {
     employee_id: asNumber(row.employee_id),
     period: asString(row.period),
     kpi_score: asNumber(row.kpi_score),
-    task_score: asNumber(row.task_score),
-    comms_score: asNumber(row.comms_score),
-    teamwork_score: asNumber(row.teamwork_score),
+    discipline_score: asNumber(row.task_score),
+    attendance_score: asNumber(row.comms_score),
+    hygiene_score: asNumber(row.hygiene_score ?? 0),
+    extracurricular_score: asNumber(row.extracurricular_score ?? 0),
     total_score: asNumber(row.total_score),
     rating: asString(row.rating) as HRRatingBand,
     notes: asNullableString(row.notes),

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
+import { EmployeeProfileSections } from "@/components/hr/employee-profile-sections";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
+        <Card className="shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Current score
@@ -63,7 +64,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Department
@@ -77,7 +78,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Manager
@@ -88,7 +89,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
             <StatusBadge status={employee.employment_status} />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">PIP</CardTitle>
           </CardHeader>
@@ -108,146 +109,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
         </Card>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Performance trend</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {profile.scoreTrend.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No score history.</p>
-            ) : (
-              profile.scoreTrend.map((s) => (
-                <div
-                  key={s.period}
-                  className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
-                >
-                  <span>{s.period}</span>
-                  <span className="tabular-nums font-medium">
-                    {s.total.toFixed(1)} · {humanizeLabel(s.rating)}
-                  </span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>KPI cards</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {profile.kpiCards.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No KPI cards.</p>
-            ) : (
-              profile.kpiCards.map((card) => {
-                const items = profile.kpiItems.find((i) => i.cardId === card.id)?.items ?? [];
-                return (
-                  <div key={card.id} className="rounded-md border border-border p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium">{card.period}</p>
-                      <StatusBadge status={card.status} />
-                    </div>
-                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      {items.map((item) => (
-                        <li key={item.id}>
-                          {item.kpi_text} (weight {item.weight})
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Tasks ({profile.tasks.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {profile.tasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tasks assigned.</p>
-            ) : (
-              profile.tasks.slice(0, 8).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-                >
-                  <span className="truncate">{task.title}</span>
-                  <StatusBadge status={task.status} />
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Growth plan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {profile.growthPlan ? (
-              <div className="space-y-2 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Next role:</span>{" "}
-                  {profile.growthPlan.possible_next_role || "—"}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Timeline:</span>{" "}
-                  {profile.growthPlan.review_timeline || "—"}
-                </p>
-                <StatusBadge status={profile.growthPlan.status} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No growth plan on file.</p>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Rewards</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {profile.rewards.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No rewards recorded.</p>
-            ) : (
-              profile.rewards.slice(0, 6).map((r) => (
-                <div key={r.id} className="text-sm rounded-md border border-border px-3 py-2">
-                  {r.reward_type} · {r.awarded_on}
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Accountability</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {profile.accountability.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No accountability records.</p>
-            ) : (
-              profile.accountability.slice(0, 6).map((a) => (
-                <div key={a.id} className="rounded-md border border-border px-3 py-2 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <StatusBadge status={a.stage} />
-                    <StatusBadge status={a.status} />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{a.reason}</p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
+      <EmployeeProfileSections profile={profile} />
     </div>
   );
 }

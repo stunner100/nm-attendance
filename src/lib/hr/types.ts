@@ -201,9 +201,10 @@ export type CreateMonthlyScoreInput = {
   employeeId: number;
   period: string;
   kpiScore: number;
-  taskScore: number;
-  commsScore: number;
-  teamworkScore: number;
+  disciplineScore: number;
+  attendanceScore: number;
+  hygieneScore: number;
+  extracurricularScore: number;
   notes?: string | null;
   scoredBy?: string | null;
 };

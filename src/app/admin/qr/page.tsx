@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Printer } from "lucide-react";
+import { Clock } from "lucide-react";
 import QRCode from "qrcode";
 
 import { PrintButton } from "@/components/print-button";

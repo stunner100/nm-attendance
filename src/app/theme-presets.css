@@ -1,0 +1,92 @@
+/* Surface themes — override tokens.css via html[data-theme]. Default = :root / tokens.css */
+
+[data-theme="slate"] {
+  --color-paper: #f4f6f8;
+  --color-paper-2: #eceef2;
+  --color-paper-3: #d8dce3;
+  --color-rule: #cfd4dc;
+  --color-accent: #2c3340;
+  --color-accent-active: #1a2030;
+  --color-accent-ink: #ffffff;
+}
+
+[data-theme="sand"] {
+  --color-paper: #faf6f0;
+  --color-paper-2: #f3ede4;
+  --color-paper-3: #e6ddd0;
+  --color-rule: #ddd4c8;
+  --color-accent: #4a3f35;
+  --color-accent-active: #352c24;
+  --color-accent-ink: #ffffff;
+  --color-link: #7a4f2a;
+  --color-link-active: #4a3f35;
+}
+
+[data-theme="mint"] {
+  --color-paper: #f3f8f5;
+  --color-paper-2: #e8f2ec;
+  --color-paper-3: #d0e4d8;
+  --color-rule: #c5d9cc;
+  --color-accent: #0a2e0e;
+  --color-accent-active: #061f09;
+  --color-accent-ink: #ffffff;
+  --color-link: #1d6b3a;
+  --color-link-active: #0a2e0e;
+}
+
+[data-theme="sky"] {
+  --color-paper: #f2f6fb;
+  --color-paper-2: #e8eef8;
+  --color-paper-3: #d4dff0;
+  --color-rule: #c8d4e8;
+  --color-accent: #1a3866;
+  --color-accent-active: #122a4d;
+  --color-accent-ink: #ffffff;
+  --color-link: #1b61c9;
+  --color-link-active: #1a3866;
+}
+
+[data-theme="linen"] {
+  --color-paper: #faf8f5;
+  --color-paper-2: #f5f0e8;
+  --color-paper-3: #ebe3d6;
+  --color-rule: #ddd5c8;
+  --color-accent: #aa2d00;
+  --color-accent-active: #8a2400;
+  --color-accent-ink: #ffffff;
+}
+
+[data-theme="purple"] {
+  --color-paper: #f7f4fb;
+  --color-paper-2: #efe8f8;
+  --color-paper-3: #ddd0f0;
+  --color-rule: #d4c4e8;
+  --color-accent: #5b21b6;
+  --color-accent-active: #4c1d95;
+  --color-accent-ink: #ffffff;
+  --color-link: #7c3aed;
+  --color-link-active: #5b21b6;
+  --color-focus: #8b5cf6;
+}
+
+[data-theme="night"] {
+  --color-paper: #1a1d24;
+  --color-paper-2: #22262f;
+  --color-paper-3: #2e333d;
+  --color-ink: #f4f5f7;
+  --color-ink-2: #d8dce3;
+  --color-ink-muted: #a8adb8;
+  --color-rule: #3a3f4a;
+  --color-border-strong: #5c6370;
+  --color-accent: #e8eaed;
+  --color-accent-active: #ffffff;
+  --color-accent-ink: #181d26;
+  --color-link: #7eb4ff;
+  --color-link-active: #a8cdff;
+  --color-focus: #5c9dff;
+  --color-success: #4ade80;
+  --color-destructive: #ff8a65;
+  --color-signature-mint: #2d5a45;
+  --color-signature-yellow: #5c4d1a;
+  --color-signature-cream: #3d3528;
+}

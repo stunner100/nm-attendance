@@ -2,10 +2,18 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { StatusBadge } from "@/components/hr/status-badge";
+import {
+  AddDisciplinaryCaseStack,
+  AddFollowupActionStack,
+  AddPolicyViolationStack,
+} from "@/components/hr/compliance-create-stacks";
+import {
+  DisciplinaryCasesAccordion,
+  FollowupActionsAccordion,
+  PolicyViolationsAccordion,
+} from "@/components/hr/compliance-list-accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
@@ -233,32 +241,10 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
             <CardTitle>Open Case</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createCaseAction} className="grid gap-3">
-              <select className="h-9 rounded-md border bg-background px-3 text-sm" defaultValue="" name="employeeId">
-                <option value="">Employee (optional)</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="category" placeholder="Category" required />
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="warning_issued"
-                name="status"
-              >
-                {HR_DISCIPLINARY_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {humanizeLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <Input name="summary" placeholder="Summary" required />
-              <Input name="openedAt" type="date" />
-              <Input name="dueDate" type="date" />
-              <Button type="submit">Create Case</Button>
-            </form>
+            <AddDisciplinaryCaseStack
+              employeeOptions={employees}
+              createCaseAction={createCaseAction}
+            />
           </CardContent>
         </Card>
 
@@ -267,29 +253,10 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
             <CardTitle>Log Violation</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createViolationAction} className="grid gap-3">
-              <select className="h-9 rounded-md border bg-background px-3 text-sm" defaultValue="" name="employeeId">
-                <option value="">Employee (optional)</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="category" placeholder="Violation category" required />
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="medium"
-                name="severity"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-              <Input name="occurredOn" type="date" />
-              <Input name="notes" placeholder="Notes (optional)" />
-              <Button type="submit">Add Violation</Button>
-            </form>
+            <AddPolicyViolationStack
+              employeeOptions={employees}
+              createViolationAction={createViolationAction}
+            />
           </CardContent>
         </Card>
 
@@ -298,29 +265,10 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
             <CardTitle>Create Follow-up Action</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createFollowupActionAction} className="grid gap-3">
-              <select className="h-9 rounded-md border bg-background px-3 text-sm" defaultValue="" name="employeeId">
-                <option value="">Employee (optional)</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.full_name}
-                  </option>
-                ))}
-              </select>
-              <Input name="actionType" placeholder="Action type" required />
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-                defaultValue="pending"
-                name="status"
-              >
-                <option value="pending">{humanizeLabel("pending")}</option>
-                <option value="in_progress">{humanizeLabel("in_progress")}</option>
-                <option value="done">{humanizeLabel("done")}</option>
-              </select>
-              <Input name="dueDate" type="date" />
-              <Input name="notes" placeholder="Notes (optional)" />
-              <Button type="submit">Create Action</Button>
-            </form>
+            <AddFollowupActionStack
+              employeeOptions={employees}
+              createFollowupActionAction={createFollowupActionAction}
+            />
           </CardContent>
         </Card>
       </div>
@@ -329,40 +277,11 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
         <CardHeader>
           <CardTitle>Disciplinary Cases ({data.cases.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {data.cases.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No cases found.</p>
-          ) : (
-            data.cases.map((caseItem) => (
-              <div key={caseItem.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{caseItem.summary}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {caseItem.category} &bull; Opened {caseItem.opened_at}
-                    {caseItem.due_date ? ` &bull; Due ${caseItem.due_date}` : ""}
-                  </p>
-                </div>
-                <form action={updateCaseStatusAction} className="flex items-center gap-2">
-                  <input name="caseId" type="hidden" value={caseItem.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={caseItem.status}
-                    name="status"
-                  >
-                    {HR_DISCIPLINARY_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {humanizeLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={caseItem.status} />
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <DisciplinaryCasesAccordion
+            cases={data.cases}
+            updateCaseStatusAction={updateCaseStatusAction}
+          />
         </CardContent>
       </Card>
 
@@ -370,22 +289,8 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
         <CardHeader>
           <CardTitle>Policy Violations ({data.violations.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {data.violations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No violations found.</p>
-          ) : (
-            data.violations.map((violation) => (
-              <div key={violation.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{violation.category}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Severity {humanizeLabel(violation.severity)} &bull; {violation.occurred_on}
-                  </p>
-                </div>
-                <StatusBadge status={violation.severity} />
-              </div>
-            ))
-          )}
+        <CardContent>
+          <PolicyViolationsAccordion violations={data.violations} />
         </CardContent>
       </Card>
 
@@ -393,37 +298,11 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
         <CardHeader>
           <CardTitle>Follow-up Actions ({data.actions.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {data.actions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No follow-up actions found.</p>
-          ) : (
-            data.actions.map((action) => (
-              <div key={action.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{action.action_type}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Due {action.due_date ?? "n/a"}
-                  </p>
-                </div>
-                <form action={updateFollowupStatusAction} className="flex items-center gap-2">
-                  <input name="actionId" type="hidden" value={action.id} />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    defaultValue={action.status}
-                    name="status"
-                  >
-                    <option value="pending">{humanizeLabel("pending")}</option>
-                    <option value="in_progress">{humanizeLabel("in_progress")}</option>
-                    <option value="done">{humanizeLabel("done")}</option>
-                  </select>
-                  <Button size="sm" type="submit" variant="outline">
-                    Save
-                  </Button>
-                  <StatusBadge status={action.status} />
-                </form>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <FollowupActionsAccordion
+            actions={data.actions}
+            updateFollowupStatusAction={updateFollowupStatusAction}
+          />
         </CardContent>
       </Card>
     </div>

@@ -513,9 +513,12 @@ export type HRMonthlyScore = {
   employee_id: number;
   period: string;
   kpi_score: number;
-  task_score: number;
-  comms_score: number;
-  teamwork_score: number;
+  /** Stored in `task_score` — discipline component */
+  discipline_score: number;
+  /** Stored in `comms_score` — attendance component */
+  attendance_score: number;
+  hygiene_score: number;
+  extracurricular_score: number;
   total_score: number;
   rating: HRRatingBand;
   notes: string | null;

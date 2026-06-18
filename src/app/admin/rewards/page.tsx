@@ -2,11 +2,10 @@ import { revalidatePath } from "next/cache";
 
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
-import { StatusBadge } from "@/components/hr/status-badge";
+import { RewardAccordion } from "@/components/hr/reward-accordion";
+import { RewardStack } from "@/components/hr/reward-stack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
 import {
@@ -101,40 +100,7 @@ export default async function RewardsPage({ searchParams }: PageProps) {
           <CardTitle>Record Reward</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createRewardAction} className="grid gap-3 sm:grid-cols-2">
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue=""
-              name="employeeId"
-              required
-            >
-              <option disabled value="">
-                Select employee
-              </option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.full_name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              defaultValue="monthly"
-              name="tier"
-            >
-              {HR_REWARD_TIERS.map((tier) => (
-                <option key={tier} value={tier}>
-                  {humanizeLabel(tier)}
-                </option>
-              ))}
-            </select>
-            <Input name="rewardType" placeholder="Reward type (bonus, recognition, promotion)" required />
-            <Input name="awardedOn" type="date" />
-            <Textarea className="sm:col-span-2" name="description" placeholder="Description / reason" />
-            <div className="sm:col-span-2">
-              <Button type="submit">Save Reward</Button>
-            </div>
-          </form>
+          <RewardStack employeeOptions={employees} createRewardAction={createRewardAction} />
         </CardContent>
       </Card>
 
@@ -142,29 +108,8 @@ export default async function RewardsPage({ searchParams }: PageProps) {
         <CardHeader>
           <CardTitle>Rewards ({rewards.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {rewards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No rewards recorded yet.</p>
-          ) : (
-            rewards.map((reward) => (
-              <div
-                key={reward.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {reward.employee_name}
-                    <span className="text-muted-foreground"> &middot; {reward.reward_type}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Awarded {reward.awarded_on}
-                    {reward.description ? ` \u2022 ${reward.description}` : ""}
-                  </p>
-                </div>
-                <StatusBadge status={reward.tier} />
-              </div>
-            ))
-          )}
+        <CardContent>
+          <RewardAccordion rewards={rewards} />
         </CardContent>
       </Card>
 

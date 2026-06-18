@@ -1,11 +1,32 @@
 import type { HRDepartment, HRRatingBand } from "@/lib/types";
 
 export const SCORE_WEIGHTS = {
-  kpi: 50,
-  task: 25,
-  comms: 15,
-  teamwork: 10,
+  kpi: 75,
+  discipline: 10,
+  attendance: 10,
+  hygiene: 2.5,
+  extracurricular: 2.5,
 } as const;
+
+export const SCORE_DIMENSIONS = [
+  { key: "kpi", label: "KPI", weight: SCORE_WEIGHTS.kpi },
+  { key: "discipline", label: "Discipline", weight: SCORE_WEIGHTS.discipline },
+  { key: "attendance", label: "Attendance", weight: SCORE_WEIGHTS.attendance },
+  {
+    key: "hygiene",
+    label: "Personal hygiene & appearance",
+    weight: SCORE_WEIGHTS.hygiene,
+  },
+  {
+    key: "extracurricular",
+    label: "Extra curricular activities",
+    weight: SCORE_WEIGHTS.extracurricular,
+  },
+] as const;
+
+export function formatMonthlyScoreFormula(): string {
+  return SCORE_DIMENSIONS.map((d) => `${d.label} ${d.weight}%`).join(", ");
+}
 
 export const RATING_BANDS: Array<{
   band: HRRatingBand;
@@ -19,12 +40,12 @@ export const RATING_BANDS: Array<{
   { band: "acceptable", label: "Acceptable", min: 70, max: 79, tone: "amber" },
   {
     band: "below_expectation",
-    label: "Below expectation",
+    label: "Below Expectation",
     min: 60,
     max: 69,
     tone: "orange",
   },
-  { band: "poor", label: "Poor performance", min: 0, max: 59, tone: "rose" },
+  { band: "poor", label: "Poor", min: 0, max: 59, tone: "rose" },
 ];
 
 export function computeRating(total: number): HRRatingBand {

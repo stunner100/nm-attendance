@@ -88,7 +88,7 @@ function LocationLine({
             href={mapUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-0.5 text-xs font-medium text-neutral-600 underline-offset-2 hover:text-neutral-950 hover:underline"
+            className="text-link inline-flex items-center gap-0.5 text-xs font-medium underline-offset-2 hover:underline"
           >
             View on map
             <ExternalLink className="h-3 w-3" />
@@ -176,8 +176,8 @@ export function AttendanceTable({
       <CardHeader className="gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-neutral-400" />
-            <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-lg font-medium">{title}</CardTitle>
           </div>
           <CardDescription>
             {description ??
@@ -201,7 +201,7 @@ export function AttendanceTable({
           </div>
           {viewAllHref ? (
             <Link
-              className="flex items-center gap-1 pb-2 text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-950"
+              className="text-link flex items-center gap-1 pb-2 text-sm font-medium"
               href={viewAllHref}
             >
               View all
@@ -256,8 +256,8 @@ export function AttendanceTable({
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.name}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-600">
-                        <Clock className="h-3.5 w-3.5 text-neutral-400" />
+                      <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                         {formatter.format(new Date(record.timestamp))}
                       </div>
                     </TableCell>
@@ -268,25 +268,25 @@ export function AttendanceTable({
                           {formatter.format(new Date(record.checkout_timestamp as string))}
                         </div>
                       ) : (
-                        <Badge variant="outline" className="border-amber-200 text-amber-700">
+                        <Badge variant="outline" className="border-[var(--color-rule)] bg-[var(--color-signature-yellow)]/35 text-[var(--color-ink)]">
                           Not checked out
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge
+                        <Badge
                         variant="outline"
                         className={
                           isLate
-                            ? "border-amber-200 bg-amber-50 text-amber-800"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            ? "border-[var(--color-rule)] bg-[var(--color-signature-yellow)]/35 text-[var(--color-ink)]"
+                            : "border-[var(--color-rule)] bg-[var(--color-signature-mint)]/40 text-[var(--color-success)]"
                         }
                       >
                         {punctuality}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <div className="space-y-1 text-sm text-neutral-700">
+                      <div className="space-y-1 text-sm text-foreground">
                         <LocationLine
                           prefix="In"
                           locationText={checkInLocation}

@@ -221,7 +221,6 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Payroll & Leave Management"
         description="Monitor payroll cycles, anomalies, leave balances, and approvals."
       />
 

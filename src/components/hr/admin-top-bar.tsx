@@ -2,18 +2,26 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BarChart3, Bell, ChevronDown, Menu, Search } from "lucide-react";
+import { BarChart3, Bell, Search } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
+import { AdminMobileNav } from "@/components/hr/admin-mobile-nav";
 import { LogoutButton } from "@/components/logout-button";
-
 import { PeriodSelector } from "@/components/hr/period-selector";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: "/admin/attendance", title: "Attendance" },
+  { prefix: "/admin/roster", title: "Roster" },
   { prefix: "/admin/headcount", title: "Employees" },
   { prefix: "/admin/company-goals", title: "Company goals" },
   { prefix: "/admin/department-roadmap", title: "Department goals" },
@@ -27,6 +35,7 @@ const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: "/admin/recruitment", title: "Recruitment" },
   { prefix: "/admin/payroll-leave", title: "Payroll & leave" },
   { prefix: "/admin/compliance", title: "Compliance" },
+  { prefix: "/admin/performance", title: "Performance" },
   { prefix: "/admin/imports", title: "Imports" },
   { prefix: "/admin/reports", title: "Reports" },
   { prefix: "/admin/settings", title: "Settings" },
@@ -34,8 +43,21 @@ const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: "/admin", title: "Overview" },
 ];
 
+type SearchResult = { label: string; href: string; group: string };
+
 type AdminTopBarProps = {
   email: string;
+};
+
+type AdminSearchFieldProps = {
+  query: string;
+  setQuery: (value: string) => void;
+  results: SearchResult[];
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
+  onSearchSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onResultNavigate?: () => void;
+  inputClassName?: string;
 };
 
 function resolvePageTitle(pathname: string): string {
@@ -63,16 +85,72 @@ function displayNameFromEmail(email: string): string {
     .join(" ");
 }
 
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function AdminSearchField({
+  query,
+  setQuery,
+  results,
+  searchOpen,
+  setSearchOpen,
+  onSearchSubmit,
+  onResultNavigate,
+  inputClassName,
+}: AdminSearchFieldProps) {
+  return (
+    <form className="relative w-full" onSubmit={onSearchSubmit}>
+      <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-muted)]" />
+      <Input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        onFocus={() => setSearchOpen(results.length > 0)}
+        onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
+        placeholder="Search employees, KPIs, tasks…"
+        className={cn(
+          "h-11 rounded-[var(--radius-sm)] border-[var(--color-rule)] bg-[var(--color-paper)] pl-10 text-sm shadow-none",
+          inputClassName
+        )}
+      />
+      {searchOpen && results.length > 0 ? (
+        <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-rule)] bg-[var(--color-paper)]">
+          {results.map((result) => (
+            <Link
+              key={`${result.group}-${result.href}`}
+              href={result.href}
+              className="block border-b border-[var(--color-rule)] px-3 py-2 text-sm last:border-b-0 hover:bg-[var(--color-paper-2)]"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setSearchOpen(false);
+                setQuery("");
+                onResultNavigate?.();
+              }}
+            >
+              <p className="font-medium text-[var(--color-ink)]">{result.label}</p>
+              <p className="text-xs text-[var(--color-ink-muted)]">{result.group}</p>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </form>
+  );
+}
+
 export function AdminTopBar({ email }: AdminTopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [notificationCount, setNotificationCount] = useState(0);
-  const [results, setResults] = useState<
-    Array<{ label: string; href: string; group: string }>
-  >([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const isOverview = pathname === "/admin";
   const period =
@@ -82,10 +160,10 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
 
   useEffect(() => {
     const controller = new AbortController();
-    const period =
+    const periodParam =
       searchParams.get("period")?.trim() || new Date().toISOString().slice(0, 7);
 
-    void fetch(`/api/hr/overview-notifications?period=${encodeURIComponent(period)}`, {
+    void fetch(`/api/hr/overview-notifications?period=${encodeURIComponent(periodParam)}`, {
       signal: controller.signal,
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -123,7 +201,7 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
         }
 
         const data = (await response.json()) as {
-          results?: Array<{ label: string; href: string; group: string }>;
+          results?: SearchResult[];
         };
         setResults(data.results ?? []);
         setSearchOpen(true);
@@ -145,98 +223,135 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
       router.push(first.href);
       setSearchOpen(false);
       setQuery("");
+      setMobileSearchOpen(false);
     }
   };
 
+  const closeMobileSearch = () => {
+    setMobileSearchOpen(false);
+    setSearchOpen(false);
+    setQuery("");
+  };
+
   return (
-    <header className="sticky top-0 z-40 border-b border-[#e5e7eb] bg-white">
-      <div className="flex min-h-20 items-center gap-4 px-4 sm:px-6 lg:px-6">
-        <div className="flex min-w-0 flex-1 items-center gap-5">
-          <button aria-label="Open menu" className="hidden text-[#475569] lg:block">
-            <Menu className="h-5 w-5" strokeWidth={2} />
-          </button>
-          <div className="min-w-0">
-            <h1 className="font-heading text-xl font-semibold tracking-tight text-[#0f172a]">
-              {pageTitle}
-            </h1>
-            <p className="mt-0.5 text-xs text-[#64748b]">Welcome back, {displayName}</p>
-          </div>
+    <header className="sticky top-0 z-40 border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
+      <div className="flex h-16 items-center gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex shrink-0 items-center gap-2 md:hidden">
+          <AdminMobileNav email={email} />
+          <img
+            src="/logo.jpg"
+            alt=""
+            className="h-8 w-8 rounded-full object-cover object-left"
+          />
         </div>
 
-        <div className="hidden flex-1 justify-center lg:flex">
-          <form className="relative w-full max-w-[296px]" onSubmit={onSearchSubmit}>
-            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onFocus={() => setSearchOpen(results.length > 0)}
-              onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
-              placeholder="Search employees, KPIs, tasks..."
-              className="h-9 rounded-[6px] border-[#d7dde7] bg-[#fbfcfe] pl-10 text-[13px] shadow-none placeholder:text-[#7b8497]"
-            />
-            {searchOpen && results.length > 0 ? (
-              <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-lg border border-[#e5e7eb] bg-white shadow-lg">
-                {results.map((result) => (
-                  <Link
-                    key={`${result.group}-${result.href}`}
-                    href={result.href}
-                    className="block border-b border-[#eef2f7] px-3 py-2 text-sm last:border-b-0 hover:bg-[#f8fafc]"
-                    onMouseDown={(event) => event.preventDefault()}
-                  >
-                    <p className="font-medium">{result.label}</p>
-                    <p className="text-xs text-[#64748b]">{result.group}</p>
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </form>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-medium tracking-tight text-[var(--color-ink)]">
+            {pageTitle}
+          </h1>
+          <p className="hidden truncate text-xs text-[var(--color-ink-muted)] sm:block">
+            Welcome back, {displayName}
+          </p>
         </div>
 
-        <div className="flex items-center gap-4">
-            <Button
-              asChild
-              size="icon"
-              variant="ghost"
-              className={cn("relative h-9 w-9 rounded-full text-[#334155] hover:bg-[#f1f5f9]", notificationCount > 0 && "text-[#0f172a]")}
-            >
-              <Link href="/admin#alerts" aria-label="View alerts">
-                <Bell className="h-4 w-4" />
-                {notificationCount > 0 ? (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ff3b4f] px-1 text-[10px] font-semibold text-white">
-                    {notificationCount > 9 ? "9+" : notificationCount}
-                  </span>
-                ) : null}
-              </Link>
-            </Button>
+        <div className="hidden max-w-xs flex-1 justify-center md:flex">
+          <AdminSearchField
+            query={query}
+            setQuery={setQuery}
+            results={results}
+            searchOpen={searchOpen}
+            setSearchOpen={setSearchOpen}
+            onSearchSubmit={onSearchSubmit}
+          />
+        </div>
 
-            <div className="hidden items-center gap-3 sm:flex">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(145deg,#8b4f2d,#321407)] text-xs font-semibold text-white ring-2 ring-white shadow-sm">
-                {displayName
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-[#0f172a]">{displayName}</p>
-                <p className="truncate text-xs text-[#64748b]">Super Admin</p>
-              </div>
-              <ChevronDown className="h-4 w-4 text-[#334155]" />
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <Dialog
+            open={mobileSearchOpen}
+            onOpenChange={(open) => {
+              setMobileSearchOpen(open);
+              if (!open) {
+                setSearchOpen(false);
+                setQuery("");
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full text-[var(--color-ink-2)] md:hidden"
+                aria-label="Search"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="gap-4 sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-[var(--color-ink)]">Search</DialogTitle>
+              </DialogHeader>
+              <AdminSearchField
+                query={query}
+                setQuery={setQuery}
+                results={results}
+                searchOpen={searchOpen}
+                setSearchOpen={setSearchOpen}
+                onSearchSubmit={onSearchSubmit}
+                onResultNavigate={closeMobileSearch}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <Button
+            asChild
+            size="icon"
+            variant="ghost"
+            className={cn(
+              "relative h-10 w-10 rounded-full text-[var(--color-ink-2)]",
+              notificationCount > 0 && "text-[var(--color-ink)]"
+            )}
+          >
+            <Link href="/admin#alerts" aria-label="View alerts">
+              <Bell className="h-4 w-4" />
+              {notificationCount > 0 ? (
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-signature-coral)] px-1 text-[10px] font-medium text-[var(--color-accent-ink)]">
+                  {notificationCount > 9 ? "9+" : notificationCount}
+                </span>
+              ) : null}
+            </Link>
+          </Button>
+
+          <div className="hidden items-center gap-2 sm:flex">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-paper-3)] text-xs font-medium text-[var(--color-ink)]">
+              {initials(displayName)}
             </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-[var(--color-ink)]">{displayName}</p>
+              <p className="truncate text-xs text-[var(--color-ink-muted)]">Admin</p>
+            </div>
+          </div>
+
+          <LogoutButton iconOnly className="sm:hidden" />
+          <LogoutButton className="hidden sm:inline-flex" />
         </div>
       </div>
-      <div className="flex min-h-10 items-center justify-end gap-3 border-t border-[#eef2f7] bg-[#f8fafc] px-4 sm:px-6 lg:px-4">
-        {isOverview ? <PeriodSelector period={period} /> : null}
-        <Button asChild size="sm" className="h-8 rounded-[6px] bg-[#00965f] px-4 text-xs font-semibold text-white shadow-[0_6px_14px_rgba(0,150,95,0.24)] hover:bg-[#008955]">
-          <Link href="/admin/scores">
-            <BarChart3 className="h-3.5 w-3.5" />
-            Record Scores
-          </Link>
-        </Button>
-        <div className="sr-only">
-          <LogoutButton />
+
+      {isOverview ? (
+        <div className="flex min-h-11 flex-wrap items-center justify-end gap-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] px-4 py-2 sm:px-6 lg:px-8">
+          <PeriodSelector period={period} />
+          <Button
+            asChild
+            size="sm"
+            className="h-9 rounded-[var(--radius-button)] bg-[var(--color-accent)] px-4 text-sm font-medium text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-active)]"
+          >
+            <Link href="/admin/scores">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Record scores
+            </Link>
+          </Button>
         </div>
-      </div>
+      ) : null}
     </header>
   );
 }

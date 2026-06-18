@@ -1,10 +1,7 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { Check, FileText, Gift, ShieldAlert, TriangleAlert } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ActivityItem } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 type RecentActivityFeedProps = {
   items: ActivityItem[];
@@ -34,74 +31,33 @@ function relativeTime(value: string): string {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-function activityMeta(label: string): { icon: ReactNode; className: string } {
-  const normalized = label.toLowerCase();
-
-  if (normalized.includes("score") || normalized.includes("approved")) {
-    return {
-      icon: <Check className="h-4 w-4" />,
-      className: "bg-emerald-100 text-emerald-600",
-    };
-  }
-  if (normalized.includes("kpi")) {
-    return {
-      icon: <FileText className="h-4 w-4" />,
-      className: "bg-blue-100 text-blue-600",
-    };
-  }
-  if (normalized.includes("task") || normalized.includes("overdue")) {
-    return {
-      icon: <TriangleAlert className="h-4 w-4" />,
-      className: "bg-amber-100 text-amber-600",
-    };
-  }
-  if (normalized.includes("reward")) {
-    return {
-      icon: <Gift className="h-4 w-4" />,
-      className: "bg-violet-100 text-violet-600",
-    };
-  }
-
-  return {
-    icon: <ShieldAlert className="h-4 w-4" />,
-    className: "bg-rose-100 text-rose-600",
-  };
-}
-
 export function RecentActivityFeed({ items }: RecentActivityFeedProps) {
   const visibleItems = items.slice(0, 5);
 
   return (
-    <Card className="h-full min-h-[338px]">
+    <Card className="h-full min-h-[338px] rounded-[var(--radius-lg)] border-[var(--color-rule)] bg-[var(--color-paper-2)] shadow-none">
       <CardHeader className="grid-cols-[1fr_auto] items-center">
-        <CardTitle>Recent Activity</CardTitle>
-        <Link href="/admin/reports" className="text-xs font-medium text-[#006ce5] hover:text-[#0057b8]">
+        <CardTitle className="text-base font-medium">Recent activity</CardTitle>
+        <Link href="/admin/reports" className="text-link text-xs font-medium whitespace-nowrap">
           View all
         </Link>
       </CardHeader>
       <CardContent>
         {visibleItems.length === 0 ? (
-          <p className="text-sm text-[#64748b]">No recent activity yet.</p>
+          <p className="text-sm text-[var(--color-ink-muted)]">No recent activity yet.</p>
         ) : (
-          visibleItems.map((item, index) => {
-            const meta = activityMeta(item.label);
+          visibleItems.map((item) => {
             const body = (
-              <div className="grid min-h-[55px] grid-cols-[40px_1fr_88px] items-center gap-3 border-b border-[#eef2f7] py-2 last:border-b-0">
-                <div className="relative flex justify-center">
-                  {index < visibleItems.length - 1 ? (
-                    <span className="absolute top-9 h-8 w-px bg-[#e5e7eb]" aria-hidden="true" />
-                  ) : null}
-                  <div className={cn("relative z-10 flex h-9 w-9 items-center justify-center rounded-full", meta.className)}>
-                    {meta.icon}
-                  </div>
-                </div>
+              <div className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_88px] items-center gap-3 border-b border-[var(--color-rule)] py-3 last:border-b-0">
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-semibold text-[#0f172a]">{item.label}</p>
-                  <p className="mt-0.5 truncate text-xs text-[#64748b]">
+                  <p className="truncate text-sm font-medium text-[var(--color-ink)]">{item.label}</p>
+                  <p className="mt-0.5 truncate text-xs text-[var(--color-ink-muted)]">
                     {item.actor ? `by ${item.actor}` : "by System"}
                   </p>
                 </div>
-                <p className="text-right text-xs text-[#64748b]">{relativeTime(item.occurred_at)}</p>
+                <p className="text-right text-xs text-[var(--color-ink-muted)]">
+                  {relativeTime(item.occurred_at)}
+                </p>
               </div>
             );
 
@@ -110,7 +66,11 @@ export function RecentActivityFeed({ items }: RecentActivityFeedProps) {
             }
 
             return (
-              <Link key={item.id} href={item.href} className="block transition-[background-color] hover:bg-[#f8fafc]">
+              <Link
+                key={item.id}
+                href={item.href}
+                className="block hover:bg-[var(--color-paper)]"
+              >
                 {body}
               </Link>
             );

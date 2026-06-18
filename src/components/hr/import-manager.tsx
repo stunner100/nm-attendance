@@ -225,7 +225,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
 
   return (
     <div className="space-y-4">
-      <Card className="border-0 shadow-lg">
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle>Import Data</CardTitle>
           <CardDescription>
@@ -257,7 +257,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
           <div>
             <span className="mb-2 block text-xs font-medium text-muted-foreground">Upload file</span>
             <div
-              className="relative flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-8 transition-colors hover:border-emerald-300 hover:bg-emerald-50/50"
+              className="relative flex cursor-pointer flex-col items-center gap-3 rounded-[var(--radius-md)] border-2 border-dashed border-border bg-muted p-8 transition-colors hover:border-[var(--color-border-strong)] hover:bg-muted/80"
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -276,22 +276,20 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
                 className="hidden"
                 onChange={handleFileUpload}
               />
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                <Upload className="h-6 w-6 text-emerald-600" />
-              </div>
+              <Upload className="h-8 w-8 text-muted-foreground" />
               <div className="text-center">
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-sm font-medium text-foreground">
                     {fileName ? fileName : "Drop your CSV or DOCX file here, or click to browse"}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">.csv, .docx, .txt, .md</p>
+                <p className="mt-1 text-xs text-muted-foreground">.csv, .docx, .txt, .md</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-200" />
-            <span className="text-xs text-slate-400">or paste data below</span>
-            <div className="h-px flex-1 bg-slate-200" />
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">or paste data below</span>
+            <div className="h-px flex-1 bg-border" />
           </div>
 
           <label className="text-sm">
@@ -314,18 +312,18 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
           </label>
 
           {template ? (
-            <div className="rounded-xl border bg-slate-50 p-4">
+            <div className="rounded-[var(--radius-md)] border border-border bg-muted p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-slate-400" />
-                  <p className="text-sm font-medium text-slate-700">Template for {scopeLabel}</p>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground">Template for {scopeLabel}</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={downloadTemplate} className="text-xs">
                   <Download className="mr-1.5 h-3.5 w-3.5" />
                   Download
                 </Button>
               </div>
-              <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-lg bg-white p-3 font-mono text-xs">{template}</pre>
+              <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-border bg-card p-3 font-mono text-xs">{template}</pre>
             </div>
           ) : null}
 
@@ -387,37 +385,36 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
                   ) : null}
                 </div>
               ) : (
-                <p className="text-xs text-emerald-700">No validation errors. Ready to import.</p>
+                <p className="text-xs text-[var(--color-success)]">No validation errors. Ready to import.</p>
               )}
             </div>
           ) : null}
 
           {importResult ? (
-            <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm">
+            <div className="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-rule)] bg-[var(--color-signature-mint)]/30 p-5 text-sm">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                <p className="font-semibold text-emerald-900">
+                <CheckCircle2 className="h-5 w-5 text-[var(--color-success)]" />
+                <p className="font-medium text-foreground">
                   Import complete &mdash; {importResult.rowsSuccess} rows imported
                 </p>
               </div>
               {importResult.rowsFailed > 0 && (
-                <p className="text-xs text-emerald-700">
+                <p className="text-xs text-muted-foreground">
                   {importResult.rowsFailed} row(s) skipped due to errors.
                 </p>
               )}
-              <a
-                href={viewDataLink}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-              >
-                View imported data
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+              <Button asChild>
+                <a href={viewDataLink} className="inline-flex items-center gap-1.5">
+                  View imported data
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </Button>
             </div>
           ) : null}
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-lg">
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle>Import History ({runs.length})</CardTitle>
         </CardHeader>

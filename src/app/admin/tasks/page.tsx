@@ -93,7 +93,6 @@ export default async function TasksPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Task tracker"
         description="Tasks linked to KPIs. Employees update progress; managers verify completion before it counts toward monthly scores."
       />
 

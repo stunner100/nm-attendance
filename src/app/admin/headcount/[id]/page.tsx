@@ -32,6 +32,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
     <div className="space-y-6">
       <AdminPageIntro
         title={employee.full_name}
+        showTitle
         description="Full performance profile — KPIs, tasks, scores, rewards, accountability, and growth."
         actions={
           <Button asChild variant="outline">

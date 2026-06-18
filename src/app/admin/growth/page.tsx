@@ -89,7 +89,6 @@ export default async function GrowthPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Long-Term Growth Plans"
         description="Every employee should have a 6-12 month growth plan covering role, KPIs, skills, the next role, promotion requirements, and review timeline."
       />
 
@@ -208,7 +207,7 @@ export default async function GrowthPage({ searchParams }: PageProps) {
                     <StatusBadge status={plan.status} />
                   </form>
                 </div>
-                <div className="mt-2 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
                   {plan.required_kpis ? (
                     <p>
                       <span className="font-semibold">Required KPIs:</span> {plan.required_kpis}

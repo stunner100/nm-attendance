@@ -1,49 +1,66 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: design.md · designed-as-app
- * theme: custom (Abonten HR · paper oklch(99% 0.006 155) · accent oklch(52% 0.14 160) emerald · Space Grotesk + Inter)
- * pre-emit critique: P4 H4 E4 S5 R4 V4
+ * theme: Airtable-adapted (canvas #fff · ink #181d26 · Inter · signature accents)
  */
 
 :root {
-  --color-paper: oklch(0.99 0.006 155);
-  --color-paper-2: oklch(0.97 0.008 155);
-  --color-paper-3: oklch(0.94 0.01 155);
-  --color-ink: oklch(0.2 0.02 260);
-  --color-ink-2: oklch(0.42 0.015 260);
-  --color-ink-muted: oklch(0.52 0.012 260);
-  --color-rule: oklch(0.91 0.006 260);
-  --color-accent: oklch(0.52 0.14 160);
-  --color-accent-ink: oklch(0.99 0.006 155);
-  --color-focus: oklch(0.52 0.14 160);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-ink: oklch(0.99 0.006 155);
+  --color-paper: #ffffff;
+  --color-paper-2: #f8fafc;
+  --color-paper-3: #e0e2e6;
+  --color-ink: #181d26;
+  --color-ink-2: #333840;
+  --color-ink-muted: #41454d;
+  --color-rule: #dddddd;
+  --color-border-strong: #9297a0;
+  --color-accent: #181d26;
+  --color-accent-active: #0d1218;
+  --color-accent-ink: #ffffff;
+  --color-link: #1b61c9;
+  --color-link-active: #1a3866;
+  --color-focus: #458fff;
+  --color-info: #254fad;
+  --color-success: #006400;
+  --color-destructive: #aa2d00;
+  --color-destructive-ink: #ffffff;
+  --color-signature-coral: #aa2d00;
+  --color-signature-forest: #0a2e0e;
+  --color-signature-cream: #f5e9d4;
+  --color-signature-peach: #fcab79;
+  --color-signature-mint: #a8d8c4;
+  --color-signature-yellow: #f4d35e;
+  --color-signature-mustard: #d9a441;
 
-  --font-display: var(--font-display-loaded), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-body-loaded), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-body-loaded), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono-loaded), ui-monospace, monospace;
 
-  --space-3xs: 0.25rem;
-  --space-2xs: 0.5rem;
-  --space-xs: 0.75rem;
-  --space-sm: 1rem;
-  --space-md: 1.5rem;
-  --space-lg: 2rem;
-  --space-xl: 3rem;
-  --space-2xl: 4.5rem;
+  --space-xxs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-xxl: 3rem;
 
-  --text-xs: 0.75rem;
+  --text-xs: 0.8125rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;
   --text-lg: 1.25rem;
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
+  --text-display: 2rem;
+
+  --radius-xs: 2px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+  --radius-input: var(--radius-sm);
+  --radius-card: var(--radius-md);
+  --radius-button: var(--radius-lg);
+  --radius-shell: var(--radius-lg);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --dur-short: 180ms;
-  --dur-medium: 280ms;
-
-  --radius-input: 0.5rem;
-  --radius-card: 0.75rem;
-  --radius-pill: 9999px;
-  --radius-shell: 1rem;
+  --dur-short: 150ms;
+  --dur-medium: 250ms;
 }

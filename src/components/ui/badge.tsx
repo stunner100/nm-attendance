@@ -5,20 +5,18 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "group/badge inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2.5 py-0.5 text-[11px] font-semibold tracking-tight whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "group/badge inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-[var(--radius-sm)] border border-transparent px-2 py-0.5 text-[11px] font-medium whitespace-nowrap transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
-        default: "bg-neutral-950 text-white [a]:hover:bg-neutral-800 dark:bg-white dark:text-neutral-950",
-        secondary:
-          "bg-neutral-100 text-neutral-700 [a]:hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200",
+        default: "bg-primary text-primary-foreground [a]:hover:bg-[var(--color-accent-active)]",
+        secondary: "bg-muted text-muted-foreground [a]:hover:bg-muted/80",
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+          "bg-destructive/10 text-destructive [a]:hover:bg-destructive/15",
         outline:
-          "border-neutral-200 bg-white text-neutral-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] [a]:hover:bg-neutral-100 [a]:hover:text-neutral-950 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border-border bg-card text-foreground [a]:hover:bg-muted",
+        ghost: "hover:bg-muted hover:text-foreground",
+        link: "text-[var(--color-link)] underline-offset-4 hover:text-[var(--color-link-active)] hover:underline",
       },
     },
     defaultVariants: {

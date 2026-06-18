@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -9,8 +8,7 @@ type OverviewKpiCardProps = {
   delta: number;
   invertTrend?: boolean;
   href?: string;
-  icon?: ReactNode;
-  tone?: "emerald" | "blue" | "green" | "amber" | "rose";
+  variant?: "default" | "signature";
   trendContext?: "this month" | "from last month";
 };
 
@@ -29,8 +27,7 @@ export function OverviewKpiCard({
   delta,
   invertTrend = false,
   href,
-  icon,
-  tone = "emerald",
+  variant = "default",
   trendContext = "this month",
 }: OverviewKpiCardProps) {
   const isPositive = delta > 0;
@@ -43,33 +40,43 @@ export function OverviewKpiCard({
     delta === 0
       ? "No change from last month"
       : `${isPositive ? "Up" : "Down"} ${formatDelta(delta)} from last month`;
-  const toneClass = {
-    emerald: "bg-emerald-50 text-emerald-600",
-    blue: "bg-blue-50 text-blue-600",
-    green: "bg-green-50 text-green-600",
-    amber: "bg-amber-50 text-amber-600",
-    rose: "bg-rose-50 text-rose-600",
-  }[tone];
+
+  const isSignature = variant === "signature";
 
   const content = (
-    <article className="flex h-[110px] flex-col justify-between rounded-[8px] border border-[#e2e8f0] bg-white px-4 py-5 shadow-[0_2px_8px_rgba(15,23,42,0.05)] transition-[box-shadow] hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
-      <div className="flex items-start gap-3">
-        <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", toneClass)}>
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <p className="text-2xl leading-none font-semibold tracking-tight text-[#0f172a] tabular-nums">
-            {value}
-          </p>
-          <p className="mt-2 whitespace-nowrap text-xs font-medium leading-tight text-[#1e293b]">{label}</p>
-        </div>
+    <article
+      className={cn(
+        "flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] border p-4",
+        isSignature
+          ? "border-transparent bg-[var(--color-signature-forest)] text-[var(--color-accent-ink)]"
+          : "border-[var(--color-rule)] bg-[var(--color-paper)]"
+      )}
+    >
+      <div className="min-w-0">
+        <p
+          className={cn(
+            "text-2xl font-medium leading-none tabular-nums",
+            isSignature ? "text-[var(--color-accent-ink)]" : "text-[var(--color-ink)]"
+          )}
+        >
+          {value}
+        </p>
+        <p
+          className={cn(
+            "mt-2 text-xs font-medium leading-tight",
+            isSignature ? "text-[var(--color-accent-ink)]/85" : "text-[var(--color-ink-2)]"
+          )}
+        >
+          {label}
+        </p>
       </div>
       <div
         className={cn(
-          "ml-[55px] inline-flex items-center gap-1 text-xs font-medium",
-          isGood && "text-[#00a76f]",
-          isBad && "text-[#ff3045]",
-          !isGood && !isBad && "text-[#64748b]"
+          "mt-3 inline-flex items-center gap-1 text-xs font-medium",
+          isSignature && "text-[var(--color-accent-ink)]/90",
+          !isSignature && isGood && "text-[var(--color-success)]",
+          !isSignature && isBad && "text-[var(--color-destructive)]",
+          !isSignature && !isGood && !isBad && "text-[var(--color-ink-muted)]"
         )}
         aria-label={trendLabel}
       >
@@ -86,7 +93,10 @@ export function OverviewKpiCard({
   }
 
   return (
-    <a href={href} className="block h-full rounded-[8px] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40">
+    <a
+      href={href}
+      className="block rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]"
+    >
       {content}
     </a>
   );

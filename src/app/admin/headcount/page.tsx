@@ -180,15 +180,11 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Employee Directory"
         description="Manage employee records, contracts, and status."
         actions={
-          <Link
-            href="/admin/imports"
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-          >
-            Import data
-          </Link>
+          <Button variant="outline" asChild>
+            <Link href="/admin/imports">Import data</Link>
+          </Button>
         }
       />
 

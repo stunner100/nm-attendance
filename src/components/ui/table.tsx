@@ -8,7 +8,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto rounded-xl border border-border bg-card shadow-sm"
+      className="relative w-full overflow-x-auto rounded-[var(--radius-md)] border border-border bg-card"
     >
       <table
         data-slot="table"
@@ -23,7 +23,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("bg-neutral-50/80 text-neutral-500 dark:bg-neutral-900/80 dark:text-neutral-400 [&_tr]:border-b", className)}
+      className={cn("bg-muted text-muted-foreground [&_tr]:border-b", className)}
       {...props}
     />
   )
@@ -44,7 +44,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "border-t bg-neutral-50 font-medium dark:bg-neutral-900 [&>tr]:last:border-b-0",
+        "border-t bg-muted font-medium [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -57,7 +57,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b border-neutral-100 transition-colors hover:bg-neutral-50/80 data-[state=selected]:bg-neutral-100 dark:border-white/5 dark:hover:bg-white/5 dark:data-[state=selected]:bg-white/10",
+        "border-b border-border transition-colors hover:bg-muted/60 data-[state=selected]:bg-muted",
         className
       )}
       {...props}
@@ -83,7 +83,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "px-4 py-3 align-middle whitespace-nowrap text-neutral-700 [&:has([role=checkbox])]:pr-0 dark:text-neutral-200",
+        "px-4 py-3 align-middle whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

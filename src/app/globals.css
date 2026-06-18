@@ -68,11 +68,11 @@
   --border: var(--color-rule);
   --input: var(--color-rule);
   --ring: var(--color-focus);
-  --chart-1: oklch(0.52 0.14 160);
-  --chart-2: oklch(0.42 0.015 260);
-  --chart-3: oklch(0.577 0.245 27.325);
-  --chart-4: oklch(0.65 0.12 230);
-  --chart-5: oklch(0.72 0.14 85);
+  --chart-1: var(--color-signature-forest);
+  --chart-2: var(--color-signature-coral);
+  --chart-3: var(--color-signature-mustard);
+  --chart-4: var(--color-signature-mint);
+  --chart-5: var(--color-signature-peach);
   --radius: var(--radius-card);
   --sidebar: var(--color-paper-2);
   --sidebar-foreground: var(--color-ink);
@@ -131,9 +131,16 @@
   h4 {
     font-family: var(--font-display);
     font-style: normal;
+    font-weight: 500;
   }
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+  .text-link {
+    color: var(--color-link);
+  }
+  .text-link:hover {
+    color: var(--color-link-active);
   }
   .dashboard-sidebar-scroll {
     scrollbar-width: none;

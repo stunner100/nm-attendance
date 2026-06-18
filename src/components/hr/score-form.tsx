@@ -116,14 +116,14 @@ export function ScoreForm({ employees, defaultPeriod, action }: ScoreFormProps) 
       <Input className="sm:col-span-2" name="scoredBy" placeholder="Scored by (name)" />
       <Textarea className="sm:col-span-2" name="notes" placeholder="Notes (optional)" />
 
-      <div className="flex items-center justify-between rounded-lg border bg-slate-50 px-4 py-3 sm:col-span-2">
+      <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-border bg-muted px-4 py-3 sm:col-span-2">
         <div>
           <p className="text-xs text-muted-foreground">Weighted monthly score</p>
-          <p className="text-2xl font-bold text-slate-900">{total.toFixed(1)} / 100</p>
+          <p className="text-2xl font-medium tabular-nums text-foreground">{total.toFixed(1)} / 100</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">Rating</p>
-          <p className="text-lg font-semibold text-slate-900">{ratingLabel}</p>
+          <p className="text-lg font-medium text-foreground">{ratingLabel}</p>
         </div>
       </div>
 

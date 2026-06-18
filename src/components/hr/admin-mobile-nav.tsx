@@ -24,7 +24,7 @@ export function AdminMobileNav({ email }: AdminMobileNavProps) {
           type="button"
           variant="outline"
           size="icon"
-          className="lg:hidden"
+          className="md:hidden"
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" />

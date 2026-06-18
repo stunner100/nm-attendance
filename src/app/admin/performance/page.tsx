@@ -168,7 +168,6 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Performance Management"
         description="Track review completion, improvement plan progress, and KPI score trends."
       />
 

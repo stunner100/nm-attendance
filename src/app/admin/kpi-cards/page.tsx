@@ -126,7 +126,6 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Employee KPI Cards"
         description="Document SMART, role-specific KPIs per employee. KPIs are reviewed weekly, scored monthly, and reviewed deeply each quarter."
       />
 
@@ -284,15 +283,15 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
                     (itemsByCard.get(card.id) ?? []).map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-start justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                        className="flex items-start justify-between gap-3 rounded-[var(--radius-sm)] bg-muted px-3 py-2 text-sm"
                       >
                         <div>
-                          <p className="font-medium text-slate-800">{item.kpi_text}</p>
+                          <p className="font-medium text-foreground">{item.kpi_text}</p>
                           {item.target_measure ? (
-                            <p className="text-xs text-slate-500">Target: {item.target_measure}</p>
+                            <p className="text-xs text-muted-foreground">Target: {item.target_measure}</p>
                           ) : null}
                         </div>
-                        <span className="shrink-0 text-xs font-semibold text-slate-500">
+                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
                           {item.weight}%
                         </span>
                       </div>
@@ -328,11 +327,11 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {HR_DEPARTMENTS.map((department) => (
             <div key={department} className="rounded-lg border p-3">
-              <p className="text-sm font-semibold text-slate-800">{department}</p>
-              <ul className="mt-2 space-y-1 text-xs text-slate-600">
+              <p className="text-sm font-medium text-foreground">{department}</p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                 {DEPARTMENT_FRAMEWORK[department].focusAreas.map((area) => (
                   <li key={area} className="flex gap-2">
-                    <span className="text-emerald-500">&bull;</span>
+                    <span className="text-[var(--color-ink-muted)]">&bull;</span>
                     <span>{area}</span>
                   </li>
                 ))}

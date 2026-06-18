@@ -11,7 +11,6 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Settings"
         description="Operational defaults for Night Market HR. Advanced configuration will expand here."
       />
 

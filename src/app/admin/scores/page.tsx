@@ -69,7 +69,6 @@ export default async function ScoresPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Monthly Performance Scores"
         description={`Scored out of 100: KPI ${SCORE_WEIGHTS.kpi}%, Tasks ${SCORE_WEIGHTS.task}%, Communication ${SCORE_WEIGHTS.comms}%, Teamwork ${SCORE_WEIGHTS.teamwork}%. Rating is derived automatically.`}
       />
 
@@ -147,7 +146,7 @@ export default async function ScoresPage({ searchParams }: PageProps) {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl font-bold text-slate-900">
+                  <span className="text-2xl font-medium tabular-nums text-foreground">
                     {score.total_score.toFixed(1)}
                   </span>
                   <StatusBadge status={score.rating} />
@@ -165,8 +164,8 @@ export default async function ScoresPage({ searchParams }: PageProps) {
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {RATING_BANDS.map((band) => (
             <div key={band.band} className="rounded-lg border p-3 text-center">
-              <p className="text-sm font-semibold text-slate-800">{band.label}</p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-sm font-medium text-foreground">{band.label}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {band.min}
                 {band.max >= 100 ? "+" : `-${band.max}`}
               </p>

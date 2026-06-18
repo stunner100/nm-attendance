@@ -63,7 +63,6 @@ export default async function RewardsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Rewards & Recognition"
         description="Weekly, monthly, quarterly, and long-term rewards. Employees scoring 80+ are bonus eligible; 90+ qualify for higher recognition."
       />
 
@@ -176,11 +175,11 @@ export default async function RewardsPage({ searchParams }: PageProps) {
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {REWARD_TIERS.map((tier) => (
             <div key={tier.tier} className="rounded-lg border p-3">
-              <p className="text-sm font-semibold text-slate-800">{tier.label}</p>
-              <ul className="mt-2 space-y-1 text-xs text-slate-600">
+              <p className="text-sm font-medium text-foreground">{tier.label}</p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                 {tier.items.map((item) => (
                   <li key={item} className="flex gap-2">
-                    <span className="text-emerald-500">&bull;</span>
+                    <span className="text-[var(--color-ink-muted)]">&bull;</span>
                     <span>{item}</span>
                   </li>
                 ))}

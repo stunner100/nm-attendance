@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AttendanceTable } from "@/components/attendance-table";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
+import { Button } from "@/components/ui/button";
 import { getAllAttendance } from "@/lib/db";
 
 type AttendancePageProps = {
@@ -18,15 +19,11 @@ export default async function AttendancePage({
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Attendance Log"
         description="Full attendance history with check-in, check-out, date filtering, and GPS links."
         actions={
-          <Link
-            href="/admin"
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-          >
-            Back to overview
-          </Link>
+          <Button variant="outline" asChild>
+            <Link href="/admin">Back to overview</Link>
+          </Button>
         }
       />
 

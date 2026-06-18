@@ -179,7 +179,6 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="HR Cases & Compliance"
         description="Track cases, policy violations, and follow-up actions."
       />
 

@@ -37,10 +37,10 @@ export function PeriodSelector({ period }: PeriodSelectorProps) {
       <button
         type="button"
         onClick={() => inputRef.current?.showPicker()}
-        className="flex h-8 w-[184px] items-center justify-between rounded-[6px] border border-[#d7dde7] bg-white px-3 text-xs font-medium text-[#1e293b] shadow-none"
+        className="flex h-9 min-w-[11rem] items-center justify-between rounded-[var(--radius-sm)] border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 text-xs font-medium text-[var(--color-ink-2)]"
       >
-        <span>{formatPeriodLabel(period)}</span>
-        <Calendar className="h-3.5 w-3.5 text-[#334155]" />
+        <span className="whitespace-nowrap">{formatPeriodLabel(period)}</span>
+        <Calendar className="h-3.5 w-3.5 text-[var(--color-ink-muted)]" />
       </button>
       <Input
         ref={inputRef}
@@ -48,7 +48,7 @@ export function PeriodSelector({ period }: PeriodSelectorProps) {
         type="month"
         value={period}
         onChange={(event) => onChange(event.target.value)}
-        className="pointer-events-none absolute inset-0 h-8 w-[184px] opacity-0"
+        className="pointer-events-none absolute inset-0 h-9 w-full opacity-0"
         title={formatPeriodLabel(period)}
       />
     </div>

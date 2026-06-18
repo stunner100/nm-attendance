@@ -2,10 +2,10 @@
   {
     "date": "2026-06-16",
     "macrostructure": "Workbench",
-    "theme": "custom",
-    "theme_axes": "light / grotesk-sans / chromatic-other",
+    "theme": "Airtable-adapted",
+    "theme_axes": "light / grotesk-sans / neutral-primary",
     "enrichment": "none",
-    "brief": "design.md locked — Abonten HR system",
-    "scope": "app"
+    "brief": "design.md — Night Market HR · Airtable canvas/ink system",
+    "scope": "app-dashboard"
   }
 ]

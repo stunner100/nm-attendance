@@ -97,7 +97,6 @@ export default async function DepartmentRoadmapPage({ searchParams }: PageProps)
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Department goals & roadmap health"
         description="Link department priorities to company goals. HODs update roadmap health monthly."
       />
 

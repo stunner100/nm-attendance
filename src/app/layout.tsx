@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-display-loaded",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
 
 const inter = Inter({
   variable: "--font-body-loaded",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -19,8 +14,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Abonten Technologies",
-  description: "Admin HR operations platform with recruitment, compliance, payroll, performance, training, and attendance.",
+  title: "Night Market HR",
+  description: "HR operations platform — performance, people ops, and attendance.",
 };
 
 export default function RootLayout({
@@ -31,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>

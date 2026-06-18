@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Clock, QrCode, Printer } from "lucide-react";
+import { Clock, Printer } from "lucide-react";
 import QRCode from "qrcode";
 
 import { PrintButton } from "@/components/print-button";
+import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function AdminQrPage() {
   const appUrl = (
@@ -23,24 +24,18 @@ export default async function AdminQrPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-          <QrCode className="h-5 w-5 text-emerald-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Check-in QR Code</h1>
-          <p className="text-sm text-slate-500">Print and display this code at your office entrance.</p>
-        </div>
-      </div>
+      <AdminPageIntro
+        description="Print and display this code at your office entrance."
+      />
 
-      <Card className="border-0 shadow-lg">
+      <Card>
         <CardContent className="flex flex-col items-center gap-4 pt-6">
           <img
             src={qrDataUrl}
             alt="Attendance check-in QR code"
             className="h-auto w-full max-w-[300px]"
           />
-          <p className="break-all text-center text-sm text-slate-500">{checkinUrl}</p>
+          <p className="break-all text-center text-sm text-muted-foreground">{checkinUrl}</p>
           <PrintButton />
         </CardContent>
       </Card>
@@ -49,12 +44,12 @@ export default async function AdminQrPage() {
         <Link href="/admin/attendance" className="flex-1">
           <Button variant="outline" className="w-full">
             <Clock className="mr-2 h-4 w-4" />
-            View Attendance
+            View attendance
           </Button>
         </Link>
         <Link href="/admin" className="flex-1">
           <Button variant="outline" className="w-full">
-            Back to Dashboard
+            Back to overview
           </Button>
         </Link>
       </div>

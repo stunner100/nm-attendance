@@ -126,7 +126,6 @@ export default async function RecruitmentPage({ searchParams }: RecruitmentPageP
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Recruitment Pipeline"
         description="Track open roles, applicant progression, and hiring conversion."
       />
 

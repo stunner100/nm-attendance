@@ -1,5 +1,9 @@
 function LoadingCard({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-slate-200 ${className}`.trim()} />;
+  return (
+    <div
+      className={`animate-pulse rounded-[var(--radius-md)] bg-[var(--color-paper-3)] ${className}`.trim()}
+    />
+  );
 }
 
 export default function AdminLoading() {
@@ -11,17 +15,17 @@ export default function AdminLoading() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <div className="col-span-2 rounded-xl bg-slate-900 p-6">
-          <LoadingCard className="h-4 w-32 bg-slate-700" />
-          <LoadingCard className="mt-3 h-8 w-64 bg-slate-700" />
+        <div className="col-span-2 rounded-[var(--radius-md)] border border-border bg-card p-6">
+          <LoadingCard className="h-4 w-32" />
+          <LoadingCard className="mt-3 h-8 w-64" />
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <LoadingCard className="h-20 bg-slate-700" />
-            <LoadingCard className="h-20 bg-slate-700" />
-            <LoadingCard className="h-20 bg-slate-700" />
+            <LoadingCard className="h-20" />
+            <LoadingCard className="h-20" />
+            <LoadingCard className="h-20" />
           </div>
         </div>
 
-        <div className="rounded-xl bg-white p-6 shadow">
+        <div className="rounded-[var(--radius-md)] border border-border bg-card p-6">
           <LoadingCard className="h-5 w-40" />
           <div className="mt-4 space-y-3">
             {Array.from({ length: 5 }).map((_, index) => (
@@ -36,10 +40,10 @@ export default function AdminLoading() {
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="rounded-xl bg-white p-5 shadow">
+          <div key={index} className="rounded-[var(--radius-md)] border border-border bg-card p-5">
             <div className="flex items-center justify-between">
               <LoadingCard className="h-4 w-20" />
-              <LoadingCard className="h-8 w-8 rounded-lg" />
+              <LoadingCard className="h-8 w-8 rounded-[var(--radius-sm)]" />
             </div>
             <LoadingCard className="mt-4 h-9 w-16" />
             <LoadingCard className="mt-2 h-4 w-32" />
@@ -48,7 +52,7 @@ export default function AdminLoading() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-xl bg-white p-6 shadow">
+        <div className="rounded-[var(--radius-md)] border border-border bg-card p-6">
           <LoadingCard className="h-6 w-44" />
           <div className="mt-4 space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -57,7 +61,7 @@ export default function AdminLoading() {
           </div>
         </div>
 
-        <div className="rounded-xl bg-white p-6 shadow">
+        <div className="rounded-[var(--radius-md)] border border-border bg-card p-6">
           <LoadingCard className="h-6 w-40" />
           <div className="mt-4 space-y-3">
             {Array.from({ length: 5 }).map((_, index) => (

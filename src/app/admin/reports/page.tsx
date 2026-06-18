@@ -22,7 +22,6 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Reports & exports"
         description="Download CSV exports for performance, people operations, and attendance."
       />
 

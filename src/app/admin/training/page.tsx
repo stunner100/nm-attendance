@@ -158,7 +158,6 @@ export default async function TrainingPage({ searchParams }: TrainingPageProps) 
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Training & Onboarding"
         description="Monitor onboarding completion and training curriculum progress."
       />
 

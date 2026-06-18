@@ -94,7 +94,6 @@ export default async function AccountabilityPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Accountability & Consequences"
         description="A fair, progressive path: coaching, warnings, improvement plans, and final review. Serious misconduct triggers immediate investigation."
       />
 
@@ -243,11 +242,11 @@ export default async function AccountabilityPage({ searchParams }: PageProps) {
         </CardHeader>
         <CardContent className="space-y-2">
           {ACCOUNTABILITY_LADDER.map((step, index) => (
-            <div key={step.stage} className="flex gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm">
-              <span className="w-6 shrink-0 font-semibold text-slate-400">{index + 1}</span>
+            <div key={step.stage} className="flex gap-3 rounded-[var(--radius-sm)] bg-muted px-3 py-2 text-sm">
+              <span className="w-6 shrink-0 font-medium text-muted-foreground">{index + 1}</span>
               <div>
-                <p className="font-medium text-slate-800">{step.label}</p>
-                <p className="text-xs text-slate-500">{step.note}</p>
+                <p className="font-medium text-foreground">{step.label}</p>
+                <p className="text-xs text-muted-foreground">{step.note}</p>
               </div>
             </div>
           ))}
@@ -261,8 +260,8 @@ export default async function AccountabilityPage({ searchParams }: PageProps) {
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {HR_DEPARTMENTS.map((department) => (
             <div key={department} className="rounded-lg border p-3">
-              <p className="text-sm font-semibold text-slate-800">{department}</p>
-              <ul className="mt-2 space-y-1 text-xs text-slate-600">
+              <p className="text-sm font-medium text-foreground">{department}</p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                 {DEPARTMENT_FRAMEWORK[department].seriousIssues.map((issue) => (
                   <li key={issue} className="flex gap-2">
                     <span className="text-rose-500">&bull;</span>

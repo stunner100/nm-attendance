@@ -12,21 +12,27 @@ export function RoadmapHealthList({ healthByDepartment }: RoadmapHealthListProps
   const entries = Object.entries(healthByDepartment);
 
   return (
-    <Card className="h-full min-h-[274px]">
+    <Card className="h-full min-h-[274px] rounded-[var(--radius-lg)] border-[var(--color-rule)] bg-[var(--color-paper-2)] shadow-none">
       <CardHeader className="grid-cols-[1fr_auto] items-center">
-        <CardTitle>Roadmap Health by Department</CardTitle>
-        <Link href="/admin/department-roadmap" className="text-xs font-medium text-[#006ce5] hover:text-[#0057b8]">
+        <CardTitle className="text-base font-medium">Roadmap health by department</CardTitle>
+        <Link
+          href="/admin/department-roadmap"
+          className="text-link text-xs font-medium whitespace-nowrap"
+        >
           View all
         </Link>
       </CardHeader>
       <CardContent>
         {entries.map(([department, health]) => (
-          <div key={department} className="flex h-[33px] items-center justify-between gap-3 border-b border-[#eef2f7] text-xs last:border-b-0">
-            <span className="font-medium text-[#1e293b]">{department}</span>
+          <div
+            key={department}
+            className="flex h-9 items-center justify-between gap-3 border-b border-[var(--color-rule)] text-xs last:border-b-0"
+          >
+            <span className="font-medium text-[var(--color-ink-2)]">{department}</span>
             {health ? (
               <StatusBadge status={health} />
             ) : (
-              <span className="text-[#64748b]">Not set</span>
+              <span className="text-[var(--color-ink-muted)]">Not set</span>
             )}
           </div>
         ))}

@@ -89,7 +89,6 @@ export default async function CompanyGoalsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Company goals"
         description="Set company-wide objectives that department goals and employee KPIs connect to."
       />
 

@@ -8,7 +8,6 @@ export default async function ImportsPage() {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        title="Data Imports"
         description="Validate and commit HR data imports from CSV or DOCX for employees, recruitment, leave, and payroll."
       />
 

@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function FadeIn({
@@ -15,19 +15,21 @@ export function FadeIn({
 export function AnimatedBar({
   value,
   max = 100,
-  colorClass = "bg-emerald-500",
+  colorClass = "bg-primary",
+  barStyle,
 }: {
   value: number;
   max?: number;
   colorClass?: string;
+  barStyle?: CSSProperties;
   delay?: number;
 }) {
   const pct = max <= 0 ? 0 : Math.min((value / max) * 100, 100);
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+    <div className="h-2 overflow-hidden rounded-full bg-[var(--color-paper-3)]">
       <div
         className={cn("h-full rounded-full transition-[width] duration-500 ease-out", colorClass)}
-        style={{ width: `${pct}%` }}
+        style={{ width: `${pct}%`, ...barStyle }}
       />
     </div>
   );

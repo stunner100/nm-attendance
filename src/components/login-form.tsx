@@ -105,20 +105,21 @@ export function LoginForm({ callbackUrl, signupOpen = false }: LoginFormProps) {
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
 
+          {signupOpen ? (
+            <Button
+              asChild
+              className="h-11 w-full whitespace-nowrap"
+              type="button"
+              variant="outline"
+            >
+              <Link href="/signup">Create your account</Link>
+            </Button>
+          ) : null}
+
           <p className="text-center text-xs text-muted-foreground">
-            {signupOpen ? (
-              <>
-                First time here?{" "}
-                <Link
-                  href="/signup"
-                  className="font-medium text-[var(--color-link)] hover:underline"
-                >
-                  Create your account
-                </Link>
-              </>
-            ) : (
-              "Contact your system administrator for login credentials."
-            )}
+            {signupOpen
+              ? "First time here? Use Create your account above to set up your login."
+              : "Contact your system administrator for login credentials."}
           </p>
         </form>
       </CardContent>

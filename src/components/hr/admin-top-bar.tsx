@@ -49,6 +49,7 @@ type SearchResult = { label: string; href: string; group: string };
 
 type AdminTopBarProps = {
   email: string;
+  displayName?: string;
 };
 
 type AdminSearchFieldProps = {
@@ -144,7 +145,7 @@ function AdminSearchField({
   );
 }
 
-export function AdminTopBar({ email }: AdminTopBarProps) {
+export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -163,7 +164,7 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
   const period =
     searchParams.get("period")?.trim() || new Date().toISOString().slice(0, 7);
   const pageTitle = resolvePageTitle(pathname);
-  const displayName = displayNameFromEmail(email);
+  const resolvedDisplayName = displayName?.trim() || displayNameFromEmail(email);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -253,7 +254,7 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
             {pageTitle}
           </h1>
           <p className="hidden truncate text-xs text-[var(--color-ink-muted)] sm:block">
-            Welcome back, {displayName}
+            Welcome back, {resolvedDisplayName}
           </p>
         </div>
 
@@ -342,10 +343,10 @@ export function AdminTopBar({ email }: AdminTopBarProps) {
 
           <div className="hidden items-center gap-2 sm:flex">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-paper-3)] text-xs font-medium text-[var(--color-ink)]">
-              {initials(displayName)}
+              {initials(resolvedDisplayName)}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[var(--color-ink)]">{displayName}</p>
+              <p className="truncate text-sm font-medium text-[var(--color-ink)]">{resolvedDisplayName}</p>
               <p className="truncate text-xs text-[var(--color-ink-muted)]">Admin</p>
             </div>
           </div>

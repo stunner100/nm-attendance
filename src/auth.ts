@@ -2,7 +2,8 @@ import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-import { ensureDefaultAdmin, getAuthUserByEmail } from "@/lib/db";
+import { ensureDefaultAdmin } from "@/lib/db";
+import { getAuthUserByEmail, getAuthSessionVersion, isSignupOpen } from "@/lib/auth-users";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
@@ -38,7 +39,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        await ensureDefaultAdmin();
+        if (!isSignupOpen()) {
+          await ensureDefaultAdmin();
+        }
+
         const user = await getAuthUserByEmail(email);
 
         if (!user) {
@@ -53,16 +57,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return {
           id: String(user.id),
           email: user.email,
-          name: user.email,
+          name: user.employeeName ?? user.email,
           role: user.role,
+          employeeId: user.employeeId ? String(user.employeeId) : null,
+          jobLevel: user.jobLevel,
+          employeeName: user.employeeName,
         };
       },
     }),
   ],
   callbacks: {
     jwt({ token, user }) {
-      if (user && "role" in user && typeof user.role === "string") {
-        token.role = user.role;
+      if (user) {
+        token.sessionVersion = getAuthSessionVersion();
+        if ("role" in user && typeof user.role === "string") {
+          token.role = user.role;
+        }
+        if ("employeeId" in user && typeof user.employeeId === "string") {
+          token.employeeId = user.employeeId;
+        }
+        if ("jobLevel" in user && typeof user.jobLevel === "string") {
+          token.jobLevel = user.jobLevel;
+        }
+        if ("employeeName" in user && typeof user.employeeName === "string") {
+          token.employeeName = user.employeeName;
+        }
       }
       return token;
     },
@@ -70,7 +89,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.sub ?? "";
         session.user.role = typeof token.role === "string" ? token.role : "";
+        session.user.employeeId =
+          typeof token.employeeId === "string" ? token.employeeId : null;
+        session.user.jobLevel =
+          typeof token.jobLevel === "string" ? token.jobLevel : null;
+        session.user.employeeName =
+          typeof token.employeeName === "string" ? token.employeeName : null;
       }
+      session.sessionVersion =
+        typeof token.sessionVersion === "string" ? token.sessionVersion : "";
       return session;
     },
   },

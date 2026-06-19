@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 type AdminAppShellProps = {
   email: string;
+  displayName?: string;
   children: ReactNode;
 };
 
@@ -19,7 +20,7 @@ type AdminPageIntroProps = {
   showTitle?: boolean;
 };
 
-export function AdminAppShell({ email, children }: AdminAppShellProps) {
+export function AdminAppShell({ email, displayName, children }: AdminAppShellProps) {
   return (
     <div className="min-h-screen bg-[var(--color-paper-2)] text-[var(--color-ink)]">
       <div className="flex min-h-screen">
@@ -45,7 +46,7 @@ export function AdminAppShell({ email, children }: AdminAppShellProps) {
               <div className="h-16 border-b border-[var(--color-rule)] bg-[var(--color-paper)]" aria-hidden="true" />
             }
           >
-            <AdminTopBar email={email} />
+            <AdminTopBar email={email} displayName={displayName} />
           </Suspense>
 
           <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8">{children}</main>

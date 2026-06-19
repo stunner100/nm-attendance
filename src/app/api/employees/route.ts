@@ -7,6 +7,7 @@ import {
   getEmployeeNames,
   removeEmployeeName,
 } from "@/lib/db";
+import { isValidAdminSession } from "@/lib/session";
 import { normalizeRosterNames, splitRosterNames } from "@/lib/roster";
 
 type EmployeeMutationPayload = {
@@ -16,7 +17,7 @@ type EmployeeMutationPayload = {
 };
 
 function isAdminSession(session: Session | null): boolean {
-  return session?.user?.role === "admin";
+  return isValidAdminSession(session);
 }
 
 function extractRosterNames(payload: EmployeeMutationPayload): string[] {

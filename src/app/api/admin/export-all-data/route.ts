@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { logAdminAction } from "@/lib/admin-audit";
 import { exportAllTables, tablesToCsv } from "@/lib/admin-backup";
+import { isValidAdminSession } from "@/lib/session";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user?.role !== "admin") {
+  if (!isValidAdminSession(session)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

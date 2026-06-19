@@ -9,9 +9,13 @@ type AdminLayoutProps = {
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
   const session = await requireAdminPage("/admin");
+  const displayName =
+    session.user.employeeName?.trim() ||
+    session.user.email?.split("@")[0] ||
+    "HR Admin";
 
   return (
-    <AdminAppShell email={session.user.email ?? "admin"}>
+    <AdminAppShell email={session.user.email ?? "admin"} displayName={displayName}>
       {children}
     </AdminAppShell>
   );

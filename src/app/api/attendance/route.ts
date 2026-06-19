@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { getAllAttendance, clearAttendance } from "@/lib/db";
+import { isValidAdminSession } from "@/lib/session";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user?.role !== "admin") {
+  if (!isValidAdminSession(session)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -43,7 +44,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user?.role !== "admin") {
+  if (!isValidAdminSession(session)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

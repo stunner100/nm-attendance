@@ -7,6 +7,7 @@ import {
   deleteOperationalData,
   isDataWipeAllowed,
 } from "@/lib/admin-backup";
+import { isValidAdminSession } from "@/lib/session";
 
 type ClearPayload = {
   confirmPhrase?: unknown;
@@ -18,7 +19,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user?.role !== "admin") {
+  if (!isValidAdminSession(session)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

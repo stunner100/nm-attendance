@@ -10,6 +10,7 @@ import {
   needsLocationBackfill,
   resolveLocationLabel,
 } from "@/lib/reverse-geocode";
+import { isSignupOpen } from "@/lib/auth-users";
 import { runMigrations } from "@/lib/migrate";
 import type { AttendanceRow } from "@/lib/types";
 import {
@@ -149,6 +150,10 @@ async function ensureEmployeeRoster(): Promise<void> {
 }
 
 export async function ensureDefaultAdmin(): Promise<void> {
+  if (isSignupOpen()) {
+    return;
+  }
+
   if (globalForDb.adminSeedPromise) {
     return globalForDb.adminSeedPromise;
   }

@@ -3,13 +3,14 @@ import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
 
 import { auth } from "@/auth";
+import { isValidAdminSession } from "@/lib/session";
 
 export async function requireAdminPage(callbackUrl: string): Promise<Session> {
   const session = await auth();
-  if (!session || session.user?.role !== "admin") {
+  if (!isValidAdminSession(session)) {
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
-  return session;
+  return session as Session;
 }
 
 export async function requireAdminApi():
@@ -22,7 +23,7 @@ export async function requireAdminApi():
     };
   }
 
-  if (session.user?.role !== "admin") {
+  if (!isValidAdminSession(session)) {
     return {
       session,
       response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),

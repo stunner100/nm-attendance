@@ -20,6 +20,8 @@ Set these variables in `.env.local` and in production:
 - `AUTH_SECRET`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
+- `SIGNUP_OPEN` set to `true` during personal-account rollout (disables shared admin seeding)
+- `AUTH_SESSION_VERSION` bump (e.g. `2`) to force everyone to sign in again after deploy
 - `NEXT_PUBLIC_APP_URL` for a stable QR destination
 - `ALLOWED_EMPLOYEE_NAMES` (optional) for pre-seeding roster autocomplete names
 
@@ -41,6 +43,7 @@ Open `http://localhost:3000`.
 ## Routes
 
 - `/checkin` public attendance form
+- `/signup` personal account setup (when `SIGNUP_OPEN=true`)
 - `/login` admin sign-in
 - `/admin` HR overview dashboard + attendance module
 - `/admin/recruitment`

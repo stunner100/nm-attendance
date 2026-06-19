@@ -1,35 +1,21 @@
 import { redirect } from "next/navigation";
 
+import { SignupForm } from "@/components/signup-form";
 import { auth } from "@/auth";
-import { LoginForm } from "@/components/login-form";
-import { isSignupOpen } from "@/lib/auth-users";
+import { isSignupOpen, listEmployeesForSignup } from "@/lib/auth-users";
 import { isValidAdminSession } from "@/lib/session";
 
-type LoginPageProps = {
-  searchParams: Promise<{ callbackUrl?: string }>;
-};
-
-function getSafeCallbackUrl(callbackUrl?: string): string {
-  if (!callbackUrl || !callbackUrl.startsWith("/")) {
-    return "/admin";
+export default async function SignupPage() {
+  if (!isSignupOpen()) {
+    redirect("/login");
   }
-
-  return callbackUrl;
-}
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const params = await searchParams;
-  const callbackUrl = getSafeCallbackUrl(params.callbackUrl);
-  const signupOpen = isSignupOpen();
 
   const session = await auth();
   if (isValidAdminSession(session)) {
-    redirect(callbackUrl);
+    redirect("/admin");
   }
 
-  if (signupOpen) {
-    redirect("/signup");
-  }
+  const employees = await listEmployeesForSignup();
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted px-4 py-10">
@@ -42,14 +28,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             className="mb-4 h-12 w-auto object-contain"
           />
           <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
-            Abonten Technologies
+            Set up your login
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to manage HR operations and attendance.
+            Create a personal account with your email, employee profile, and job level. You will
+            keep full access to the same HR workspace.
           </p>
         </div>
 
-        <LoginForm callbackUrl={callbackUrl} />
+        <SignupForm employees={employees} />
       </div>
     </main>
   );

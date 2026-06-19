@@ -11,7 +11,7 @@ export default async function AdminRosterPage() {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        description="Manage names that appear in the check-in form."
+        description="Active employees from headcount appear in the check-in form."
         actions={
           <>
             <Button variant="outline" asChild>

@@ -10,7 +10,7 @@ export default function CheckinPage() {
             Office attendance
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Enter your name and record a check-in or check-out.
+            Select your name from the employee list and record a check-in or check-out.
           </p>
         </div>
 

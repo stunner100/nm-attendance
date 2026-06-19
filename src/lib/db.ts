@@ -19,8 +19,14 @@ import {
   splitRosterNames,
 } from "@/lib/roster";
 
+export type CheckinEmployeeOption = {
+  id: number;
+  fullName: string;
+  department: string;
+};
+
 type CheckinAttendanceInput = {
-  name: string;
+  employeeId: number;
   scanToken: string;
   timestamp: string;
   latitude: number | null;
@@ -29,7 +35,7 @@ type CheckinAttendanceInput = {
 };
 
 type CheckoutAttendanceInput = {
-  name: string;
+  employeeId: number;
   scanToken: string;
   timestamp: string;
   latitude: number;
@@ -73,6 +79,59 @@ const globalForDb = globalThis as unknown as {
 
 function normalizeEmployeeName(name: string): string {
   return normalizeRosterName(name);
+}
+
+async function resolveActiveHrEmployeeName(
+  employeeId: number,
+  client?: { query: Pool["query"] }
+): Promise<string> {
+  if (!Number.isInteger(employeeId) || employeeId <= 0) {
+    throw new CheckinRejectedError("Please select your name from the list.");
+  }
+
+  const query = client?.query ?? getPool().query.bind(getPool());
+  const result = await query<{ full_name: string }>(
+    `
+      SELECT full_name
+      FROM hr_employees
+      WHERE id = $1
+        AND employment_status = 'active'
+        AND btrim(full_name) <> ''
+      LIMIT 1
+    `,
+    [employeeId]
+  );
+
+  if ((result.rowCount ?? 0) === 0) {
+    throw new CheckinRejectedError("Please select a valid employee from the list.");
+  }
+
+  return normalizeEmployeeName(result.rows[0].full_name);
+}
+
+export async function listActiveHrEmployeesForCheckin(): Promise<CheckinEmployeeOption[]> {
+  await ensureSchema();
+
+  const pool = getPool();
+  const result = await pool.query<{
+    id: number;
+    full_name: string;
+    department: string;
+  }>(
+    `
+      SELECT id, full_name, department
+      FROM hr_employees
+      WHERE employment_status = 'active'
+        AND btrim(full_name) <> ''
+      ORDER BY full_name ASC
+    `
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    fullName: row.full_name.trim(),
+    department: row.department.trim(),
+  }));
 }
 
 function getPool(): Pool {
@@ -243,11 +302,6 @@ function normalizeAuthUser(row: AuthUserDb): AuthUser {
 export async function insertAttendance(input: CheckinAttendanceInput): Promise<void> {
   await ensureSchema();
 
-  const attendeeName = normalizeEmployeeName(input.name);
-  if (!attendeeName) {
-    throw new CheckinRejectedError("Name is required.");
-  }
-
   const scanToken = input.scanToken.trim();
   if (!scanToken) {
     throw new CheckinRejectedError(
@@ -266,6 +320,8 @@ export async function insertAttendance(input: CheckinAttendanceInput): Promise<v
 
   try {
     await client.query("BEGIN");
+
+    const attendeeName = await resolveActiveHrEmployeeName(input.employeeId, client);
 
     await client.query(
       `
@@ -309,20 +365,6 @@ export async function insertAttendance(input: CheckinAttendanceInput): Promise<v
       );
     }
 
-    await client.query(
-      `
-        INSERT INTO employees (name)
-        SELECT $1
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM employees
-          WHERE LOWER(btrim(name)) = LOWER($1)
-        )
-        ON CONFLICT (name) DO NOTHING
-      `,
-      [attendeeName]
-    );
-
     const insertedAttendanceResult = await client.query(
       `
         INSERT INTO attendance (name, timestamp, latitude, longitude, location)
@@ -354,11 +396,6 @@ export async function insertAttendance(input: CheckinAttendanceInput): Promise<v
 export async function checkoutAttendance(input: CheckoutAttendanceInput): Promise<void> {
   await ensureSchema();
 
-  const attendeeName = normalizeEmployeeName(input.name);
-  if (!attendeeName) {
-    throw new CheckinRejectedError("Name is required.");
-  }
-
   const scanToken = input.scanToken.trim();
   if (!scanToken) {
     throw new CheckinRejectedError(
@@ -375,6 +412,8 @@ export async function checkoutAttendance(input: CheckoutAttendanceInput): Promis
 
   try {
     await client.query("BEGIN");
+
+    const attendeeName = await resolveActiveHrEmployeeName(input.employeeId, client);
 
     const consumedTokenResult = await client.query(
       `
@@ -528,30 +567,8 @@ async function hydrateAttendanceLocations(
 }
 
 export async function getEmployeeNames(): Promise<string[]> {
-  await ensureSchema();
-  await ensureEmployeeRoster();
-
-  const pool = getPool();
-  const result = await pool.query<{ name: string }>(
-    `
-      SELECT DISTINCT ON (LOWER(btrim(name))) btrim(name) AS name
-      FROM (
-        SELECT full_name AS name
-        FROM hr_employees
-        WHERE employment_status = 'active'
-          AND btrim(full_name) <> ''
-
-        UNION ALL
-
-        SELECT name
-        FROM employees
-        WHERE btrim(name) <> ''
-      ) combined_names
-      ORDER BY LOWER(btrim(name)), name
-    `
-  );
-
-  return result.rows.map((row) => row.name);
+  const employees = await listActiveHrEmployeesForCheckin();
+  return employees.map((employee) => employee.fullName);
 }
 
 const SUGGEST_MIN_QUERY_LENGTH = 2;
@@ -563,35 +580,13 @@ export async function suggestEmployeeNames(query: string): Promise<string[]> {
     return [];
   }
 
-  await ensureSchema();
-  await ensureEmployeeRoster();
+  const employees = await listActiveHrEmployeesForCheckin();
+  const pattern = normalizedQuery.toLowerCase();
 
-  const pool = getPool();
-  const pattern = `%${normalizedQuery}%`;
-  const result = await pool.query<{ name: string }>(
-    `
-      SELECT DISTINCT ON (LOWER(btrim(name))) btrim(name) AS name
-      FROM (
-        SELECT full_name AS name
-        FROM hr_employees
-        WHERE employment_status = 'active'
-          AND btrim(full_name) <> ''
-          AND full_name ILIKE $1
-
-        UNION ALL
-
-        SELECT name
-        FROM employees
-        WHERE btrim(name) <> ''
-          AND name ILIKE $1
-      ) combined_names
-      ORDER BY LOWER(btrim(name)), name
-      LIMIT $2
-    `,
-    [pattern, SUGGEST_MAX_RESULTS]
-  );
-
-  return result.rows.map((row) => row.name);
+  return employees
+    .filter((employee) => employee.fullName.toLowerCase().includes(pattern))
+    .slice(0, SUGGEST_MAX_RESULTS)
+    .map((employee) => employee.fullName);
 }
 
 export async function addEmployeeNames(names: string[]): Promise<string[]> {

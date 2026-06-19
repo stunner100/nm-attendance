@@ -1,13 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
   Loader2,
   LogOut,
   MapPin,
-  Search,
   User,
 } from "lucide-react";
 
@@ -28,30 +27,53 @@ type Coordinates = {
   lng: number;
 };
 
+type CheckinEmployee = {
+  id: number;
+  fullName: string;
+  department: string;
+};
+
 type TokenStatus = "loading" | "ready" | "error";
 type AttendanceAction = "checkin" | "checkout";
+type EmployeeLoadStatus = "loading" | "ready" | "error";
+
+const selectClassName =
+  "h-12 w-full rounded-[var(--radius-input)] border border-input bg-card px-3 py-2 text-base text-foreground transition-colors outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 md:text-sm";
 
 export function CheckinForm() {
   const [action, setAction] = useState<AttendanceAction>("checkin");
   const [scanToken, setScanToken] = useState<string | null>(null);
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>("loading");
-  const [name, setName] = useState("");
+  const [employees, setEmployees] = useState<CheckinEmployee[]>([]);
+  const [employeeLoadStatus, setEmployeeLoadStatus] = useState<EmployeeLoadStatus>("loading");
+  const [employeeId, setEmployeeId] = useState("");
+  const [filterQuery, setFilterQuery] = useState("");
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
-  const [employees, setEmployees] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [submittedAction, setSubmittedAction] = useState<AttendanceAction | null>(null);
   const [punctualityMessage, setPunctualityMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const filteredEmployees = employees.filter((employee) =>
-    employee.toLowerCase().includes(name.toLowerCase())
+  const selectedEmployee = useMemo(
+    () => employees.find((employee) => String(employee.id) === employeeId) ?? null,
+    [employeeId, employees]
   );
+
+  const filteredEmployees = useMemo(() => {
+    const query = filterQuery.trim().toLowerCase();
+    if (!query) {
+      return employees;
+    }
+
+    return employees.filter((employee) => {
+      const haystack = `${employee.fullName} ${employee.department}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [employees, filterQuery]);
 
   async function fetchScanTokenValue(): Promise<string> {
     const response = await fetch("/api/checkin/token", {
@@ -116,55 +138,46 @@ export function CheckinForm() {
   }, []);
 
   useEffect(() => {
-    void requestLocation();
-  }, []);
-
-  useEffect(() => {
-    const query = name.trim();
-    if (query.length < 2) {
-      setEmployees([]);
-      return;
-    }
-
     let active = true;
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const response = await fetch(
-            `/api/checkin/suggest?q=${encodeURIComponent(query)}`,
-            { cache: "no-store" }
-          );
-          if (!response.ok || !active) {
-            return;
-          }
 
-          const data = (await response.json()) as { names?: string[] };
-          if (active) {
-            setEmployees(Array.isArray(data.names) ? data.names : []);
-          }
-        } catch {
-          if (active) {
-            setEmployees([]);
-          }
+    const loadEmployees = async () => {
+      setEmployeeLoadStatus("loading");
+
+      try {
+        const response = await fetch("/api/checkin/employees", { cache: "no-store" });
+        const data = (await response.json().catch(() => ({}))) as {
+          employees?: CheckinEmployee[];
+          error?: string;
+        };
+
+        if (!response.ok || !Array.isArray(data.employees)) {
+          throw new Error(data.error ?? "Unable to load employee list.");
         }
-      })();
-    }, 250);
+
+        if (!active) {
+          return;
+        }
+
+        setEmployees(data.employees);
+        setEmployeeLoadStatus("ready");
+      } catch (loadError) {
+        console.error("Failed to load employees", loadError);
+        if (active) {
+          setEmployees([]);
+          setEmployeeLoadStatus("error");
+        }
+      }
+    };
+
+    void loadEmployees();
 
     return () => {
       active = false;
-      window.clearTimeout(timer);
     };
-  }, [name]);
+  }, []);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    void requestLocation();
   }, []);
 
   function requestLocation() {
@@ -212,8 +225,8 @@ export function CheckinForm() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!name.trim()) {
-      setError("Please enter a name.");
+    if (!employeeId) {
+      setError("Please select your name from the list.");
       return;
     }
 
@@ -229,7 +242,6 @@ export function CheckinForm() {
 
     setSubmitting(true);
     setError(null);
-    setIsDropdownOpen(false);
 
     try {
       const endpoint = action === "checkout" ? "/api/checkout" : "/api/checkin";
@@ -239,7 +251,7 @@ export function CheckinForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: name.trim(),
+          employeeId: Number.parseInt(employeeId, 10),
           scanToken,
           latitude: coordinates.lat,
           longitude: coordinates.lng,
@@ -335,8 +347,8 @@ export function CheckinForm() {
               {isCheckout ? "Check-out complete" : isLate ? "You are late" : "You are on time"}
             </CardTitle>
             <CardDescription className="mt-2 text-base">
-              {name} {isCheckout ? "checked out" : "checked in"} at{" "}
-              <span className="tabular-nums">{new Date(submittedAt).toLocaleTimeString()}</span>
+              {selectedEmployee?.fullName ?? "Employee"} {isCheckout ? "checked out" : "checked in"}{" "}
+              at <span className="tabular-nums">{new Date(submittedAt).toLocaleTimeString()}</span>
             </CardDescription>
           </div>
         </CardHeader>
@@ -357,7 +369,7 @@ export function CheckinForm() {
     <Card>
       <CardHeader>
         <CardTitle>Record attendance</CardTitle>
-        <CardDescription>Choose an action, enter your name, and submit.</CardDescription>
+        <CardDescription>Choose an action, select your name, and submit.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-5">
@@ -390,62 +402,56 @@ export function CheckinForm() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="name">
-              Full name
+            <label className="text-sm font-medium" htmlFor="employee-filter">
+              Your name
             </label>
 
-            <div className="relative" ref={wrapperRef}>
-              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            {employees.length > 8 ? (
               <Input
-                id="name"
-                name="name"
-                placeholder="Enter your full name"
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  if (event.target.value.trim().length >= 2) {
-                    setIsDropdownOpen(true);
-                  } else {
-                    setIsDropdownOpen(false);
-                  }
-                }}
-                onFocus={() => {
-                  if (name.trim().length >= 2 && employees.length > 0) {
-                    setIsDropdownOpen(true);
-                  }
-                }}
+                id="employee-filter"
+                placeholder="Search employees..."
+                value={filterQuery}
+                onChange={(event) => setFilterQuery(event.target.value)}
                 autoComplete="off"
-                required
-                className="h-12 pl-10"
+                className="h-11"
               />
+            ) : null}
 
-              {isDropdownOpen && employees.length > 0 ? (
-                <div className="absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-lg border border-border bg-card shadow-md">
-                  <div className="max-h-60 overflow-y-auto p-1">
-                    {filteredEmployees.length > 0 ? (
-                      filteredEmployees.map((employee) => (
-                        <button
-                          key={employee}
-                          type="button"
-                          onClick={() => {
-                            setName(employee);
-                            setIsDropdownOpen(false);
-                          }}
-                          className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm transition-[background-color] hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-                        >
-                          <Search className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{employee}</span>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-3 text-sm text-muted-foreground">
-                        No matching names found.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : null}
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <select
+                id="employee"
+                name="employee"
+                value={employeeId}
+                onChange={(event) => setEmployeeId(event.target.value)}
+                required
+                disabled={employeeLoadStatus !== "ready" || filteredEmployees.length === 0}
+                className={`${selectClassName} appearance-none pl-10`}
+              >
+                <option value="">
+                  {employeeLoadStatus === "loading"
+                    ? "Loading employees..."
+                    : employeeLoadStatus === "error"
+                      ? "Unable to load employees"
+                      : filteredEmployees.length === 0
+                        ? "No employees found"
+                        : "Select your name"}
+                </option>
+                {filteredEmployees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.department
+                      ? `${employee.fullName} — ${employee.department}`
+                      : employee.fullName}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {employeeLoadStatus === "error" ? (
+              <p className="text-sm text-destructive">
+                Could not load the employee list. Refresh the page and try again.
+              </p>
+            ) : null}
           </div>
 
           <div className="rounded-lg border border-border bg-muted p-4">
@@ -505,7 +511,12 @@ export function CheckinForm() {
           ) : null}
 
           <Button
-            disabled={submitting || tokenStatus !== "ready"}
+            disabled={
+              submitting ||
+              tokenStatus !== "ready" ||
+              employeeLoadStatus !== "ready" ||
+              !employeeId
+            }
             type="submit"
             className="h-12 w-full whitespace-nowrap text-base"
           >

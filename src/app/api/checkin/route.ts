@@ -5,12 +5,27 @@ import { CheckinRejectedError, insertAttendance } from "@/lib/db";
 import { asLatitude, asLongitude } from "@/lib/geo-coords";
 
 type CheckinPayload = {
-  name?: unknown;
+  employeeId?: unknown;
   scanToken?: unknown;
   latitude?: unknown;
   longitude?: unknown;
   location?: unknown;
 };
+
+function parseEmployeeId(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
 
 export async function POST(request: Request) {
   let payload: CheckinPayload;
@@ -21,24 +36,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
   }
 
-  const name = typeof payload.name === "string" ? payload.name.trim() : "";
+  const employeeId = parseEmployeeId(payload.employeeId);
   const scanToken =
     typeof payload.scanToken === "string" ? payload.scanToken.trim() : "";
 
-  if (!name) {
-    return NextResponse.json({ error: "Name is required." }, { status: 400 });
+  if (!employeeId) {
+    return NextResponse.json({ error: "Please select your name from the list." }, { status: 400 });
   }
 
   if (!scanToken) {
     return NextResponse.json(
       { error: "Please scan the QR code again before submitting." },
-      { status: 400 }
-    );
-  }
-
-  if (name.length > 120) {
-    return NextResponse.json(
-      { error: "Name must be 120 characters or fewer." },
       { status: 400 }
     );
   }
@@ -58,7 +66,7 @@ export async function POST(request: Request) {
 
   try {
     await insertAttendance({
-      name,
+      employeeId,
       scanToken,
       timestamp,
       latitude,

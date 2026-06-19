@@ -27,10 +27,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     redirect(callbackUrl);
   }
 
-  if (signupOpen) {
-    redirect("/signup");
-  }
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted px-4 py-10">
       <div className="w-full max-w-md">
@@ -49,7 +45,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         </div>
 
-        <LoginForm callbackUrl={callbackUrl} />
+        <LoginForm callbackUrl={callbackUrl} signupOpen={signupOpen} />
       </div>
     </main>
   );

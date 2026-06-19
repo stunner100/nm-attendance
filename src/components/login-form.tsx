@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
@@ -15,9 +16,10 @@ import { Input } from "@/components/ui/input";
 
 type LoginFormProps = {
   callbackUrl: string;
+  signupOpen?: boolean;
 };
 
-export function LoginForm({ callbackUrl }: LoginFormProps) {
+export function LoginForm({ callbackUrl, signupOpen = false }: LoginFormProps) {
   const router = useRouter();
   const safeCallbackUrl = useMemo(
     () => (callbackUrl.startsWith("/") ? callbackUrl : "/admin"),
@@ -104,7 +106,19 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Contact your system administrator for login credentials.
+            {signupOpen ? (
+              <>
+                First time here?{" "}
+                <Link
+                  href="/signup"
+                  className="font-medium text-[var(--color-link)] hover:underline"
+                >
+                  Create your account
+                </Link>
+              </>
+            ) : (
+              "Contact your system administrator for login credentials."
+            )}
           </p>
         </form>
       </CardContent>

@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import { humanizeLabel } from "@/lib/labels";
 import {
   createLeaveRequest,
@@ -33,7 +33,7 @@ import {
 import { HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
 
 type PayrollLeavePageProps = {
-  searchParams: Promise<{ cycleStatus?: string; leaveStatus?: string; error?: string }>;
+  searchParams: Promise<{ cycleStatus?: string; leaveStatus?: string; error?: string; success?: string }>;
 };
 
 async function createCycleAction(formData: FormData): Promise<void> {
@@ -61,6 +61,7 @@ async function createCycleAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/payroll-leave", "Payroll cycle created successfully.");
 }
 
 async function createAnomalyAction(formData: FormData): Promise<void> {
@@ -90,6 +91,7 @@ async function createAnomalyAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/payroll-leave", "Payroll anomaly reported successfully.");
 }
 
 async function upsertBalanceAction(formData: FormData): Promise<void> {
@@ -114,6 +116,7 @@ async function upsertBalanceAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/payroll-leave", "Leave balance updated successfully.");
 }
 
 async function createLeaveRequestAction(formData: FormData): Promise<void> {
@@ -149,6 +152,7 @@ async function createLeaveRequestAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/payroll-leave", "Leave request created successfully.");
 }
 
 async function updateCycleStatusAction(formData: FormData): Promise<void> {
@@ -168,6 +172,7 @@ async function updateCycleStatusAction(formData: FormData): Promise<void> {
   await updatePayrollCycleStatus(cycleId, status as (typeof HR_PAYROLL_STATUSES)[number]);
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/payroll-leave", "Payroll cycle status updated successfully.");
 }
 
 async function updateLeaveStatusAction(formData: FormData): Promise<void> {
@@ -194,6 +199,7 @@ async function updateLeaveStatusAction(formData: FormData): Promise<void> {
   );
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/payroll-leave", "Leave request status updated successfully.");
 }
 
 async function updateAnomalyStatusAction(formData: FormData): Promise<void> {
@@ -210,6 +216,7 @@ async function updateAnomalyStatusAction(formData: FormData): Promise<void> {
   await updatePayrollAnomalyStatus(anomalyId, status as "open" | "resolved");
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/payroll-leave", "Payroll anomaly status updated successfully.");
 }
 
 export default async function PayrollLeavePage({ searchParams }: PayrollLeavePageProps) {
@@ -234,6 +241,7 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

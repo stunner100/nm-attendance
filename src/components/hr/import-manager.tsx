@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Upload, FileText, Download, Eye, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
+import { Upload, FileText, Download, Eye, CheckCircle2, Loader2, ExternalLink, History } from "lucide-react";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -420,7 +421,11 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
         </CardHeader>
         <CardContent className="space-y-2">
           {runs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No imports yet.</p>
+            <EmptyState
+              description="Upload a file above to start importing HR data."
+              icon={History}
+              title="No imports yet"
+            />
           ) : (
             runs.map((run) => (
               <div

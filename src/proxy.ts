@@ -17,7 +17,7 @@ function isProtectedPath(pathname: string): boolean {
 export default auth((request: AuthenticatedRequest) => {
   const { pathname, search } = request.nextUrl;
   const isLoggedIn = isValidAdminSession(request.auth);
-  const isLoginPage = pathname === "/login";
+  const isLoginPage = pathname === "/login" || pathname.startsWith("/login/");
   const isSignupPage = pathname === "/signup";
 
   if (isProtectedPath(pathname) && !isLoggedIn) {
@@ -48,5 +48,5 @@ export default auth((request: AuthenticatedRequest) => {
 });
 
 export const config = {
-  matcher: ["/login", "/signup", "/admin", "/admin/:path*"],
+  matcher: ["/login", "/login/:path*", "/signup", "/admin", "/admin/:path*"],
 };

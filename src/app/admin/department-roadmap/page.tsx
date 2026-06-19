@@ -6,7 +6,7 @@ import { AddDepartmentGoalStack } from "@/components/hr/add-department-goal-stac
 import { DepartmentRoadmapListAccordion } from "@/components/hr/department-roadmap-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createDepartmentGoal,
   currentPeriod,
@@ -18,7 +18,7 @@ import {
 import { HR_DEPARTMENTS, HR_ROADMAP_HEALTH } from "@/lib/types";
 
 type PageProps = {
-  searchParams: Promise<{ period?: string; department?: string; error?: string }>;
+  searchParams: Promise<{ period?: string; department?: string; error?: string; success?: string }>;
 };
 
 async function createDeptGoalAction(formData: FormData): Promise<void> {
@@ -48,6 +48,7 @@ async function createDeptGoalAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/department-roadmap");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/department-roadmap", "Department goal created successfully.");
 }
 
 async function updateRoadmapAction(formData: FormData): Promise<void> {
@@ -76,6 +77,7 @@ async function updateRoadmapAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/department-roadmap");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/department-roadmap", "Roadmap health updated successfully.");
 }
 
 async function deleteDeptGoalAction(formData: FormData): Promise<void> {
@@ -94,6 +96,7 @@ async function deleteDeptGoalAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/department-roadmap");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/department-roadmap", "Department goal deleted successfully.");
 }
 
 export default async function DepartmentRoadmapPage({ searchParams }: PageProps) {
@@ -117,6 +120,7 @@ export default async function DepartmentRoadmapPage({ searchParams }: PageProps)
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

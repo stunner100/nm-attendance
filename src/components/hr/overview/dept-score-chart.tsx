@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import { AnimatedBar } from "@/components/hr/dashboard-motion";
+import { EmptyState } from "@/components/hr/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { HRDepartment } from "@/lib/types";
+import { BarChart2 } from "lucide-react";
 
 const DEPT_BAR_COLORS: Record<HRDepartment, string> = {
   Operations: "var(--color-signature-forest)",
@@ -41,7 +43,11 @@ export function DeptScoreChart({ scores }: DeptScoreChartProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {entries.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">No scored departments for this period.</p>
+          <EmptyState
+            description="Department averages appear once monthly scores are logged."
+            icon={BarChart2}
+            title="No scored departments for this period"
+          />
         ) : (
           entries.map(([department, avg], index) => (
             <div

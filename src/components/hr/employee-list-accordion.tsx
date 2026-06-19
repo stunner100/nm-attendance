@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -21,6 +22,7 @@ import {
   HR_EXIT_TYPES,
   HR_WORK_MODES,
 } from "@/lib/types";
+import { Users } from "lucide-react";
 
 const selectClass =
   "h-8 w-full rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30";
@@ -30,19 +32,35 @@ const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 type EmployeeListAccordionProps = {
   employees: HREmployee[];
   employeeOptions: HREmployeeOption[];
+  hasActiveFilters?: boolean;
   updateEmployeeAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function EmployeeListAccordion({
   employees,
   employeeOptions,
+  hasActiveFilters = false,
   updateEmployeeAction,
 }: EmployeeListAccordionProps) {
   if (employees.length === 0) {
+    if (hasActiveFilters) {
+      return (
+        <EmptyState
+          description="Try adjusting or clearing your filters to see more employees."
+          icon={Users}
+          title="No employees match filters"
+        />
+      );
+    }
+
     return (
-      <p className="text-sm text-muted-foreground">
-        No employees found. Add your first employee above.
-      </p>
+      <EmptyState
+        actionHref="#add-employee"
+        actionLabel="Add employee"
+        description="Use the form above to create your first employee record."
+        icon={Users}
+        title="No employees yet"
+      />
     );
   }
 

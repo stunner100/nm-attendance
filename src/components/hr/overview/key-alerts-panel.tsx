@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { HRDashboardSummary } from "@/lib/types";
+import { Bell } from "lucide-react";
 
 type KeyAlertsPanelProps = {
   alerts: HRDashboardSummary["performance_alerts"];
@@ -65,9 +67,11 @@ export function KeyAlertsPanel({ alerts }: KeyAlertsPanelProps) {
       </CardHeader>
       <CardContent>
         {alerts.length === 0 ? (
-          <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-rule)] bg-[var(--color-paper-2)] p-6 text-center text-sm text-[var(--color-ink-muted)]">
-            No urgent performance alerts.
-          </div>
+          <EmptyState
+            description="Performance alerts will appear here when action is needed."
+            icon={Bell}
+            title="No urgent performance alerts"
+          />
         ) : (
           alerts.slice(0, 5).map((alert) => (
             <div

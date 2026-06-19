@@ -6,7 +6,7 @@ import { AddCompanyGoalStack } from "@/components/hr/add-company-goal-stack";
 import { CompanyGoalsListAccordion } from "@/components/hr/company-goals-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createCompanyGoal,
   currentPeriod,
@@ -17,7 +17,7 @@ import {
 import { HR_GOAL_PRIORITIES, HR_GOAL_STATUSES } from "@/lib/types";
 
 type PageProps = {
-  searchParams: Promise<{ period?: string; status?: string; error?: string }>;
+  searchParams: Promise<{ period?: string; status?: string; error?: string; success?: string }>;
 };
 
 async function createGoalAction(formData: FormData): Promise<void> {
@@ -46,6 +46,7 @@ async function createGoalAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/company-goals");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/company-goals", "Company goal created successfully.");
 }
 
 async function approveGoalAction(formData: FormData): Promise<void> {
@@ -71,6 +72,7 @@ async function approveGoalAction(formData: FormData): Promise<void> {
   });
 
   revalidatePath("/admin/company-goals");
+  redirectWithFormSuccess("/admin/company-goals", "Company goal approved successfully.");
 }
 
 async function deleteGoalAction(formData: FormData): Promise<void> {
@@ -89,6 +91,7 @@ async function deleteGoalAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/company-goals");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/company-goals", "Company goal deleted successfully.");
 }
 
 export default async function CompanyGoalsPage({ searchParams }: PageProps) {
@@ -109,6 +112,7 @@ export default async function CompanyGoalsPage({ searchParams }: PageProps) {
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

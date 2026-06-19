@@ -161,6 +161,7 @@ async function updateEmployeeAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/headcount");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/headcount", "Employee updated successfully.");
 }
 
 export default async function HeadcountPage({ searchParams }: HeadcountPageProps) {
@@ -267,7 +268,7 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="add-employee">
         <CardHeader>
           <CardTitle>Add Employee</CardTitle>
         </CardHeader>
@@ -287,6 +288,9 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
           <EmployeeListAccordion
             employees={moduleData.employees}
             employeeOptions={employeeOptions}
+            hasActiveFilters={Boolean(
+              departmentFilter || statusFilter || contractTypeFilter
+            )}
             updateEmployeeAction={updateEmployeeAction}
           />
         </CardContent>

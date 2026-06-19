@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createDisciplinaryCase,
   createFollowupAction,
@@ -29,7 +29,7 @@ import { HR_DISCIPLINARY_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type CompliancePageProps = {
-  searchParams: Promise<{ status?: string; severity?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; severity?: string; error?: string; success?: string }>;
 };
 
 async function createCaseAction(formData: FormData): Promise<void> {
@@ -66,6 +66,7 @@ async function createCaseAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/compliance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/compliance", "Disciplinary case opened successfully.");
 }
 
 async function createViolationAction(formData: FormData): Promise<void> {
@@ -96,6 +97,7 @@ async function createViolationAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/compliance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/compliance", "Policy violation logged successfully.");
 }
 
 async function createFollowupActionAction(formData: FormData): Promise<void> {
@@ -126,6 +128,7 @@ async function createFollowupActionAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/compliance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/compliance", "Follow-up action created successfully.");
 }
 
 async function updateCaseStatusAction(formData: FormData): Promise<void> {
@@ -152,6 +155,7 @@ async function updateCaseStatusAction(formData: FormData): Promise<void> {
   );
   revalidatePath("/admin/compliance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/compliance", "Case status updated successfully.");
 }
 
 async function updateFollowupStatusAction(formData: FormData): Promise<void> {
@@ -168,6 +172,7 @@ async function updateFollowupStatusAction(formData: FormData): Promise<void> {
   await updateFollowupActionStatus(actionId, status as "pending" | "in_progress" | "done");
   revalidatePath("/admin/compliance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/compliance", "Follow-up status updated successfully.");
 }
 
 export default async function CompliancePage({ searchParams }: CompliancePageProps) {
@@ -191,6 +196,7 @@ export default async function CompliancePage({ searchParams }: CompliancePagePro
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

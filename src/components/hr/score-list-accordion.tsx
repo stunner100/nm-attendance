@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -10,6 +11,7 @@ import {
 import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { SCORE_DIMENSIONS } from "@/lib/hr/framework-reference";
 import type { HRMonthlyScoreWithEmployee } from "@/lib/hr/scores";
+import { BarChart3 } from "lucide-react";
 
 const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 
@@ -31,7 +33,13 @@ const scoreValueByKey: Record<
 
 export function ScoreListAccordion({ scores, deleteScoreAction }: ScoreListAccordionProps) {
   if (scores.length === 0) {
-    return <p className="text-sm text-muted-foreground">No monthly scores recorded yet.</p>;
+    return (
+      <EmptyState
+        description="Log a monthly score above to start tracking performance ratings."
+        icon={BarChart3}
+        title="No monthly scores recorded yet"
+      />
+    );
   }
 
   return (

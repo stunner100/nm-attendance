@@ -7,7 +7,7 @@ import { RewardStack } from "@/components/hr/reward-stack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createReward,
   deleteReward,
@@ -19,7 +19,7 @@ import { HR_REWARD_TIERS } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type PageProps = {
-  searchParams: Promise<{ tier?: string; error?: string }>;
+  searchParams: Promise<{ tier?: string; error?: string; success?: string }>;
 };
 
 async function createRewardAction(formData: FormData): Promise<void> {
@@ -49,6 +49,7 @@ async function createRewardAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/rewards");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/rewards", "Reward recorded successfully.");
 }
 
 async function deleteRewardAction(formData: FormData): Promise<void> {
@@ -67,6 +68,7 @@ async function deleteRewardAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/rewards");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/rewards", "Reward deleted successfully.");
 }
 
 export default async function RewardsPage({ searchParams }: PageProps) {
@@ -85,6 +87,7 @@ export default async function RewardsPage({ searchParams }: PageProps) {
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

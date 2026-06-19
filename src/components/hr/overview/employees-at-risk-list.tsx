@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AtRiskEmployee } from "@/lib/types";
+import { UserX } from "lucide-react";
 
 function initials(name: string): string {
   return name
@@ -27,7 +29,11 @@ export function EmployeesAtRiskList({ employees }: EmployeesAtRiskListProps) {
       </CardHeader>
       <CardContent>
         {employees.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">No employees below 70 for this period.</p>
+          <EmptyState
+            description="Employees scoring below 70 for the selected period will show here."
+            icon={UserX}
+            title="No employees below 70"
+          />
         ) : (
           employees.slice(0, 5).map((employee) => (
             <Link

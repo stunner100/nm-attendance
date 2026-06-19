@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createOnboardingChecklistItem,
   createTrainingAssignment,
@@ -24,7 +24,7 @@ import { HR_TRAINING_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type TrainingPageProps = {
-  searchParams: Promise<{ category?: string; assignmentStatus?: string; error?: string }>;
+  searchParams: Promise<{ category?: string; assignmentStatus?: string; error?: string; success?: string }>;
 };
 
 async function createModuleAction(formData: FormData): Promise<void> {
@@ -49,6 +49,7 @@ async function createModuleAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/training");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/training", "Training module saved successfully.");
 }
 
 async function createAssignmentAction(formData: FormData): Promise<void> {
@@ -76,6 +77,7 @@ async function createAssignmentAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/training");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/training", "Training assigned successfully.");
 }
 
 async function createOnboardingAction(formData: FormData): Promise<void> {
@@ -103,6 +105,7 @@ async function createOnboardingAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/training");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/training", "Onboarding checklist item added successfully.");
 }
 
 async function updateAssignmentStatusAction(formData: FormData): Promise<void> {
@@ -125,6 +128,7 @@ async function updateAssignmentStatusAction(formData: FormData): Promise<void> {
   );
   revalidatePath("/admin/training");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/training", "Training status updated successfully.");
 }
 
 async function updateOnboardingStatusAction(formData: FormData): Promise<void> {
@@ -140,6 +144,7 @@ async function updateOnboardingStatusAction(formData: FormData): Promise<void> {
   await updateOnboardingChecklistStatus(checklistId, status);
   revalidatePath("/admin/training");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/training", "Onboarding status updated successfully.");
 }
 
 export default async function TrainingPage({ searchParams }: TrainingPageProps) {
@@ -164,6 +169,7 @@ export default async function TrainingPage({ searchParams }: TrainingPageProps) 
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

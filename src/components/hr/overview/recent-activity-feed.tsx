@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ActivityItem } from "@/lib/types";
+import { Activity } from "lucide-react";
 
 type RecentActivityFeedProps = {
   items: ActivityItem[];
@@ -41,7 +43,11 @@ export function RecentActivityFeed({ items }: RecentActivityFeedProps) {
       </CardHeader>
       <CardContent>
         {visibleItems.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">No recent activity yet.</p>
+          <EmptyState
+            description="Activity from scores, tasks, and HR updates will appear here."
+            icon={Activity}
+            title="No recent activity yet"
+          />
         ) : (
           visibleItems.map((item) => {
             const body = (

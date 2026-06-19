@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { CheckinRejectedError, hasOpenCheckinForEmployee } from "@/lib/db";
+import { CheckinRejectedError, getEmployeeCheckinStatus } from "@/lib/db";
 
 function parseEmployeeId(value: string | null): number | null {
   if (!value?.trim()) {
@@ -24,8 +24,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const hasOpenCheckin = await hasOpenCheckinForEmployee(employeeId);
-    return NextResponse.json({ hasOpenCheckin });
+    const status = await getEmployeeCheckinStatus(employeeId);
+    return NextResponse.json({
+      hasOpenCheckin: status.hasOpenCheckin,
+      hasAttendanceToday: status.hasAttendanceToday,
+    });
   } catch (error) {
     if (
       error instanceof CheckinRejectedError ||

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { splitRosterNames } from "@/lib/roster";
+import { Users } from "lucide-react";
 
 type RosterManagerProps = {
   initialNames: string[];
@@ -176,9 +178,11 @@ Clara Mensah"
         </CardHeader>
         <CardContent>
           {names.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              No names yet. Add staff names on the left to improve check-in autocomplete.
-            </div>
+            <EmptyState
+              description="Add staff names on the left to improve check-in autocomplete."
+              icon={Users}
+              title="No names yet"
+            />
           ) : (
             <Table>
               <TableHeader>

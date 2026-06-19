@@ -20,6 +20,7 @@ Set these variables in `.env.local` and in production:
 - `AUTH_SECRET`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
+- `RESEND_API_KEY` and `RESEND_FROM` (optional) to notify the admin when users submit a password reset request
 - `SIGNUP_OPEN` set to `true` during personal-account rollout (disables shared admin seeding)
 - `AUTH_SESSION_VERSION` bump (e.g. `2`) to force everyone to sign in again after deploy
 - `NEXT_PUBLIC_APP_URL` for a stable QR destination
@@ -45,6 +46,7 @@ Open `http://localhost:3000`.
 - `/checkin` public attendance form
 - `/signup` personal account setup (when `SIGNUP_OPEN=true`)
 - `/login` admin sign-in
+- `/login/forgot-password` account recovery instructions and optional reset request form
 - `/admin` HR overview dashboard + attendance module
 - `/admin/recruitment`
 - `/admin/headcount`

@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { humanizeLabel } from "@/lib/labels";
 import type { HRRecruitmentApplicant, HRRecruitmentRole } from "@/lib/types";
 import { HR_RECRUITMENT_STAGES } from "@/lib/types";
+import { UserPlus } from "lucide-react";
 
 const selectClass =
   "h-8 w-full rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30";
@@ -34,9 +36,11 @@ export function RecruitmentApplicantsAccordion({
 }: RecruitmentApplicantsAccordionProps) {
   if (applicants.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No applicants yet. Add one above to start tracking the hiring pipeline.
-      </p>
+      <EmptyState
+        description="Add an applicant using the form above to start tracking your hiring pipeline."
+        icon={UserPlus}
+        title="No applicants yet"
+      />
     );
   }
 

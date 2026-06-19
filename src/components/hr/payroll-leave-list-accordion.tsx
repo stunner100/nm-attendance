@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { humanizeLabel } from "@/lib/labels";
 import type { HRLeaveRequest, HRPayrollAnomaly, HRPayrollCycle } from "@/lib/types";
 import { HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
+import { AlertTriangle, Calendar, Palmtree } from "lucide-react";
 
 const selectClass =
   "h-8 w-full rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30";
@@ -28,7 +30,11 @@ export function PayrollCyclesAccordion({
 }: PayrollCyclesAccordionProps) {
   if (payrollCycles.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No payroll cycles yet. Create one above.</p>
+      <EmptyState
+        description="Create a payroll cycle using the form above."
+        icon={Calendar}
+        title="No payroll cycles yet"
+      />
     );
   }
 
@@ -94,7 +100,11 @@ export function LeaveRequestsAccordion({
 }: LeaveRequestsAccordionProps) {
   if (leaveRequests.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No leave requests yet. Create one above.</p>
+      <EmptyState
+        description="Submit a leave request using the form above."
+        icon={Palmtree}
+        title="No leave requests yet"
+      />
     );
   }
 
@@ -157,7 +167,11 @@ export function PayrollAnomaliesAccordion({
 }: PayrollAnomaliesAccordionProps) {
   if (payrollAnomalies.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No payroll issues yet. Report one above.</p>
+      <EmptyState
+        description="Report a payroll issue using the form above."
+        icon={AlertTriangle}
+        title="No payroll issues yet"
+      />
     );
   }
 

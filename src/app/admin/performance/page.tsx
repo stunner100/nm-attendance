@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createKpiScore,
   createPerformanceReview,
@@ -29,7 +29,7 @@ import { HR_PIP_STATUSES, HR_REVIEW_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type PerformancePageProps = {
-  searchParams: Promise<{ reviewStatus?: string; pipStatus?: string; error?: string }>;
+  searchParams: Promise<{ reviewStatus?: string; pipStatus?: string; error?: string; success?: string }>;
 };
 
 async function createReviewAction(formData: FormData): Promise<void> {
@@ -59,6 +59,7 @@ async function createReviewAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "Performance review scheduled successfully.");
 }
 
 async function createPipAction(formData: FormData): Promise<void> {
@@ -88,6 +89,7 @@ async function createPipAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "Improvement plan created successfully.");
 }
 
 async function createKpiAction(formData: FormData): Promise<void> {
@@ -114,6 +116,7 @@ async function createKpiAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "KPI score saved successfully.");
 }
 
 async function updateReviewStatusAction(formData: FormData): Promise<void> {
@@ -133,6 +136,7 @@ async function updateReviewStatusAction(formData: FormData): Promise<void> {
   await updatePerformanceReviewStatus(reviewId, status as (typeof HR_REVIEW_STATUSES)[number]);
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "Review status updated successfully.");
 }
 
 async function updatePipStatusAction(formData: FormData): Promise<void> {
@@ -157,6 +161,7 @@ async function updatePipStatusAction(formData: FormData): Promise<void> {
   );
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "Improvement plan status updated successfully.");
 }
 
 async function deleteReviewAction(formData: FormData): Promise<void> {
@@ -175,6 +180,7 @@ async function deleteReviewAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "Performance review deleted successfully.");
 }
 
 async function deletePipAction(formData: FormData): Promise<void> {
@@ -193,6 +199,7 @@ async function deletePipAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "Improvement plan deleted successfully.");
 }
 
 async function deleteKpiScoreAction(formData: FormData): Promise<void> {
@@ -211,6 +218,7 @@ async function deleteKpiScoreAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/performance");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/performance", "KPI score deleted successfully.");
 }
 
 export default async function PerformancePage({ searchParams }: PerformancePageProps) {
@@ -234,6 +242,7 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

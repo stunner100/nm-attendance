@@ -16,12 +16,12 @@ import {
   updateRecruitmentApplicantStage,
 } from "@/lib/hr-db";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import { HR_DEPARTMENTS, HR_RECRUITMENT_STAGES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type RecruitmentPageProps = {
-  searchParams: Promise<{ department?: string; stage?: string; error?: string }>;
+  searchParams: Promise<{ department?: string; stage?: string; error?: string; success?: string }>;
 };
 
 async function createRoleAction(formData: FormData): Promise<void> {
@@ -47,6 +47,7 @@ async function createRoleAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/recruitment");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/recruitment", "Role added successfully.");
 }
 
 async function createApplicantAction(formData: FormData): Promise<void> {
@@ -86,6 +87,7 @@ async function createApplicantAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/recruitment");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/recruitment", "Applicant added successfully.");
 }
 
 async function updateApplicantStageAction(formData: FormData): Promise<void> {
@@ -110,6 +112,7 @@ async function updateApplicantStageAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/recruitment");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/recruitment", "Applicant stage updated successfully.");
 }
 
 export default async function RecruitmentPage({ searchParams }: RecruitmentPageProps) {
@@ -132,6 +135,7 @@ export default async function RecruitmentPage({ searchParams }: RecruitmentPageP
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

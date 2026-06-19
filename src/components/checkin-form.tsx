@@ -56,6 +56,7 @@ export function CheckinForm() {
   const [employeeLoadStatus, setEmployeeLoadStatus] = useState<EmployeeLoadStatus>("loading");
   const [employeeId, setEmployeeId] = useState("");
   const [openCheckinStatus, setOpenCheckinStatus] = useState<OpenCheckinStatus>("idle");
+  const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
@@ -142,56 +143,46 @@ export function CheckinForm() {
     };
   }, []);
 
-  useEffect(() => {
-    let active = true;
+  async function refreshEmployees() {
+    setEmployeeLoadStatus("loading");
 
-    const loadEmployees = async () => {
-      setEmployeeLoadStatus("loading");
+    try {
+      const response = await fetch("/api/checkin/employees", { cache: "no-store" });
+      const data = (await response.json().catch(() => ({}))) as {
+        employees?: CheckinEmployee[];
+        error?: string;
+      };
 
-      try {
-        const response = await fetch("/api/checkin/employees", { cache: "no-store" });
-        const data = (await response.json().catch(() => ({}))) as {
-          employees?: CheckinEmployee[];
-          error?: string;
-        };
-
-        if (!response.ok || !Array.isArray(data.employees)) {
-          throw new Error(data.error ?? "Unable to load employee list.");
-        }
-
-        if (!active) {
-          return;
-        }
-
-        setEmployees(data.employees);
-        setEmployeeLoadStatus("ready");
-      } catch (loadError) {
-        console.error("Failed to load employees", loadError);
-        if (active) {
-          setEmployees([]);
-          setEmployeeLoadStatus("error");
-        }
+      if (!response.ok || !Array.isArray(data.employees)) {
+        throw new Error(data.error ?? "Unable to load employee list.");
       }
-    };
 
-    void loadEmployees();
+      setEmployees(data.employees);
+      setEmployeeLoadStatus("ready");
+    } catch (loadError) {
+      console.error("Failed to load employees", loadError);
+      setEmployees([]);
+      setEmployeeLoadStatus("error");
+    }
+  }
 
-    return () => {
-      active = false;
-    };
+  useEffect(() => {
+    void refreshEmployees();
   }, []);
 
   useEffect(() => {
-    if (action !== "checkout" || !employeeId) {
+    if (!employeeId) {
       setOpenCheckinStatus("idle");
+      setHasAttendanceToday(false);
       return;
     }
 
     let active = true;
     const controller = new AbortController();
 
-    const loadOpenCheckinStatus = async () => {
+    const loadEmployeeAttendanceStatus = async () => {
       setOpenCheckinStatus("loading");
+      setHasAttendanceToday(false);
 
       try {
         const response = await fetch(
@@ -200,6 +191,7 @@ export function CheckinForm() {
         );
         const data = (await response.json().catch(() => ({}))) as {
           hasOpenCheckin?: boolean;
+          hasAttendanceToday?: boolean;
           error?: string;
         };
 
@@ -207,12 +199,17 @@ export function CheckinForm() {
           return;
         }
 
-        if (!response.ok || typeof data.hasOpenCheckin !== "boolean") {
+        if (
+          !response.ok ||
+          typeof data.hasOpenCheckin !== "boolean" ||
+          typeof data.hasAttendanceToday !== "boolean"
+        ) {
           setOpenCheckinStatus("error");
           return;
         }
 
         setOpenCheckinStatus(data.hasOpenCheckin ? "open" : "none");
+        setHasAttendanceToday(data.hasAttendanceToday);
       } catch (statusError) {
         if (!active || (statusError instanceof DOMException && statusError.name === "AbortError")) {
           return;
@@ -222,13 +219,13 @@ export function CheckinForm() {
       }
     };
 
-    void loadOpenCheckinStatus();
+    void loadEmployeeAttendanceStatus();
 
     return () => {
       active = false;
       controller.abort();
     };
-  }, [action, employeeId]);
+  }, [employeeId]);
 
   useEffect(() => {
     void requestLocation();
@@ -295,6 +292,13 @@ export function CheckinForm() {
 
     if (!employeeId) {
       setError("Please select your name from the list.");
+      return;
+    }
+
+    if (action === "checkin" && openCheckinStatus === "open") {
+      setError(
+        "You already have an open check-in. Please check out before checking in again."
+      );
       return;
     }
 
@@ -391,6 +395,7 @@ export function CheckinForm() {
     setStatusMessage(null);
     setError(null);
     setOpenCheckinStatus("idle");
+    setHasAttendanceToday(false);
     setAction(nextAction);
 
     if (tokenStatus !== "ready") {
@@ -508,9 +513,41 @@ export function CheckinForm() {
             />
 
             {employeeLoadStatus === "error" ? (
-              <p className="text-sm text-destructive">
-                Could not load the employee list. Refresh the page and try again.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">
+                  Could not load the employee list. Check your connection and try again.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void refreshEmployees()}
+                  className="shrink-0 border-destructive/30 bg-card text-destructive hover:bg-destructive/5"
+                >
+                  Try again
+                </Button>
+              </div>
+            ) : null}
+
+            {action === "checkin" && employeeId ? (
+              openCheckinStatus === "loading" ? (
+                <p className="text-sm text-muted-foreground">Checking today&apos;s attendance...</p>
+              ) : openCheckinStatus === "open" ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <p className="font-medium">Open check-in already on record</p>
+                  <p className="mt-1">
+                    You are still checked in. Switch to Check out to close this session before
+                    checking in again.
+                  </p>
+                </div>
+              ) : hasAttendanceToday ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <p className="font-medium">Already checked in today</p>
+                  <p className="mt-1">
+                    You have attendance on record for today. You can still check in again for
+                    another session if needed.
+                  </p>
+                </div>
+              ) : null
             ) : null}
 
             {action === "checkout" && employeeId ? (
@@ -644,7 +681,8 @@ export function CheckinForm() {
               employeeLoadStatus !== "ready" ||
               !employeeId ||
               gpsStatus !== "granted" ||
-              !coordinates
+              !coordinates ||
+              (action === "checkin" && openCheckinStatus === "open")
             }
             type="submit"
             className="h-12 w-full whitespace-nowrap text-base"

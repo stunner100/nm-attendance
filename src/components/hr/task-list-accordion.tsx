@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -12,6 +13,7 @@ import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import type { HRTaskWithEmployee } from "@/lib/hr/tasks";
 import { humanizeLabel } from "@/lib/labels";
 import { HR_TASK_STATUSES } from "@/lib/types";
+import { ListTodo } from "lucide-react";
 
 const selectClass =
   "h-8 w-full rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30";
@@ -30,7 +32,13 @@ export function TaskListAccordion({
   deleteTaskAction,
 }: TaskListAccordionProps) {
   if (tasks.length === 0) {
-    return <p className="text-sm text-muted-foreground">No tasks yet.</p>;
+    return (
+      <EmptyState
+        description="Assign a task above to track employee follow-ups and deliverables."
+        icon={ListTodo}
+        title="No tasks yet"
+      />
+    );
   }
 
   return (

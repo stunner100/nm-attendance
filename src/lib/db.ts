@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Pool } from "pg";
 
+import { CHECKIN_TIMEZONE } from "@/lib/attendance-punctuality";
 import {
   CHECKIN_SCAN_TOKEN_TTL_MINUTES,
   createRawCheckinScanToken,
@@ -134,23 +135,51 @@ export async function listActiveHrEmployeesForCheckin(): Promise<CheckinEmployee
   }));
 }
 
-export async function hasOpenCheckinForEmployee(employeeId: number): Promise<boolean> {
+export type EmployeeCheckinStatus = {
+  hasOpenCheckin: boolean;
+  hasAttendanceToday: boolean;
+};
+
+export async function getEmployeeCheckinStatus(
+  employeeId: number
+): Promise<EmployeeCheckinStatus> {
   await ensureSchema();
 
   const attendeeName = await resolveActiveHrEmployeeName(employeeId);
   const pool = getPool();
-  const result = await pool.query(
+  const result = await pool.query<{
+    has_open_checkin: boolean;
+    has_attendance_today: boolean;
+  }>(
     `
-      SELECT id
-      FROM attendance
-      WHERE LOWER(btrim(name)) = LOWER($1)
-        AND checkout_timestamp IS NULL
-      LIMIT 1
+      SELECT
+        EXISTS (
+          SELECT 1
+          FROM attendance
+          WHERE LOWER(btrim(name)) = LOWER($1)
+            AND checkout_timestamp IS NULL
+        ) AS has_open_checkin,
+        EXISTS (
+          SELECT 1
+          FROM attendance
+          WHERE LOWER(btrim(name)) = LOWER($1)
+            AND (timestamp::timestamptz AT TIME ZONE $2)::date
+              = (NOW() AT TIME ZONE $2)::date
+        ) AS has_attendance_today
     `,
-    [attendeeName]
+    [attendeeName, CHECKIN_TIMEZONE]
   );
 
-  return (result.rowCount ?? 0) > 0;
+  const row = result.rows[0];
+  return {
+    hasOpenCheckin: row?.has_open_checkin ?? false,
+    hasAttendanceToday: row?.has_attendance_today ?? false,
+  };
+}
+
+export async function hasOpenCheckinForEmployee(employeeId: number): Promise<boolean> {
+  const status = await getEmployeeCheckinStatus(employeeId);
+  return status.hasOpenCheckin;
 }
 
 function getPool(): Pool {

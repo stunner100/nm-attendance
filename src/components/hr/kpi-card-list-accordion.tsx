@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -14,6 +15,7 @@ import type { HRKpiCardWithEmployee } from "@/lib/hr/kpi-cards";
 import { humanizeLabel } from "@/lib/labels";
 import type { HRKpiCardItem } from "@/lib/types";
 import { HR_KPI_CARD_STATUSES } from "@/lib/types";
+import { Target } from "lucide-react";
 
 const selectClass =
   "h-8 w-full rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30";
@@ -38,7 +40,13 @@ export function KpiCardListAccordion({
   deleteItemAction,
 }: KpiCardListAccordionProps) {
   if (cards.length === 0) {
-    return <p className="text-sm text-muted-foreground">No KPI cards yet.</p>;
+    return (
+      <EmptyState
+        description="Create a KPI card above to define employee goals for the period."
+        icon={Target}
+        title="No KPI cards yet"
+      />
+    );
   }
 
   return (
@@ -95,9 +103,12 @@ export function KpiCardListAccordion({
 
                 <div className="space-y-1.5">
                   {items.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      No KPIs added to this card yet.
-                    </p>
+                    <EmptyState
+                      className="p-4"
+                      description="Add KPIs using the form below."
+                      icon={Target}
+                      title="No KPIs on this card yet"
+                    />
                   ) : (
                     items.map((item) => (
                       <div

@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -10,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import type { HRCompanyGoal } from "@/lib/types";
+import { Flag } from "lucide-react";
 
 const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 
@@ -25,7 +27,13 @@ export function CompanyGoalsListAccordion({
   deleteGoalAction,
 }: CompanyGoalsListAccordionProps) {
   if (goals.length === 0) {
-    return <p className="text-sm text-muted-foreground">No company goals yet.</p>;
+    return (
+      <EmptyState
+        description="Define a company goal above to align department roadmaps and KPI cards."
+        icon={Flag}
+        title="No company goals yet"
+      />
+    );
   }
 
   return (

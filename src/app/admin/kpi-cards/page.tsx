@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   addKpiCardItem,
   createKpiCard,
@@ -27,7 +27,7 @@ import { HR_DEPARTMENTS, HR_KPI_CARD_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type PageProps = {
-  searchParams: Promise<{ status?: string; period?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; period?: string; error?: string; success?: string }>;
 };
 
 async function createCardAction(formData: FormData): Promise<void> {
@@ -61,6 +61,7 @@ async function createCardAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/kpi-cards");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/kpi-cards", "KPI card created successfully.");
 }
 
 async function addItemAction(formData: FormData): Promise<void> {
@@ -84,6 +85,7 @@ async function addItemAction(formData: FormData): Promise<void> {
   });
 
   revalidatePath("/admin/kpi-cards");
+  redirectWithFormSuccess("/admin/kpi-cards", "KPI item added successfully.");
 }
 
 async function updateCardStatusAction(formData: FormData): Promise<void> {
@@ -103,6 +105,7 @@ async function updateCardStatusAction(formData: FormData): Promise<void> {
   await updateKpiCardStatus(cardId, status as (typeof HR_KPI_CARD_STATUSES)[number]);
   revalidatePath("/admin/kpi-cards");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/kpi-cards", "KPI card status updated successfully.");
 }
 
 async function deleteCardAction(formData: FormData): Promise<void> {
@@ -121,6 +124,7 @@ async function deleteCardAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/kpi-cards");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/kpi-cards", "KPI card deleted successfully.");
 }
 
 async function deleteItemAction(formData: FormData): Promise<void> {
@@ -138,6 +142,7 @@ async function deleteItemAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/admin/kpi-cards");
+  redirectWithFormSuccess("/admin/kpi-cards", "KPI item deleted successfully.");
 }
 
 export default async function KpiCardsPage({ searchParams }: PageProps) {
@@ -169,6 +174,7 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

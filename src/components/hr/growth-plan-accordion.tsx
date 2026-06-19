@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import type { HRGrowthPlanWithEmployee } from "@/lib/hr/growth";
 import { humanizeLabel } from "@/lib/labels";
 import { HR_GROWTH_PLAN_STATUSES } from "@/lib/types";
+import { Sprout } from "lucide-react";
 
 const selectClass =
   "h-8 w-full rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30";
@@ -31,7 +33,13 @@ export function GrowthPlanAccordion({
   deletePlanAction,
 }: GrowthPlanAccordionProps) {
   if (plans.length === 0) {
-    return <p className="text-sm text-muted-foreground">No growth plans yet.</p>;
+    return (
+      <EmptyState
+        description="Create a growth plan above to track development and promotion readiness."
+        icon={Sprout}
+        title="No growth plans yet"
+      />
+    );
   }
 
   return (

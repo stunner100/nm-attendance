@@ -7,7 +7,7 @@ import { AccountabilityActionStack } from "@/components/hr/accountability-action
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   ACCOUNTABILITY_LADDER,
   createAccountabilityAction,
@@ -24,7 +24,7 @@ import {
 import { humanizeLabel } from "@/lib/labels";
 
 type PageProps = {
-  searchParams: Promise<{ status?: string; stage?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; stage?: string; error?: string; success?: string }>;
 };
 
 async function createActionAction(formData: FormData): Promise<void> {
@@ -54,6 +54,7 @@ async function createActionAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/accountability");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/accountability", "Accountability action recorded successfully.");
 }
 
 async function updateStatusAction(formData: FormData): Promise<void> {
@@ -78,6 +79,7 @@ async function updateStatusAction(formData: FormData): Promise<void> {
   );
   revalidatePath("/admin/accountability");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/accountability", "Accountability status updated successfully.");
 }
 
 export default async function AccountabilityPage({ searchParams }: PageProps) {
@@ -97,6 +99,7 @@ export default async function AccountabilityPage({ searchParams }: PageProps) {
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

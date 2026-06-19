@@ -76,6 +76,7 @@ async function deleteScoreAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/scores");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/scores", "Monthly score deleted successfully.");
 }
 
 export default async function ScoresPage({ searchParams }: PageProps) {

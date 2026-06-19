@@ -71,6 +71,7 @@ async function updateStatusAction(formData: FormData): Promise<void> {
   );
 
   revalidatePath("/admin/tasks");
+  redirectWithFormSuccess("/admin/tasks", "Task status updated successfully.");
 }
 
 async function deleteTaskAction(formData: FormData): Promise<void> {
@@ -89,6 +90,7 @@ async function deleteTaskAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/tasks");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/tasks", "Task deleted successfully.");
 }
 
 export default async function TasksPage({ searchParams }: PageProps) {

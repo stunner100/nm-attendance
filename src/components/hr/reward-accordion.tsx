@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -10,6 +11,7 @@ import {
 import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import type { HRRewardWithEmployee } from "@/lib/hr/rewards";
 import { humanizeLabel } from "@/lib/labels";
+import { Award } from "lucide-react";
 
 const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 
@@ -20,7 +22,13 @@ type RewardAccordionProps = {
 
 export function RewardAccordion({ rewards, deleteRewardAction }: RewardAccordionProps) {
   if (rewards.length === 0) {
-    return <p className="text-sm text-muted-foreground">No rewards recorded yet.</p>;
+    return (
+      <EmptyState
+        description="Record a reward above when an employee earns recognition."
+        icon={Award}
+        title="No rewards recorded yet"
+      />
+    );
   }
 
   return (

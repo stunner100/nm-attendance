@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/hr/empty-state";
 import { StatusBadge } from "@/components/hr/status-badge";
 import {
   Accordion,
@@ -15,6 +16,7 @@ import type {
   HRPolicyViolation,
 } from "@/lib/types";
 import { HR_DISCIPLINARY_STATUSES } from "@/lib/types";
+import { ClipboardList, Gavel, ShieldAlert } from "lucide-react";
 
 const selectClass =
   "h-8 w-full rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30";
@@ -31,7 +33,13 @@ export function DisciplinaryCasesAccordion({
   updateCaseStatusAction,
 }: DisciplinaryCasesAccordionProps) {
   if (cases.length === 0) {
-    return <p className="text-sm text-muted-foreground">No cases found.</p>;
+    return (
+      <EmptyState
+        description="Open a disciplinary case using the form above when action is required."
+        icon={Gavel}
+        title="No disciplinary cases yet"
+      />
+    );
   }
 
   return (
@@ -90,7 +98,13 @@ type PolicyViolationsAccordionProps = {
 
 export function PolicyViolationsAccordion({ violations }: PolicyViolationsAccordionProps) {
   if (violations.length === 0) {
-    return <p className="text-sm text-muted-foreground">No violations found.</p>;
+    return (
+      <EmptyState
+        description="Log a policy violation using the form above to keep a compliance record."
+        icon={ShieldAlert}
+        title="No policy violations yet"
+      />
+    );
   }
 
   return (
@@ -136,7 +150,13 @@ export function FollowupActionsAccordion({
   updateFollowupStatusAction,
 }: FollowupActionsAccordionProps) {
   if (actions.length === 0) {
-    return <p className="text-sm text-muted-foreground">No follow-up actions found.</p>;
+    return (
+      <EmptyState
+        description="Add a follow-up action using the form above to track next steps."
+        icon={ClipboardList}
+        title="No follow-up actions yet"
+      />
+    );
   }
 
   return (

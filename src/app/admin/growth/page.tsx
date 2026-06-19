@@ -7,7 +7,7 @@ import { GrowthPlanStack } from "@/components/hr/growth-plan-stack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createGrowthPlan,
   deleteGrowthPlan,
@@ -19,7 +19,7 @@ import { HR_GROWTH_PLAN_STATUSES } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type PageProps = {
-  searchParams: Promise<{ status?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; error?: string; success?: string }>;
 };
 
 function field(formData: FormData, key: string): string | null {
@@ -51,6 +51,7 @@ async function createPlanAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/growth");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/growth", "Growth plan created successfully.");
 }
 
 async function updateStatusAction(formData: FormData): Promise<void> {
@@ -75,6 +76,7 @@ async function updateStatusAction(formData: FormData): Promise<void> {
   );
   revalidatePath("/admin/growth");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/growth", "Growth plan status updated successfully.");
 }
 
 async function deletePlanAction(formData: FormData): Promise<void> {
@@ -93,6 +95,7 @@ async function deletePlanAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/growth");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/growth", "Growth plan deleted successfully.");
 }
 
 export default async function GrowthPage({ searchParams }: PageProps) {
@@ -111,6 +114,7 @@ export default async function GrowthPage({ searchParams }: PageProps) {
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

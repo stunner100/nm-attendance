@@ -9,7 +9,7 @@ import { KpiCard } from "@/components/hr/kpi-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createHREmployee,
   getHeadcountModuleData,
@@ -31,6 +31,7 @@ type HeadcountPageProps = {
     status?: string;
     contractType?: string;
     error?: string;
+    success?: string;
   }>;
 };
 
@@ -92,6 +93,7 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/headcount");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/headcount", "Employee created successfully.");
 }
 
 async function updateEmployeeAction(formData: FormData): Promise<void> {
@@ -189,6 +191,7 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Total Active" value={`${moduleData.totalActive}`} />

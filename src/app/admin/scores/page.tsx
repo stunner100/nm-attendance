@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   currentPeriod,
   deleteMonthlyScore,
@@ -22,7 +22,7 @@ import { HR_RATING_BANDS } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 
 type PageProps = {
-  searchParams: Promise<{ period?: string; rating?: string; error?: string }>;
+  searchParams: Promise<{ period?: string; rating?: string; error?: string; success?: string }>;
 };
 
 async function saveScoreAction(formData: FormData): Promise<void> {
@@ -57,6 +57,7 @@ async function saveScoreAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/scores");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/scores", "Monthly score saved successfully.");
 }
 
 async function deleteScoreAction(formData: FormData): Promise<void> {
@@ -94,6 +95,7 @@ export default async function ScoresPage({ searchParams }: PageProps) {
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

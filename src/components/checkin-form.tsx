@@ -7,7 +7,6 @@ import {
   Loader2,
   LogOut,
   MapPin,
-  User,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { EmployeeCombobox } from "@/components/employee-combobox";
 import type { GpsStatus } from "@/lib/types";
 import { buildOpenStreetMapUrl } from "@/lib/geo-coords";
 import { reverseGeocode } from "@/lib/reverse-geocode";
@@ -37,9 +36,17 @@ type CheckinEmployee = {
 type TokenStatus = "loading" | "ready" | "error";
 type AttendanceAction = "checkin" | "checkout";
 type EmployeeLoadStatus = "loading" | "ready" | "error";
+type OpenCheckinStatus = "idle" | "loading" | "open" | "none" | "error";
 
-const selectClassName =
-  "h-12 w-full rounded-[var(--radius-input)] border border-input bg-card px-3 py-2 text-base text-foreground transition-colors outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 md:text-sm";
+const NO_ACTIVE_CHECKIN_PATTERN = /no active check-in found/i;
+
+function formatSubmitError(message: string, action: AttendanceAction): string {
+  if (action === "checkout" && NO_ACTIVE_CHECKIN_PATTERN.test(message)) {
+    return "You don't have an open check-in yet. Switch to Check in, record your arrival, then return here to check out.";
+  }
+
+  return message;
+}
 
 export function CheckinForm() {
   const [action, setAction] = useState<AttendanceAction>("checkin");
@@ -48,7 +55,7 @@ export function CheckinForm() {
   const [employees, setEmployees] = useState<CheckinEmployee[]>([]);
   const [employeeLoadStatus, setEmployeeLoadStatus] = useState<EmployeeLoadStatus>("loading");
   const [employeeId, setEmployeeId] = useState("");
-  const [filterQuery, setFilterQuery] = useState("");
+  const [openCheckinStatus, setOpenCheckinStatus] = useState<OpenCheckinStatus>("idle");
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
@@ -58,6 +65,7 @@ export function CheckinForm() {
   const [punctualityMessage, setPunctualityMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [formattedSubmittedTime, setFormattedSubmittedTime] = useState<string | null>(null);
 
   const selectedEmployee = useMemo(
     () => employees.find((employee) => String(employee.id) === employeeId) ?? null,
@@ -71,18 +79,6 @@ export function CheckinForm() {
         : null,
     [coordinates]
   );
-
-  const filteredEmployees = useMemo(() => {
-    const query = filterQuery.trim().toLowerCase();
-    if (!query) {
-      return employees;
-    }
-
-    return employees.filter((employee) => {
-      const haystack = `${employee.fullName} ${employee.department}`.toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [employees, filterQuery]);
 
   async function fetchScanTokenValue(): Promise<string> {
     const response = await fetch("/api/checkin/token", {
@@ -186,8 +182,71 @@ export function CheckinForm() {
   }, []);
 
   useEffect(() => {
+    if (action !== "checkout" || !employeeId) {
+      setOpenCheckinStatus("idle");
+      return;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+
+    const loadOpenCheckinStatus = async () => {
+      setOpenCheckinStatus("loading");
+
+      try {
+        const response = await fetch(
+          `/api/checkin/open-status?employeeId=${encodeURIComponent(employeeId)}`,
+          { cache: "no-store", signal: controller.signal }
+        );
+        const data = (await response.json().catch(() => ({}))) as {
+          hasOpenCheckin?: boolean;
+          error?: string;
+        };
+
+        if (!active) {
+          return;
+        }
+
+        if (!response.ok || typeof data.hasOpenCheckin !== "boolean") {
+          setOpenCheckinStatus("error");
+          return;
+        }
+
+        setOpenCheckinStatus(data.hasOpenCheckin ? "open" : "none");
+      } catch (statusError) {
+        if (!active || (statusError instanceof DOMException && statusError.name === "AbortError")) {
+          return;
+        }
+
+        setOpenCheckinStatus("error");
+      }
+    };
+
+    void loadOpenCheckinStatus();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [action, employeeId]);
+
+  useEffect(() => {
     void requestLocation();
   }, []);
+
+  useEffect(() => {
+    if (!submittedAt) {
+      setFormattedSubmittedTime(null);
+      return;
+    }
+
+    setFormattedSubmittedTime(
+      new Date(submittedAt).toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    );
+  }, [submittedAt]);
 
   function requestLocation() {
     if (gpsStatus === "loading" || gpsStatus === "granted") {
@@ -273,10 +332,13 @@ export function CheckinForm() {
           error?: string;
         };
         setError(
-          data.error ??
-            (action === "checkout"
-              ? "Unable to submit check-out."
-              : "Unable to submit check-in.")
+          formatSubmitError(
+            data.error ??
+              (action === "checkout"
+                ? "Unable to submit check-out."
+                : "Unable to submit check-in."),
+            action
+          )
         );
         return;
       }
@@ -312,12 +374,23 @@ export function CheckinForm() {
     }
   }
 
+  function handleActionChange(nextAction: AttendanceAction) {
+    setAction(nextAction);
+    setError(null);
+  }
+
+  function handleEmployeeChange(nextEmployeeId: string) {
+    setEmployeeId(nextEmployeeId);
+    setError(null);
+  }
+
   function resetForAnother(nextAction: AttendanceAction) {
     setSubmittedAt(null);
     setSubmittedAction(null);
     setPunctualityMessage(null);
     setStatusMessage(null);
     setError(null);
+    setOpenCheckinStatus("idle");
     setAction(nextAction);
 
     if (tokenStatus !== "ready") {
@@ -356,8 +429,13 @@ export function CheckinForm() {
               {isCheckout ? "Check-out complete" : isLate ? "You are late" : "You are on time"}
             </CardTitle>
             <CardDescription className="mt-2 text-base">
-              {selectedEmployee?.fullName ?? "Employee"} {isCheckout ? "checked out" : "checked in"}{" "}
-              at <span className="tabular-nums">{new Date(submittedAt).toLocaleTimeString()}</span>
+              {selectedEmployee?.fullName ?? "Employee"} {isCheckout ? "checked out" : "checked in"}
+              {formattedSubmittedTime ? (
+                <>
+                  {" "}
+                  at <span className="tabular-nums">{formattedSubmittedTime}</span>
+                </>
+              ) : null}
             </CardDescription>
           </div>
         </CardHeader>
@@ -374,20 +452,24 @@ export function CheckinForm() {
     );
   }
 
+  const submitBlockedReason =
+    tokenStatus === "error"
+      ? "Session not ready"
+      : gpsStatus === "denied"
+        ? "Location required"
+        : gpsStatus === "loading" || gpsStatus === "idle"
+          ? "Waiting for location"
+          : null;
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Record attendance</CardTitle>
-        <CardDescription>Choose an action, select your name, and submit.</CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 pt-6">
         <form className="space-y-5" onSubmit={onSubmit}>
           <div className="rounded-lg border border-border bg-muted p-1">
             <div className="grid min-w-0 grid-cols-2 gap-1">
               <button
                 type="button"
-                onClick={() => setAction("checkin")}
+                onClick={() => handleActionChange("checkin")}
                 className={
                   action === "checkin"
                     ? "rounded-md bg-primary px-3 py-2 text-sm font-semibold whitespace-nowrap text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
@@ -398,7 +480,7 @@ export function CheckinForm() {
               </button>
               <button
                 type="button"
-                onClick={() => setAction("checkout")}
+                onClick={() => handleActionChange("checkout")}
                 className={
                   action === "checkout"
                     ? "rounded-md bg-primary px-3 py-2 text-sm font-semibold whitespace-nowrap text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
@@ -411,55 +493,41 @@ export function CheckinForm() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="employee-filter">
+            <label className="text-sm font-medium" htmlFor="employee">
               Your name
             </label>
 
-            {employees.length > 8 ? (
-              <Input
-                id="employee-filter"
-                placeholder="Search employees..."
-                value={filterQuery}
-                onChange={(event) => setFilterQuery(event.target.value)}
-                autoComplete="off"
-                className="h-11"
-              />
-            ) : null}
-
-            <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <select
-                id="employee"
-                name="employee"
-                value={employeeId}
-                onChange={(event) => setEmployeeId(event.target.value)}
-                required
-                disabled={employeeLoadStatus !== "ready" || filteredEmployees.length === 0}
-                className={`${selectClassName} appearance-none pl-10`}
-              >
-                <option value="">
-                  {employeeLoadStatus === "loading"
-                    ? "Loading employees..."
-                    : employeeLoadStatus === "error"
-                      ? "Unable to load employees"
-                      : filteredEmployees.length === 0
-                        ? "No employees found"
-                        : "Select your name"}
-                </option>
-                {filteredEmployees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.department
-                      ? `${employee.fullName} — ${employee.department}`
-                      : employee.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <EmployeeCombobox
+              id="employee"
+              employees={employees}
+              value={employeeId}
+              onChange={handleEmployeeChange}
+              loading={employeeLoadStatus === "loading"}
+              loadError={employeeLoadStatus === "error"}
+              disabled={employeeLoadStatus !== "ready"}
+            />
 
             {employeeLoadStatus === "error" ? (
               <p className="text-sm text-destructive">
                 Could not load the employee list. Refresh the page and try again.
               </p>
+            ) : null}
+
+            {action === "checkout" && employeeId ? (
+              openCheckinStatus === "loading" ? (
+                <p className="text-sm text-muted-foreground">Checking for an open check-in...</p>
+              ) : openCheckinStatus === "none" ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <p className="font-medium">No open check-in found</p>
+                  <p className="mt-1">
+                    Switch to Check in first, then come back here to check out.
+                  </p>
+                </div>
+              ) : openCheckinStatus === "open" ? (
+                <p className="text-sm text-muted-foreground">
+                  Open check-in found. You can check out now.
+                </p>
+              ) : null
             ) : null}
           </div>
 
@@ -519,7 +587,46 @@ export function CheckinForm() {
                 )}
               </Button>
             </div>
+
+            {gpsStatus === "denied" ? (
+              <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Location access blocked</p>
+                    <p className="mt-1 text-destructive/90">
+                      Enable location in your browser settings, then tap Allow location above to
+                      retry.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
+
+          {tokenStatus === "error" ? (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Unable to prepare check-in</p>
+                    <p className="mt-1 text-destructive/90">
+                      Check your connection and try again.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void refreshScanToken()}
+                  className="shrink-0 border-destructive/30 bg-card text-destructive hover:bg-destructive/5"
+                >
+                  Try again
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           {error ? (
             <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
@@ -535,7 +642,9 @@ export function CheckinForm() {
               submitting ||
               tokenStatus !== "ready" ||
               employeeLoadStatus !== "ready" ||
-              !employeeId
+              !employeeId ||
+              gpsStatus !== "granted" ||
+              !coordinates
             }
             type="submit"
             className="h-12 w-full whitespace-nowrap text-base"
@@ -545,6 +654,8 @@ export function CheckinForm() {
                 <Loader2 className="h-5 w-5 animate-spin" />
                 {action === "checkout" ? "Checking out..." : "Checking in..."}
               </>
+            ) : submitBlockedReason ? (
+              submitBlockedReason
             ) : tokenStatus === "ready" ? (
               <>
                 {action === "checkout" ? (

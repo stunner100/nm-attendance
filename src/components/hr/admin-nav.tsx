@@ -6,6 +6,7 @@ import {
   Award,
   BadgeDollarSign,
   BriefcaseBusiness,
+  CalendarDays,
   ClipboardCheck,
   ClipboardList,
   Clock,
@@ -20,6 +21,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sprout,
+  Star,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -44,6 +46,7 @@ const NAV_GROUPS = [
       { href: "/admin/scores", label: "Monthly scores", icon: Award },
       { href: "/admin/rewards", label: "Rewards", icon: Medal },
       { href: "/admin/accountability", label: "Accountability", icon: ShieldAlert },
+      { href: "/admin/performance", label: "Performance reviews", icon: Star },
       { href: "/admin/growth", label: "Growth plans", icon: Sprout },
       { href: "/admin/training", label: "Training", icon: GraduationCap },
     ],
@@ -52,6 +55,7 @@ const NAV_GROUPS = [
     label: "People operations",
     items: [
       { href: "/admin/attendance", label: "Attendance", icon: Clock },
+      { href: "/admin/roster", label: "Roster", icon: CalendarDays },
       { href: "/admin/recruitment", label: "Recruitment", icon: UserPlus },
       { href: "/admin/payroll-leave", label: "Payroll & leave", icon: BadgeDollarSign },
       { href: "/admin/compliance", label: "Compliance", icon: ShieldCheck },

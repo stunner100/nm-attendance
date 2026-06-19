@@ -105,7 +105,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         <EmployeesAtRiskList employees={bundle.at_risk_employees} />
       </section>
 
-      <section id="alerts" className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+      <section
+        id="alerts"
+        className="scroll-mt-28 grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]"
+      >
         <KeyAlertsPanel alerts={summary.performance_alerts} />
         <RecentActivityFeed items={bundle.recent_activity} />
       </section>

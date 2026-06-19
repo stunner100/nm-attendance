@@ -58,6 +58,7 @@ type AdminSearchFieldProps = {
   results: SearchResult[];
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+  searchFetched: boolean;
   onSearchSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onResultNavigate?: () => void;
   inputClassName?: string;
@@ -103,17 +104,26 @@ function AdminSearchField({
   results,
   searchOpen,
   setSearchOpen,
+  searchFetched,
   onSearchSubmit,
   onResultNavigate,
   inputClassName,
 }: AdminSearchFieldProps) {
+  const trimmedQuery = query.trim();
+  const showDropdown =
+    searchOpen && trimmedQuery.length >= 2 && (results.length > 0 || searchFetched);
+
   return (
     <form className="relative w-full" onSubmit={onSearchSubmit}>
       <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-muted)]" />
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        onFocus={() => setSearchOpen(results.length > 0)}
+        onFocus={() => {
+          if (trimmedQuery.length >= 2 && (results.length > 0 || searchFetched)) {
+            setSearchOpen(true);
+          }
+        }}
         onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
         placeholder="Search employees, KPIs, tasks…"
         className={cn(
@@ -121,24 +131,30 @@ function AdminSearchField({
           inputClassName
         )}
       />
-      {searchOpen && results.length > 0 ? (
+      {showDropdown ? (
         <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-rule)] bg-[var(--color-paper)]">
-          {results.map((result) => (
-            <Link
-              key={`${result.group}-${result.href}`}
-              href={result.href}
-              className="block border-b border-[var(--color-rule)] px-3 py-2 text-sm last:border-b-0 hover:bg-[var(--color-paper-2)]"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                setSearchOpen(false);
-                setQuery("");
-                onResultNavigate?.();
-              }}
-            >
-              <p className="font-medium text-[var(--color-ink)]">{result.label}</p>
-              <p className="text-xs text-[var(--color-ink-muted)]">{result.group}</p>
-            </Link>
-          ))}
+          {results.length > 0 ? (
+            results.map((result) => (
+              <Link
+                key={`${result.group}-${result.href}`}
+                href={result.href}
+                className="block border-b border-[var(--color-rule)] px-3 py-2 text-sm last:border-b-0 hover:bg-[var(--color-paper-2)]"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setSearchOpen(false);
+                  setQuery("");
+                  onResultNavigate?.();
+                }}
+              >
+                <p className="font-medium text-[var(--color-ink)]">{result.label}</p>
+                <p className="text-xs text-[var(--color-ink-muted)]">{result.group}</p>
+              </Link>
+            ))
+          ) : (
+            <p className="px-3 py-2.5 text-sm text-[var(--color-ink-muted)]">
+              No results for &lsquo;{trimmedQuery}&rsquo;
+            </p>
+          )}
         </div>
       ) : null}
     </form>
@@ -153,6 +169,7 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
   const [notificationCount, setNotificationCount] = useState(0);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchFetched, setSearchFetched] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -192,6 +209,7 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
       const timeout = window.setTimeout(() => {
         setResults([]);
         setSearchOpen(false);
+        setSearchFetched(false);
       }, 0);
 
       return () => window.clearTimeout(timeout);
@@ -199,6 +217,7 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
 
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
+      setSearchFetched(false);
       try {
         const response = await fetch(
           `/api/hr/search?q=${encodeURIComponent(query.trim())}`,
@@ -212,6 +231,7 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
           results?: SearchResult[];
         };
         setResults(data.results ?? []);
+        setSearchFetched(true);
         setSearchOpen(true);
       } catch {
         // Ignore aborted or failed search requests.
@@ -265,6 +285,7 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
             results={results}
             searchOpen={searchOpen}
             setSearchOpen={setSearchOpen}
+            searchFetched={searchFetched}
             onSearchSubmit={onSearchSubmit}
           />
         </div>
@@ -302,6 +323,7 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
                   results={results}
                   searchOpen={searchOpen}
                   setSearchOpen={setSearchOpen}
+                  searchFetched={searchFetched}
                   onSearchSubmit={onSearchSubmit}
                   onResultNavigate={closeMobileSearch}
                 />

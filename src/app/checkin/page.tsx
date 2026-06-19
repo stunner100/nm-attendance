@@ -7,10 +7,10 @@ export default function CheckinPage() {
         <div className="mb-6">
           <p className="text-sm font-medium text-primary">Abonten Technologies</p>
           <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-foreground">
-            Office attendance
+            Record attendance
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Select your name from the employee list and record a check-in or check-out.
+            Choose check-in or check-out, select your name, and submit.
           </p>
         </div>
 

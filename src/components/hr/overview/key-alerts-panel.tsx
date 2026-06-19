@@ -59,8 +59,8 @@ export function KeyAlertsPanel({ alerts }: KeyAlertsPanelProps) {
     <Card className="h-full min-h-[338px] rounded-[var(--radius-lg)] border-[var(--color-rule)] bg-[var(--color-paper)] shadow-none">
       <CardHeader className="grid-cols-[1fr_auto] items-center">
         <CardTitle className="text-base font-medium">Key alerts &amp; actions</CardTitle>
-        <Link href="/admin/tasks" className="text-link text-xs font-medium whitespace-nowrap">
-          View all
+        <Link href="/admin/accountability" className="text-link text-xs font-medium whitespace-nowrap">
+          View accountability
         </Link>
       </CardHeader>
       <CardContent>

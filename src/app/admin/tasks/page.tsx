@@ -6,7 +6,7 @@ import { AddTaskStack } from "@/components/hr/add-task-stack";
 import { TaskListAccordion } from "@/components/hr/task-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createTask,
   deleteTask,
@@ -18,7 +18,7 @@ import {
 import { HR_TASK_STATUSES } from "@/lib/types";
 
 type PageProps = {
-  searchParams: Promise<{ status?: string; employeeId?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; employeeId?: string; error?: string; success?: string }>;
 };
 
 async function createTaskAction(formData: FormData): Promise<void> {
@@ -46,6 +46,7 @@ async function createTaskAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/tasks");
   revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/tasks", "Task created successfully.");
 }
 
 async function updateStatusAction(formData: FormData): Promise<void> {
@@ -112,6 +113,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
       />
 
       <AdminFormAlert message={readFormError(params)} />
+      <AdminFormAlert message={readFormSuccess(params)} variant="success" />
 
       <Card>
         <CardHeader>

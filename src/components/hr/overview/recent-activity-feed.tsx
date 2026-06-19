@@ -36,11 +36,8 @@ export function RecentActivityFeed({ items }: RecentActivityFeedProps) {
 
   return (
     <Card className="h-full min-h-[338px] rounded-[var(--radius-lg)] border-[var(--color-rule)] bg-[var(--color-paper-2)] shadow-none">
-      <CardHeader className="grid-cols-[1fr_auto] items-center">
+      <CardHeader>
         <CardTitle className="text-base font-medium">Recent activity</CardTitle>
-        <Link href="/admin/reports" className="text-link text-xs font-medium whitespace-nowrap">
-          View all
-        </Link>
       </CardHeader>
       <CardContent>
         {visibleItems.length === 0 ? (

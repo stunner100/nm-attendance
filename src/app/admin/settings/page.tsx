@@ -1,6 +1,8 @@
+import { ClearAllDataPanel } from "@/components/admin/clear-all-data-panel";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { ThemePicker } from "@/components/hr/theme-picker";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { DATA_WIPE_CONFIRM_PHRASE, isDataWipeAllowed } from "@/lib/admin-backup";
 import { CHECKIN_TIMEZONE } from "@/lib/attendance-punctuality";
 import { currentPeriod, formatPeriodLabel } from "@/lib/hr/framework-reference";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +45,11 @@ export default async function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ClearAllDataPanel
+        wipeAllowed={isDataWipeAllowed()}
+        confirmPhrase={DATA_WIPE_CONFIRM_PHRASE}
+      />
     </div>
   );
 }

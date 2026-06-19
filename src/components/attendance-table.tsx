@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, ExternalLink, Download, Trash2, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Clock, ExternalLink, Download, MapPin } from "lucide-react";
 
 import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
 import { buildOpenStreetMapUrl } from "@/lib/geo-coords";
@@ -10,6 +11,7 @@ import {
   formatCoordinatesLabel,
   looksLikeCoordinatesLabel,
 } from "@/lib/reverse-geocode";
+import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -124,6 +126,7 @@ export function AttendanceTable({
   viewAllHref,
 }: AttendanceTableProps) {
   const router = useRouter();
+  const [exportError, setExportError] = useState<string | null>(null);
   const visibleRecords =
     typeof maxRows === "number" ? initialRecords.slice(0, maxRows) : initialRecords;
 
@@ -142,47 +145,29 @@ export function AttendanceTable({
   };
 
   const handleExportCsv = async () => {
+    setExportError(null);
+
     try {
       const dateQuery = initialDate ? `&date=${encodeURIComponent(initialDate)}` : "";
+      const res = await fetch(`/api/admin/export-attendance?format=csv${dateQuery}`);
+
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || "Failed to export attendance");
+      }
+
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = `/api/admin/export-attendance?format=csv${dateQuery}`;
+      a.href = objectUrl;
       a.download = `attendance-export-${new Date().toISOString().split("T")[0]}.csv`;
       a.click();
+      URL.revokeObjectURL(objectUrl);
     } catch (err) {
       console.error("Export failed", err);
-    }
-  };
-
-  const handleClearAll = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to delete ALL data (attendance, HR, recruitment, payroll, training, performance, compliance)? This cannot be undone."
-      )
-    ) {
-      return;
-    }
-
-    const confirmPhrase = window.prompt(
-      'Type "DELETE ALL DATA" to confirm permanent deletion of all operational data.'
-    );
-    if (confirmPhrase !== "DELETE ALL DATA") {
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/admin/clear-all-data", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmPhrase }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to clear data");
-      }
-      router.refresh();
-    } catch (err) {
-      console.error("Clear failed", err);
-      alert("Failed to clear data. Please try again.");
+      setExportError(
+        err instanceof Error ? err.message : "Failed to export CSV. Please try again."
+      );
     }
   };
 
@@ -227,14 +212,11 @@ export function AttendanceTable({
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
-          <Button onClick={handleClearAll} variant="destructive" size="sm">
-            <Trash2 className="h-4 w-4" />
-            Clear All Data
-          </Button>
         </div>
       </CardHeader>
 
       <CardContent>
+        <AdminFormAlert message={exportError} />
         {typeof maxRows === "number" && initialRecords.length > visibleRecords.length ? (
           <p className="mb-3 text-xs text-muted-foreground">
             Showing {visibleRecords.length} most recent records out of {initialRecords.length}.

@@ -134,6 +134,25 @@ export async function listActiveHrEmployeesForCheckin(): Promise<CheckinEmployee
   }));
 }
 
+export async function hasOpenCheckinForEmployee(employeeId: number): Promise<boolean> {
+  await ensureSchema();
+
+  const attendeeName = await resolveActiveHrEmployeeName(employeeId);
+  const pool = getPool();
+  const result = await pool.query(
+    `
+      SELECT id
+      FROM attendance
+      WHERE LOWER(btrim(name)) = LOWER($1)
+        AND checkout_timestamp IS NULL
+      LIMIT 1
+    `,
+    [attendeeName]
+  );
+
+  return (result.rowCount ?? 0) > 0;
+}
+
 function getPool(): Pool {
   if (globalForDb.pool) {
     return globalForDb.pool;

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { GpsStatus } from "@/lib/types";
+import { buildOpenStreetMapUrl } from "@/lib/geo-coords";
 import { reverseGeocode } from "@/lib/reverse-geocode";
 
 type Coordinates = {
@@ -61,6 +62,14 @@ export function CheckinForm() {
   const selectedEmployee = useMemo(
     () => employees.find((employee) => String(employee.id) === employeeId) ?? null,
     [employeeId, employees]
+  );
+
+  const currentMapUrl = useMemo(
+    () =>
+      coordinates
+        ? buildOpenStreetMapUrl(coordinates.lat, coordinates.lng)
+        : null,
+    [coordinates]
   );
 
   const filteredEmployees = useMemo(() => {
@@ -472,6 +481,17 @@ export function CheckinForm() {
                         : "Resolving your check-in location..."
                     : "Required. Tap the button to share your location."}
                 </p>
+                {currentMapUrl ? (
+                  <a
+                    href={currentMapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-link mt-2 inline-flex items-center gap-1.5 text-sm font-medium underline-offset-2 hover:underline"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    View on map
+                  </a>
+                ) : null}
               </div>
 
               <Button

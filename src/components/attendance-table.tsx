@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, ExternalLink, Download, Trash2 } from "lucide-react";
+import { Clock, ExternalLink, Download, Trash2, MapPin } from "lucide-react";
 
 import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
 import { buildOpenStreetMapUrl } from "@/lib/geo-coords";
@@ -64,38 +64,53 @@ function resolveLocationLabel(record: AttendanceRow, kind: "checkin" | "checkout
   );
 }
 
-function LocationLine({
-  prefix,
+function MapViewLink({
+  label,
   locationText,
   latitude,
   longitude,
 }: {
-  prefix: string;
+  label: string;
   locationText: string;
   latitude: number | null;
   longitude: number | null;
 }) {
   const mapUrl = buildOpenStreetMapUrl(latitude, longitude);
 
+  if (!mapUrl) {
+    return (
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <Badge variant="outline" className="text-muted-foreground">
+            No GPS
+          </Badge>
+        </div>
+        {locationText !== "—" ? (
+          <p className="text-xs text-muted-foreground">{locationText}</p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <p>
-      <span className="text-xs font-medium text-muted-foreground">{prefix}: </span>
-      {locationText}
-      {mapUrl ? (
-        <>
-          {" "}
-          <a
-            href={mapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-link inline-flex items-center gap-0.5 text-xs font-medium underline-offset-2 hover:underline"
-          >
-            View on map
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </>
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <Link
+          href={mapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-link inline-flex items-center gap-1.5 text-sm font-medium underline-offset-2 hover:underline"
+        >
+          <MapPin className="h-3.5 w-3.5" />
+          View on map
+        </Link>
+      </div>
+      {locationText !== "—" ? (
+        <p className="text-xs text-muted-foreground">{locationText}</p>
       ) : null}
-    </p>
+    </div>
   );
 }
 
@@ -287,15 +302,15 @@ export function AttendanceTable({
                     </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="space-y-1 text-sm text-foreground">
-                        <LocationLine
-                          prefix="In"
+                        <MapViewLink
+                          label="In"
                           locationText={checkInLocation}
                           latitude={record.latitude}
                           longitude={record.longitude}
                         />
                         {checkOutLocation ? (
-                          <LocationLine
-                            prefix="Out"
+                          <MapViewLink
+                            label="Out"
                             locationText={checkOutLocation}
                             latitude={record.checkout_latitude}
                             longitude={record.checkout_longitude}

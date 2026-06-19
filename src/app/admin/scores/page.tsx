@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   currentPeriod,
+  deleteMonthlyScore,
   formatMonthlyScoreFormula,
   listHREmployeeOptions,
   listMonthlyScores,
@@ -53,6 +54,24 @@ async function saveScoreAction(formData: FormData): Promise<void> {
     notes: notes || null,
     scoredBy: scoredBy || null,
   });
+
+  revalidatePath("/admin/scores");
+  revalidatePath("/admin");
+}
+
+async function deleteScoreAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/scores");
+
+  const scoreId = readFormRecordId(formData, "scoreId");
+  if (!scoreId) {
+    redirectWithFormError("/admin/scores", "Score ID is required.");
+  }
+
+  const deleted = await deleteMonthlyScore(scoreId);
+  if (!deleted) {
+    redirectWithFormError("/admin/scores", "Score not found.");
+  }
 
   revalidatePath("/admin/scores");
   revalidatePath("/admin");
@@ -128,7 +147,7 @@ export default async function ScoresPage({ searchParams }: PageProps) {
           <CardTitle>Monthly Scores ({scores.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <ScoreListAccordion scores={scores} />
+          <ScoreListAccordion scores={scores} deleteScoreAction={deleteScoreAction} />
         </CardContent>
       </Card>
 

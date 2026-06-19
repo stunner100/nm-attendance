@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { humanizeLabel } from "@/lib/labels";
@@ -22,11 +23,13 @@ const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 type DepartmentRoadmapListAccordionProps = {
   goals: HRDepartmentGoal[];
   updateRoadmapAction: (formData: FormData) => void | Promise<void>;
+  deleteGoalAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function DepartmentRoadmapListAccordion({
   goals,
   updateRoadmapAction,
+  deleteGoalAction,
 }: DepartmentRoadmapListAccordionProps) {
   if (goals.length === 0) {
     return (
@@ -93,10 +96,16 @@ export function DepartmentRoadmapListAccordion({
                 rows={2}
                 className="text-xs md:col-span-2"
               />
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 flex flex-wrap items-center gap-3">
                 <Button type="submit" size="sm" variant="outline">
                   Update roadmap health
                 </Button>
+                <DeleteRecordForm
+                  action={deleteGoalAction}
+                  confirmMessage={`Delete department goal "${goal.title}"? This cannot be undone.`}
+                  recordId={goal.id}
+                  recordIdFieldName="goalId"
+                />
               </div>
             </form>
           </AccordionContent>

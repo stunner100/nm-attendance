@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { SCORE_DIMENSIONS } from "@/lib/hr/framework-reference";
 import type { HRMonthlyScoreWithEmployee } from "@/lib/hr/scores";
 
@@ -14,6 +15,7 @@ const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 
 type ScoreListAccordionProps = {
   scores: HRMonthlyScoreWithEmployee[];
+  deleteScoreAction: (formData: FormData) => void | Promise<void>;
 };
 
 const scoreValueByKey: Record<
@@ -27,7 +29,7 @@ const scoreValueByKey: Record<
   extracurricular: (score) => score.extracurricular_score,
 };
 
-export function ScoreListAccordion({ scores }: ScoreListAccordionProps) {
+export function ScoreListAccordion({ scores, deleteScoreAction }: ScoreListAccordionProps) {
   if (scores.length === 0) {
     return <p className="text-sm text-muted-foreground">No monthly scores recorded yet.</p>;
   }
@@ -76,6 +78,14 @@ export function ScoreListAccordion({ scores }: ScoreListAccordionProps) {
                   <span className="font-semibold text-foreground">Notes:</span> {score.notes}
                 </p>
               ) : null}
+            </div>
+            <div className="mt-3">
+              <DeleteRecordForm
+                action={deleteScoreAction}
+                confirmMessage={`Delete ${score.employee_name}'s score for ${score.period}?`}
+                recordId={score.id}
+                recordIdFieldName="scoreId"
+              />
             </div>
           </AccordionContent>
         </AccordionItem>

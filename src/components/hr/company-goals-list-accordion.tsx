@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import type { HRCompanyGoal } from "@/lib/types";
 
 const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
@@ -15,11 +16,13 @@ const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 type CompanyGoalsListAccordionProps = {
   goals: HRCompanyGoal[];
   approveGoalAction: (formData: FormData) => void | Promise<void>;
+  deleteGoalAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function CompanyGoalsListAccordion({
   goals,
   approveGoalAction,
+  deleteGoalAction,
 }: CompanyGoalsListAccordionProps) {
   if (goals.length === 0) {
     return <p className="text-sm text-muted-foreground">No company goals yet.</p>;
@@ -61,6 +64,14 @@ export function CompanyGoalsListAccordion({
                 </Button>
               </form>
             ) : null}
+            <div className="mt-3">
+              <DeleteRecordForm
+                action={deleteGoalAction}
+                confirmMessage={`Delete company goal "${goal.title}"? This cannot be undone.`}
+                recordId={goal.id}
+                recordIdFieldName="goalId"
+              />
+            </div>
           </AccordionContent>
         </AccordionItem>
       ))}

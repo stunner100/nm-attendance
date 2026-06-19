@@ -119,3 +119,10 @@ export async function updateGrowthPlanStatus(
   }
   return normalizeGrowthPlan(asRecordRows(result.rows)[0]);
 }
+
+export async function deleteGrowthPlan(planId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_growth_plans WHERE id = $1 RETURNING id`, [planId]);
+  return (result.rowCount ?? 0) > 0;
+}

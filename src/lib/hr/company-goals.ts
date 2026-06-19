@@ -203,3 +203,21 @@ export async function updateCompanyGoal(
   });
   return goal;
 }
+
+export async function deleteCompanyGoal(id: number, actor = "HR Admin"): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_company_goals WHERE id = $1 RETURNING id`, [id]);
+  if ((result.rowCount ?? 0) === 0) {
+    return false;
+  }
+
+  await logHrAudit({
+    recordType: "company_goal",
+    recordId: id,
+    action: "edited",
+    editedBy: actor,
+    fieldChanged: "deleted",
+  });
+  return true;
+}

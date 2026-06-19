@@ -225,6 +225,24 @@ export async function updateDepartmentGoalRoadmap(
   return goals.find((g) => g.id === id) ?? null;
 }
 
+export async function deleteDepartmentGoal(id: number, actor = "HR Admin"): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_department_goals WHERE id = $1 RETURNING id`, [id]);
+  if ((result.rowCount ?? 0) === 0) {
+    return false;
+  }
+
+  await logHrAudit({
+    recordType: "department_goal",
+    recordId: id,
+    action: "edited",
+    editedBy: actor,
+    fieldChanged: "deleted",
+  });
+  return true;
+}
+
 export async function getLatestRoadmapByDepartment(
   period: string
 ): Promise<Record<HRDepartment, HRRoadmapHealth | null>> {

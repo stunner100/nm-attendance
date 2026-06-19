@@ -7,9 +7,10 @@ import { RewardStack } from "@/components/hr/reward-stack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   createReward,
+  deleteReward,
   listHREmployeeOptions,
   listRewards,
   REWARD_TIERS,
@@ -45,6 +46,24 @@ async function createRewardAction(formData: FormData): Promise<void> {
     description: description || null,
     awardedOn: awardedOn || null,
   });
+
+  revalidatePath("/admin/rewards");
+  revalidatePath("/admin");
+}
+
+async function deleteRewardAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/rewards");
+
+  const rewardId = readFormRecordId(formData, "rewardId");
+  if (!rewardId) {
+    redirectWithFormError("/admin/rewards", "Reward ID is required.");
+  }
+
+  const deleted = await deleteReward(rewardId);
+  if (!deleted) {
+    redirectWithFormError("/admin/rewards", "Reward not found.");
+  }
 
   revalidatePath("/admin/rewards");
   revalidatePath("/admin");
@@ -109,7 +128,7 @@ export default async function RewardsPage({ searchParams }: PageProps) {
           <CardTitle>Rewards ({rewards.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <RewardAccordion rewards={rewards} />
+          <RewardAccordion rewards={rewards} deleteRewardAction={deleteRewardAction} />
         </CardContent>
       </Card>
 

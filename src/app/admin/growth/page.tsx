@@ -7,9 +7,10 @@ import { GrowthPlanStack } from "@/components/hr/growth-plan-stack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   createGrowthPlan,
+  deleteGrowthPlan,
   listGrowthPlans,
   listHREmployeeOptions,
   updateGrowthPlanStatus,
@@ -76,6 +77,24 @@ async function updateStatusAction(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
+async function deletePlanAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/growth");
+
+  const planId = readFormRecordId(formData, "planId");
+  if (!planId) {
+    redirectWithFormError("/admin/growth", "Plan ID is required.");
+  }
+
+  const deleted = await deleteGrowthPlan(planId);
+  if (!deleted) {
+    redirectWithFormError("/admin/growth", "Growth plan not found.");
+  }
+
+  revalidatePath("/admin/growth");
+  revalidatePath("/admin");
+}
+
 export default async function GrowthPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const statusFilter = params.status?.trim() || "";
@@ -138,7 +157,11 @@ export default async function GrowthPage({ searchParams }: PageProps) {
           <CardTitle>Growth Plans ({plans.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <GrowthPlanAccordion plans={plans} updateStatusAction={updateStatusAction} />
+          <GrowthPlanAccordion
+            plans={plans}
+            updateStatusAction={updateStatusAction}
+            deletePlanAction={deletePlanAction}
+          />
         </CardContent>
       </Card>
     </div>

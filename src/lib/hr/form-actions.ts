@@ -14,3 +14,11 @@ export function readFormError(
   }
   return null;
 }
+
+export function readFormRecordId(formData: FormData, fieldName: string): number | null {
+  const id = Number(String(formData.get(fieldName) ?? ""));
+  if (!Number.isFinite(id) || id <= 0) {
+    return null;
+  }
+  return id;
+}

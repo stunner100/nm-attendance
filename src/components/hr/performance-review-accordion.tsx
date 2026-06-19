@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import type { HREmployeeOption } from "@/lib/hr/shared";
 import { humanizeLabel } from "@/lib/labels";
 import type { HRPerformanceReview } from "@/lib/types";
@@ -22,6 +23,7 @@ type PerformanceReviewAccordionProps = {
   reviews: HRPerformanceReview[];
   employeeOptions: HREmployeeOption[];
   updateReviewStatusAction: (formData: FormData) => void | Promise<void>;
+  deleteReviewAction: (formData: FormData) => void | Promise<void>;
 };
 
 function employeeName(
@@ -38,6 +40,7 @@ export function PerformanceReviewAccordion({
   reviews,
   employeeOptions,
   updateReviewStatusAction,
+  deleteReviewAction,
 }: PerformanceReviewAccordionProps) {
   if (reviews.length === 0) {
     return (
@@ -98,6 +101,14 @@ export function PerformanceReviewAccordion({
                 Save status
               </Button>
             </form>
+            <div className="mt-3">
+              <DeleteRecordForm
+                action={deleteReviewAction}
+                confirmMessage={`Delete review "${review.review_period}"?`}
+                recordId={review.id}
+                recordIdFieldName="reviewId"
+              />
+            </div>
           </AccordionContent>
         </AccordionItem>
       ))}

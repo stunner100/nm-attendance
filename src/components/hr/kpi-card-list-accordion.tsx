@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { Input } from "@/components/ui/input";
 import type { HRKpiCardWithEmployee } from "@/lib/hr/kpi-cards";
 import { humanizeLabel } from "@/lib/labels";
@@ -24,6 +25,8 @@ type KpiCardListAccordionProps = {
   itemsByCard: Record<number, HRKpiCardItem[]>;
   updateCardStatusAction: (formData: FormData) => void | Promise<void>;
   addItemAction: (formData: FormData) => void | Promise<void>;
+  deleteCardAction: (formData: FormData) => void | Promise<void>;
+  deleteItemAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function KpiCardListAccordion({
@@ -31,6 +34,8 @@ export function KpiCardListAccordion({
   itemsByCard,
   updateCardStatusAction,
   addItemAction,
+  deleteCardAction,
+  deleteItemAction,
 }: KpiCardListAccordionProps) {
   if (cards.length === 0) {
     return <p className="text-sm text-muted-foreground">No KPI cards yet.</p>;
@@ -107,9 +112,18 @@ export function KpiCardListAccordion({
                             </p>
                           ) : null}
                         </div>
-                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                          {item.weight}%
-                        </span>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {item.weight}%
+                          </span>
+                          <DeleteRecordForm
+                            action={deleteItemAction}
+                            confirmMessage={`Delete KPI "${item.kpi_text}"?`}
+                            label="Remove"
+                            recordId={item.id}
+                            recordIdFieldName="itemId"
+                          />
+                        </div>
                       </div>
                     ))
                   )}
@@ -142,6 +156,13 @@ export function KpiCardListAccordion({
                     Add KPI
                   </Button>
                 </form>
+
+                <DeleteRecordForm
+                  action={deleteCardAction}
+                  confirmMessage={`Delete KPI card for ${card.employee_name} (${card.period})? All KPIs on this card will be removed.`}
+                  recordId={card.id}
+                  recordIdFieldName="cardId"
+                />
               </div>
             </AccordionContent>
           </AccordionItem>

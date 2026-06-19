@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   addKpiCardItem,
   createKpiCard,
   currentPeriod,
+  deleteKpiCard,
+  deleteKpiCardItem,
   DEPARTMENT_FRAMEWORK,
   listActiveCompanyGoalOptions,
   listDepartmentGoalOptions,
@@ -101,6 +103,41 @@ async function updateCardStatusAction(formData: FormData): Promise<void> {
   await updateKpiCardStatus(cardId, status as (typeof HR_KPI_CARD_STATUSES)[number]);
   revalidatePath("/admin/kpi-cards");
   revalidatePath("/admin");
+}
+
+async function deleteCardAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/kpi-cards");
+
+  const cardId = readFormRecordId(formData, "cardId");
+  if (!cardId) {
+    redirectWithFormError("/admin/kpi-cards", "Card ID is required.");
+  }
+
+  const deleted = await deleteKpiCard(cardId);
+  if (!deleted) {
+    redirectWithFormError("/admin/kpi-cards", "KPI card not found.");
+  }
+
+  revalidatePath("/admin/kpi-cards");
+  revalidatePath("/admin");
+}
+
+async function deleteItemAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/kpi-cards");
+
+  const itemId = readFormRecordId(formData, "itemId");
+  if (!itemId) {
+    redirectWithFormError("/admin/kpi-cards", "KPI item ID is required.");
+  }
+
+  const deleted = await deleteKpiCardItem(itemId);
+  if (!deleted) {
+    redirectWithFormError("/admin/kpi-cards", "KPI item not found.");
+  }
+
+  revalidatePath("/admin/kpi-cards");
 }
 
 export default async function KpiCardsPage({ searchParams }: PageProps) {
@@ -192,6 +229,8 @@ export default async function KpiCardsPage({ searchParams }: PageProps) {
             cards={cards}
             itemsByCard={itemsByCard}
             updateCardStatusAction={updateCardStatusAction}
+            deleteCardAction={deleteCardAction}
+            deleteItemAction={deleteItemAction}
           />
         </CardContent>
       </Card>

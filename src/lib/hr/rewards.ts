@@ -69,3 +69,10 @@ export async function createReward(input: CreateRewardInput): Promise<HRReward> 
   );
   return normalizeReward(asRecordRows(result.rows)[0]);
 }
+
+export async function deleteReward(rewardId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_rewards WHERE id = $1 RETURNING id`, [rewardId]);
+  return (result.rowCount ?? 0) > 0;
+}

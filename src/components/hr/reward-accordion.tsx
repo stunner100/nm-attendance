@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import type { HRRewardWithEmployee } from "@/lib/hr/rewards";
 import { humanizeLabel } from "@/lib/labels";
 
@@ -14,9 +15,10 @@ const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 
 type RewardAccordionProps = {
   rewards: HRRewardWithEmployee[];
+  deleteRewardAction: (formData: FormData) => void | Promise<void>;
 };
 
-export function RewardAccordion({ rewards }: RewardAccordionProps) {
+export function RewardAccordion({ rewards, deleteRewardAction }: RewardAccordionProps) {
   if (rewards.length === 0) {
     return <p className="text-sm text-muted-foreground">No rewards recorded yet.</p>;
   }
@@ -55,6 +57,14 @@ export function RewardAccordion({ rewards }: RewardAccordionProps) {
                   {reward.description}
                 </p>
               ) : null}
+            </div>
+            <div className="mt-3">
+              <DeleteRecordForm
+                action={deleteRewardAction}
+                confirmMessage={`Delete reward "${reward.reward_type}" for ${reward.employee_name}?`}
+                recordId={reward.id}
+                recordIdFieldName="rewardId"
+              />
             </div>
           </AccordionContent>
         </AccordionItem>

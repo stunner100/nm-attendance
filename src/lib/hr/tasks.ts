@@ -109,3 +109,10 @@ export async function updateTaskStatus(
   }
   return normalizeTask(asRecordRows(result.rows)[0]);
 }
+
+export async function deleteTask(taskId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_tasks WHERE id = $1 RETURNING id`, [taskId]);
+  return (result.rowCount ?? 0) > 0;
+}

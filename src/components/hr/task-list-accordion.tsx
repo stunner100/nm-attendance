@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import type { HRTaskWithEmployee } from "@/lib/hr/tasks";
 import { humanizeLabel } from "@/lib/labels";
 import { HR_TASK_STATUSES } from "@/lib/types";
@@ -20,11 +21,13 @@ const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 type TaskListAccordionProps = {
   tasks: HRTaskWithEmployee[];
   updateStatusAction: (formData: FormData) => void | Promise<void>;
+  deleteTaskAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function TaskListAccordion({
   tasks,
   updateStatusAction,
+  deleteTaskAction,
 }: TaskListAccordionProps) {
   if (tasks.length === 0) {
     return <p className="text-sm text-muted-foreground">No tasks yet.</p>;
@@ -77,6 +80,12 @@ export function TaskListAccordion({
                   Update
                 </Button>
               </form>
+              <DeleteRecordForm
+                action={deleteTaskAction}
+                confirmMessage={`Delete task "${task.title}"?`}
+                recordId={task.id}
+                recordIdFieldName="taskId"
+              />
             </div>
           </AccordionContent>
         </AccordionItem>

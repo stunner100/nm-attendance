@@ -6,10 +6,11 @@ import { AddCompanyGoalStack } from "@/components/hr/add-company-goal-stack";
 import { CompanyGoalsListAccordion } from "@/components/hr/company-goals-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   createCompanyGoal,
   currentPeriod,
+  deleteCompanyGoal,
   listCompanyGoals,
   updateCompanyGoal,
 } from "@/lib/hr-db";
@@ -72,6 +73,24 @@ async function approveGoalAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/company-goals");
 }
 
+async function deleteGoalAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/company-goals");
+
+  const id = readFormRecordId(formData, "goalId");
+  if (!id) {
+    redirectWithFormError("/admin/company-goals", "Goal ID is required.");
+  }
+
+  const deleted = await deleteCompanyGoal(id);
+  if (!deleted) {
+    redirectWithFormError("/admin/company-goals", "Goal not found.");
+  }
+
+  revalidatePath("/admin/company-goals");
+  revalidatePath("/admin");
+}
+
 export default async function CompanyGoalsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const periodFilter = params.period?.trim() || "";
@@ -108,7 +127,11 @@ export default async function CompanyGoalsPage({ searchParams }: PageProps) {
           <CardTitle>Goals ({goals.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <CompanyGoalsListAccordion goals={goals} approveGoalAction={approveGoalAction} />
+          <CompanyGoalsListAccordion
+            goals={goals}
+            approveGoalAction={approveGoalAction}
+            deleteGoalAction={deleteGoalAction}
+          />
         </CardContent>
       </Card>
     </div>

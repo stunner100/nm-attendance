@@ -126,3 +126,10 @@ export async function upsertMonthlyScore(
   );
   return normalizeMonthlyScore(asRecordRows(result.rows)[0]);
 }
+
+export async function deleteMonthlyScore(id: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_monthly_scores WHERE id = $1 RETURNING id`, [id]);
+  return (result.rowCount ?? 0) > 0;
+}

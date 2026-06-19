@@ -6,16 +6,20 @@ import { CreatePipStack } from "@/components/hr/create-pip-stack";
 import { CreateReviewStack } from "@/components/hr/create-review-stack";
 import { PerformancePipAccordion } from "@/components/hr/performance-pip-accordion";
 import { PerformanceReviewAccordion } from "@/components/hr/performance-review-accordion";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   createKpiScore,
   createPerformanceReview,
   createPip,
+  deleteKpiScore,
+  deletePerformanceReview,
+  deletePip,
   getPerformanceModuleData,
   listHREmployeeOptions,
   updatePerformanceReviewStatus,
@@ -155,6 +159,60 @@ async function updatePipStatusAction(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
+async function deleteReviewAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/performance");
+
+  const reviewId = readFormRecordId(formData, "reviewId");
+  if (!reviewId) {
+    redirectWithFormError("/admin/performance", "Review ID is required.");
+  }
+
+  const deleted = await deletePerformanceReview(reviewId);
+  if (!deleted) {
+    redirectWithFormError("/admin/performance", "Review not found.");
+  }
+
+  revalidatePath("/admin/performance");
+  revalidatePath("/admin");
+}
+
+async function deletePipAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/performance");
+
+  const pipId = readFormRecordId(formData, "pipId");
+  if (!pipId) {
+    redirectWithFormError("/admin/performance", "Improvement plan ID is required.");
+  }
+
+  const deleted = await deletePip(pipId);
+  if (!deleted) {
+    redirectWithFormError("/admin/performance", "Improvement plan not found.");
+  }
+
+  revalidatePath("/admin/performance");
+  revalidatePath("/admin");
+}
+
+async function deleteKpiScoreAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/performance");
+
+  const scoreId = readFormRecordId(formData, "scoreId");
+  if (!scoreId) {
+    redirectWithFormError("/admin/performance", "KPI score ID is required.");
+  }
+
+  const deleted = await deleteKpiScore(scoreId);
+  if (!deleted) {
+    redirectWithFormError("/admin/performance", "KPI score not found.");
+  }
+
+  revalidatePath("/admin/performance");
+  revalidatePath("/admin");
+}
+
 export default async function PerformancePage({ searchParams }: PerformancePageProps) {
   const params = await searchParams;
 
@@ -290,6 +348,7 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
               reviews={data.reviews}
               employeeOptions={employees}
               updateReviewStatusAction={updateReviewStatusAction}
+              deleteReviewAction={deleteReviewAction}
             />
           </CardContent>
         </Card>
@@ -303,6 +362,7 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
               pips={data.pips}
               employeeOptions={employees}
               updatePipStatusAction={updatePipStatusAction}
+              deletePipAction={deletePipAction}
             />
           </CardContent>
         </Card>
@@ -324,7 +384,15 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
                     {kpi.period_start} to {kpi.period_end}
                   </p>
                 </div>
-                <StatusBadge status={`${kpi.score.toFixed(1)} pts`} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={`${kpi.score.toFixed(1)} pts`} />
+                  <DeleteRecordForm
+                    action={deleteKpiScoreAction}
+                    recordId={kpi.id}
+                    recordIdFieldName="scoreId"
+                    confirmMessage={`Delete KPI score "${kpi.metric_name}"? This cannot be undone.`}
+                  />
+                </div>
               </div>
             ))
           )}

@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { Input } from "@/components/ui/input";
 import type { HRGrowthPlanWithEmployee } from "@/lib/hr/growth";
 import { humanizeLabel } from "@/lib/labels";
@@ -21,11 +22,13 @@ const accordionEase = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const };
 type GrowthPlanAccordionProps = {
   plans: HRGrowthPlanWithEmployee[];
   updateStatusAction: (formData: FormData) => void | Promise<void>;
+  deletePlanAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function GrowthPlanAccordion({
   plans,
   updateStatusAction,
+  deletePlanAction,
 }: GrowthPlanAccordionProps) {
   if (plans.length === 0) {
     return <p className="text-sm text-muted-foreground">No growth plans yet.</p>;
@@ -128,6 +131,12 @@ export function GrowthPlanAccordion({
                   Save status
                 </Button>
               </form>
+              <DeleteRecordForm
+                action={deletePlanAction}
+                confirmMessage={`Delete growth plan for ${plan.employee_name}?`}
+                recordId={plan.id}
+                recordIdFieldName="planId"
+              />
             </div>
           </AccordionContent>
         </AccordionItem>

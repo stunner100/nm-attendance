@@ -6,10 +6,11 @@ import { AddDepartmentGoalStack } from "@/components/hr/add-department-goal-stac
 import { DepartmentRoadmapListAccordion } from "@/components/hr/department-roadmap-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   createDepartmentGoal,
   currentPeriod,
+  deleteDepartmentGoal,
   listActiveCompanyGoalOptions,
   listDepartmentGoals,
   updateDepartmentGoalRoadmap,
@@ -77,6 +78,24 @@ async function updateRoadmapAction(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
+async function deleteDeptGoalAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/department-roadmap");
+
+  const id = readFormRecordId(formData, "goalId");
+  if (!id) {
+    redirectWithFormError("/admin/department-roadmap", "Goal ID is required.");
+  }
+
+  const deleted = await deleteDepartmentGoal(id);
+  if (!deleted) {
+    redirectWithFormError("/admin/department-roadmap", "Goal not found.");
+  }
+
+  revalidatePath("/admin/department-roadmap");
+  revalidatePath("/admin");
+}
+
 export default async function DepartmentRoadmapPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const periodFilter = params.period?.trim() || currentPeriod();
@@ -120,6 +139,7 @@ export default async function DepartmentRoadmapPage({ searchParams }: PageProps)
           <DepartmentRoadmapListAccordion
             goals={goals}
             updateRoadmapAction={updateRoadmapAction}
+            deleteGoalAction={deleteDeptGoalAction}
           />
         </CardContent>
       </Card>

@@ -146,3 +146,20 @@ export async function updateKpiCardStatus(
   }
   return normalizeKpiCard(asRecordRows(result.rows)[0]);
 }
+
+export async function deleteKpiCard(cardId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_kpi_cards WHERE id = $1 RETURNING id`, [cardId]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function deleteKpiCardItem(itemId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(
+    `DELETE FROM hr_kpi_card_items WHERE id = $1 RETURNING id`,
+    [itemId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}

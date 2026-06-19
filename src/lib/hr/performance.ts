@@ -216,3 +216,27 @@ export async function createKpiScore(input: CreateKpiScoreInput): Promise<HRKpiS
   );
   return normalizeKpiScore(asRecordRows(result.rows)[0]);
 }
+
+export async function deletePerformanceReview(reviewId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(
+    `DELETE FROM hr_performance_reviews WHERE id = $1 RETURNING id`,
+    [reviewId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function deletePip(pipId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_pips WHERE id = $1 RETURNING id`, [pipId]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function deleteKpiScore(scoreId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(`DELETE FROM hr_kpi_scores WHERE id = $1 RETURNING id`, [scoreId]);
+  return (result.rowCount ?? 0) > 0;
+}

@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { Input } from "@/components/ui/input";
 import type { HREmployeeOption } from "@/lib/hr/shared";
 import { humanizeLabel } from "@/lib/labels";
@@ -23,6 +24,7 @@ type PerformancePipAccordionProps = {
   pips: HRPip[];
   employeeOptions: HREmployeeOption[];
   updatePipStatusAction: (formData: FormData) => void | Promise<void>;
+  deletePipAction: (formData: FormData) => void | Promise<void>;
 };
 
 function employeeName(
@@ -39,6 +41,7 @@ export function PerformancePipAccordion({
   pips,
   employeeOptions,
   updatePipStatusAction,
+  deletePipAction,
 }: PerformancePipAccordionProps) {
   if (pips.length === 0) {
     return (
@@ -100,6 +103,14 @@ export function PerformancePipAccordion({
                 Save status
               </Button>
             </form>
+            <div className="mt-3">
+              <DeleteRecordForm
+                action={deletePipAction}
+                confirmMessage="Delete this improvement plan?"
+                recordId={pip.id}
+                recordIdFieldName="pipId"
+              />
+            </div>
           </AccordionContent>
         </AccordionItem>
       ))}

@@ -6,9 +6,10 @@ import { AddTaskStack } from "@/components/hr/add-task-stack";
 import { TaskListAccordion } from "@/components/hr/task-list-accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId } from "@/lib/hr/form-actions";
 import {
   createTask,
+  deleteTask,
   listHREmployeeOptions,
   listKpiCards,
   listTasks,
@@ -71,6 +72,24 @@ async function updateStatusAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/tasks");
 }
 
+async function deleteTaskAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/tasks");
+
+  const taskId = readFormRecordId(formData, "taskId");
+  if (!taskId) {
+    redirectWithFormError("/admin/tasks", "Task ID is required.");
+  }
+
+  const deleted = await deleteTask(taskId);
+  if (!deleted) {
+    redirectWithFormError("/admin/tasks", "Task not found.");
+  }
+
+  revalidatePath("/admin/tasks");
+  revalidatePath("/admin");
+}
+
 export default async function TasksPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const statusFilter = params.status?.trim() || "";
@@ -112,7 +131,11 @@ export default async function TasksPage({ searchParams }: PageProps) {
           <CardTitle>Tasks ({tasks.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <TaskListAccordion tasks={tasks} updateStatusAction={updateStatusAction} />
+          <TaskListAccordion
+            tasks={tasks}
+            updateStatusAction={updateStatusAction}
+            deleteTaskAction={deleteTaskAction}
+          />
         </CardContent>
       </Card>
     </div>

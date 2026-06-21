@@ -26,7 +26,7 @@ async function createDeptGoalAction(formData: FormData): Promise<void> {
   await requireAdminPage("/admin/department-roadmap");
 
   const department = String(formData.get("department") ?? "").trim();
-  const companyGoalIdRaw = Number(formData.get("companyGoalId") ?? "");
+  const companyGoalId = readFormRecordId(formData, "companyGoalId");
   const title = String(formData.get("title") ?? "").trim();
   const period = String(formData.get("period") ?? "").trim();
   const owner = String(formData.get("owner") ?? "").trim();
@@ -38,7 +38,7 @@ async function createDeptGoalAction(formData: FormData): Promise<void> {
 
   await createDepartmentGoal({
     department: department as (typeof HR_DEPARTMENTS)[number],
-    companyGoalId: Number.isFinite(companyGoalIdRaw) ? companyGoalIdRaw : null,
+    companyGoalId,
     title,
     period,
     owner: owner || null,

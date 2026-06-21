@@ -37,27 +37,35 @@ async function createCardAction(formData: FormData): Promise<void> {
   const employeeId = Number(formData.get("employeeId") ?? "");
   const period = String(formData.get("period") ?? "").trim();
   const roleTitle = String(formData.get("roleTitle") ?? "").trim();
-  const companyGoalIdRaw = Number(formData.get("companyGoalId") ?? "");
-  const departmentGoalIdRaw = Number(formData.get("departmentGoalId") ?? "");
+  const companyGoalId = readFormRecordId(formData, "companyGoalId");
+  const departmentGoalId = readFormRecordId(formData, "departmentGoalId");
   const companyGoal = String(formData.get("companyGoal") ?? "").trim();
   const status = String(formData.get("status") ?? "draft").trim();
 
-  if (!Number.isFinite(employeeId) || !period) {
+  if (!Number.isFinite(employeeId) || employeeId <= 0 || !period) {
     redirectWithFormError("/admin/kpi-cards", "Employee and period are required.");
   }
   if (!HR_KPI_CARD_STATUSES.includes(status as (typeof HR_KPI_CARD_STATUSES)[number])) {
     redirectWithFormError("/admin/kpi-cards", "Select a valid card status.");
   }
 
-  await createKpiCard({
-    employeeId,
-    period,
-    roleTitle: roleTitle || null,
-    companyGoal: companyGoal || null,
-    companyGoalId: Number.isFinite(companyGoalIdRaw) ? companyGoalIdRaw : null,
-    departmentGoalId: Number.isFinite(departmentGoalIdRaw) ? departmentGoalIdRaw : null,
-    status: status as (typeof HR_KPI_CARD_STATUSES)[number],
-  });
+  try {
+    await createKpiCard({
+      employeeId,
+      period,
+      roleTitle: roleTitle || null,
+      companyGoal: companyGoal || null,
+      companyGoalId,
+      departmentGoalId,
+      status: status as (typeof HR_KPI_CARD_STATUSES)[number],
+    });
+  } catch (error) {
+    console.error("Failed to create KPI card", error);
+    redirectWithFormError(
+      "/admin/kpi-cards",
+      "Could not create KPI card. Verify the employee and linked goals, then try again."
+    );
+  }
 
   revalidatePath("/admin/kpi-cards");
   revalidatePath("/admin");

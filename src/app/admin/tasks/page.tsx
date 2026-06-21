@@ -26,7 +26,7 @@ async function createTaskAction(formData: FormData): Promise<void> {
   await requireAdminPage("/admin/tasks");
 
   const employeeId = Number(formData.get("employeeId") ?? "");
-  const cardIdRaw = Number(formData.get("cardId") ?? "");
+  const cardId = readFormRecordId(formData, "cardId");
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const dueDate = String(formData.get("dueDate") ?? "").trim();
@@ -37,7 +37,7 @@ async function createTaskAction(formData: FormData): Promise<void> {
 
   await createTask({
     employeeId,
-    cardId: Number.isFinite(cardIdRaw) ? cardIdRaw : null,
+    cardId,
     title,
     description: description || null,
     dueDate: dueDate || null,

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 
 import { CHECKIN_TIMEZONE } from "@/lib/attendance-punctuality";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/lib/reverse-geocode";
 import { isSignupOpen } from "@/lib/auth-users";
 import { runMigrations } from "@/lib/migrate";
-import type { AttendanceRow } from "@/lib/types";
+import type { AttendanceRow, HRAttendanceCoverage } from "@/lib/types";
 import {
   normalizeRosterName,
   normalizeRosterNames,
@@ -84,13 +84,13 @@ function normalizeEmployeeName(name: string): string {
 
 async function resolveActiveHrEmployeeName(
   employeeId: number,
-  client?: { query: Pool["query"] }
+  client?: PoolClient
 ): Promise<string> {
   if (!Number.isInteger(employeeId) || employeeId <= 0) {
     throw new CheckinRejectedError("Please select your name from the list.");
   }
 
-  const query = client?.query ?? getPool().query.bind(getPool());
+  const query = client ? client.query.bind(client) : getPool().query.bind(getPool());
   const result = await query<{ full_name: string }>(
     `
       SELECT full_name
@@ -327,6 +327,14 @@ function normalizeAttendanceRow(row: AttendanceRowDb): AttendanceRow {
     checkout_location: row.checkout_location
       ? String(row.checkout_location)
       : null,
+    approved_request_id:
+      row.approved_request_id === null || row.approved_request_id === undefined
+        ? null
+        : Number(row.approved_request_id),
+    approved_request_category: row.approved_request_category ?? null,
+    approved_request_type: row.approved_request_type ?? null,
+    approved_request_reason: row.approved_request_reason ?? null,
+    approved_late_arrival_time: row.approved_late_arrival_time ?? null,
     created_at:
       typeof row.created_at === "string"
         ? row.created_at
@@ -525,27 +533,155 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
     ? {
         sql: `
         SELECT id, name, timestamp, checkout_timestamp, latitude, longitude,
-          checkout_latitude, checkout_longitude, location, checkout_location, created_at
-        FROM attendance
-        WHERE LEFT(timestamp, 10) = $1
+          checkout_latitude, checkout_longitude, location, checkout_location, created_at,
+          approved_request_id, approved_request_category, approved_request_type,
+          approved_request_reason, approved_late_arrival_time
+        FROM (
+          SELECT
+            a.*,
+            lr.id AS approved_request_id,
+            lr.request_category AS approved_request_category,
+            lr.leave_type AS approved_request_type,
+            lr.reason AS approved_request_reason,
+            lr.late_arrival_time::text AS approved_late_arrival_time
+          FROM attendance a
+          LEFT JOIN hr_employees e
+            ON LOWER(btrim(e.full_name)) = LOWER(btrim(a.name))
+          LEFT JOIN LATERAL (
+            SELECT lr.*
+            FROM hr_leave_requests lr
+            WHERE lr.employee_id = e.id
+              AND lr.status = 'approved'
+              AND (a.timestamp::timestamptz AT TIME ZONE $2)::date
+                BETWEEN lr.start_date AND lr.end_date
+              AND (
+                lr.request_category = 'late_arrival'
+                OR lr.request_category = 'leave'
+              )
+            ORDER BY
+              CASE lr.request_category WHEN 'late_arrival' THEN 0 ELSE 1 END,
+              lr.reviewed_at DESC NULLS LAST,
+              lr.requested_at DESC
+            LIMIT 1
+          ) lr ON TRUE
+          WHERE LEFT(a.timestamp, 10) = $1
+        ) enriched
         ORDER BY timestamp DESC
       `,
-        params: [date] as const,
+        params: [date, CHECKIN_TIMEZONE] as const,
       }
     : {
         sql: `
       SELECT id, name, timestamp, checkout_timestamp, latitude, longitude,
-        checkout_latitude, checkout_longitude, location, checkout_location, created_at
-      FROM attendance
+        checkout_latitude, checkout_longitude, location, checkout_location, created_at,
+        approved_request_id, approved_request_category, approved_request_type,
+        approved_request_reason, approved_late_arrival_time
+      FROM (
+        SELECT
+          a.*,
+          lr.id AS approved_request_id,
+          lr.request_category AS approved_request_category,
+          lr.leave_type AS approved_request_type,
+          lr.reason AS approved_request_reason,
+          lr.late_arrival_time::text AS approved_late_arrival_time
+        FROM attendance a
+        LEFT JOIN hr_employees e
+          ON LOWER(btrim(e.full_name)) = LOWER(btrim(a.name))
+        LEFT JOIN LATERAL (
+          SELECT lr.*
+          FROM hr_leave_requests lr
+          WHERE lr.employee_id = e.id
+            AND lr.status = 'approved'
+            AND (a.timestamp::timestamptz AT TIME ZONE $1)::date
+              BETWEEN lr.start_date AND lr.end_date
+            AND (
+              lr.request_category = 'late_arrival'
+              OR lr.request_category = 'leave'
+            )
+          ORDER BY
+            CASE lr.request_category WHEN 'late_arrival' THEN 0 ELSE 1 END,
+            lr.reviewed_at DESC NULLS LAST,
+            lr.requested_at DESC
+          LIMIT 1
+        ) lr ON TRUE
+      ) enriched
       ORDER BY timestamp DESC
     `,
-        params: [] as const,
+        params: [CHECKIN_TIMEZONE] as const,
       };
 
   const result = await pool.query<AttendanceRowDb>(query.sql, [...query.params]);
   const rows = result.rows.map(normalizeAttendanceRow);
 
   return hydrateAttendanceLocations(pool, rows);
+}
+
+export async function getApprovedAttendanceCoverageForDate(
+  date: string
+): Promise<HRAttendanceCoverage[]> {
+  await ensureSchema();
+
+  const normalizedDate = date.trim();
+  if (!normalizedDate) {
+    return [];
+  }
+
+  const pool = getPool();
+  const result = await pool.query<{
+    request_id: number;
+    employee_id: number;
+    employee_name: string;
+    request_category: HRAttendanceCoverage["request_category"];
+    leave_type: string;
+    start_date: string | Date;
+    end_date: string | Date;
+    late_arrival_time: string | null;
+    reason: string | null;
+    coverage_plan: string | null;
+    has_attendance: boolean;
+  }>(
+    `
+      SELECT
+        lr.id AS request_id,
+        e.id AS employee_id,
+        e.full_name AS employee_name,
+        lr.request_category,
+        lr.leave_type,
+        lr.start_date,
+        lr.end_date,
+        lr.late_arrival_time::text AS late_arrival_time,
+        lr.reason,
+        lr.coverage_plan,
+        EXISTS (
+          SELECT 1
+          FROM attendance a
+          WHERE LOWER(btrim(a.name)) = LOWER(btrim(e.full_name))
+            AND (a.timestamp::timestamptz AT TIME ZONE $2)::date = $1::date
+        ) AS has_attendance
+      FROM hr_leave_requests lr
+      JOIN hr_employees e ON e.id = lr.employee_id
+      WHERE lr.status = 'approved'
+        AND $1::date BETWEEN lr.start_date AND lr.end_date
+      ORDER BY e.full_name ASC, lr.requested_at DESC
+    `,
+    [normalizedDate, CHECKIN_TIMEZONE]
+  );
+
+  return result.rows.map((row) => ({
+    request_id: Number(row.request_id),
+    employee_id: Number(row.employee_id),
+    employee_name: row.employee_name,
+    request_category: row.request_category,
+    leave_type: row.leave_type,
+    start_date:
+      row.start_date instanceof Date ? row.start_date.toISOString().slice(0, 10) : String(row.start_date).slice(0, 10),
+    end_date:
+      row.end_date instanceof Date ? row.end_date.toISOString().slice(0, 10) : String(row.end_date).slice(0, 10),
+    late_arrival_time: row.late_arrival_time,
+    reason: row.reason,
+    coverage_plan: row.coverage_plan,
+    has_attendance: row.has_attendance,
+  }));
 }
 
 async function hydrateAttendanceLocations(

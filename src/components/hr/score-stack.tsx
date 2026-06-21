@@ -9,8 +9,9 @@ import {
 import type { HREmployeeOption } from "@/lib/hr/shared";
 import {
   SCORE_DIMENSIONS,
-  SCORE_WEIGHTS,
   computeRating,
+  computeWeightedTotal,
+  formatDimensionScoreLabel,
   RATING_BANDS,
 } from "@/lib/hr/framework-reference";
 
@@ -31,11 +32,6 @@ const fieldNames = [
   "scoredBy",
   "notes",
 ] as const;
-
-function clamp(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, value));
-}
 
 export function ScoreStack({
   employeeOptions,
@@ -84,11 +80,11 @@ export function ScoreStack({
                 : dimension.key === "hygiene"
                   ? "hygieneScore"
                   : "extracurricularScore",
-        label: `${dimension.label} (${dimension.weight}%)`,
+        label: formatDimensionScoreLabel(dimension),
         type: "number",
         min: 0,
-        max: 100,
-        placeholder: "0–100",
+        max: dimension.weight,
+        placeholder: `0–${dimension.weight}`,
       })
     ),
     {
@@ -117,16 +113,13 @@ export function ScoreStack({
     notes: "",
   };
 
-  const total =
-    Math.round(
-      ((clamp(preview.kpi) * SCORE_WEIGHTS.kpi +
-        clamp(preview.discipline) * SCORE_WEIGHTS.discipline +
-        clamp(preview.attendance) * SCORE_WEIGHTS.attendance +
-        clamp(preview.hygiene) * SCORE_WEIGHTS.hygiene +
-        clamp(preview.extracurricular) * SCORE_WEIGHTS.extracurricular) /
-        100) *
-        100
-    ) / 100;
+  const total = computeWeightedTotal({
+    kpiScore: preview.kpi,
+    disciplineScore: preview.discipline,
+    attendanceScore: preview.attendance,
+    hygieneScore: preview.hygiene,
+    extracurricularScore: preview.extracurricular,
+  });
   const rating = computeRating(total);
   const ratingLabel = RATING_BANDS.find((band) => band.band === rating)?.label ?? rating;
 

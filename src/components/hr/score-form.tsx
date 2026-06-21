@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   SCORE_DIMENSIONS,
-  SCORE_WEIGHTS,
   computeRating,
+  computeWeightedTotal,
+  formatDimensionScoreLabel,
   RATING_BANDS,
 } from "@/lib/hr/framework-reference";
 
@@ -22,11 +23,6 @@ type ScoreFormProps = {
   defaultPeriod: string;
   action: (formData: FormData) => void | Promise<void>;
 };
-
-function clamp(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, value));
-}
 
 const formFieldByKey: Record<(typeof SCORE_DIMENSIONS)[number]["key"], string> = {
   kpi: "kpiScore",
@@ -45,16 +41,13 @@ export function ScoreForm({ employees, defaultPeriod, action }: ScoreFormProps) 
     extracurricular: 0,
   });
 
-  const total =
-    Math.round(
-      ((clamp(scores.kpi) * SCORE_WEIGHTS.kpi +
-        clamp(scores.discipline) * SCORE_WEIGHTS.discipline +
-        clamp(scores.attendance) * SCORE_WEIGHTS.attendance +
-        clamp(scores.hygiene) * SCORE_WEIGHTS.hygiene +
-        clamp(scores.extracurricular) * SCORE_WEIGHTS.extracurricular) /
-        100) *
-        100
-    ) / 100;
+  const total = computeWeightedTotal({
+    kpiScore: scores.kpi,
+    disciplineScore: scores.discipline,
+    attendanceScore: scores.attendance,
+    hygieneScore: scores.hygiene,
+    extracurricularScore: scores.extracurricular,
+  });
   const rating = computeRating(total);
   const ratingLabel = RATING_BANDS.find((band) => band.band === rating)?.label ?? rating;
 
@@ -86,13 +79,14 @@ export function ScoreForm({ employees, defaultPeriod, action }: ScoreFormProps) 
         return (
           <label key={dimension.key} className="text-sm">
             <span className="mb-1 block text-xs text-muted-foreground">
-              {dimension.label} ({dimension.weight}%)
+              {formatDimensionScoreLabel(dimension)}
             </span>
             <Input
-              max={100}
+              max={dimension.weight}
               min={0}
               name={fieldName}
               onChange={(event) => setDimension(dimension.key, Number(event.target.value))}
+              placeholder={`0–${dimension.weight}`}
               type="number"
               value={scores[dimension.key]}
             />

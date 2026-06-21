@@ -24,6 +24,35 @@ export const SCORE_DIMENSIONS = [
   },
 ] as const;
 
+/** Normalize a raw form value to earned points for one dimension (0 … maxPoints). */
+export function normalizeDimensionScore(raw: number, maxPoints: number): number {
+  if (!Number.isFinite(raw) || maxPoints <= 0) return 0;
+  if (raw <= maxPoints) {
+    return Math.max(0, raw);
+  }
+  return (Math.max(0, Math.min(100, raw)) / 100) * maxPoints;
+}
+
+export function computeWeightedTotal(input: {
+  kpiScore: number;
+  disciplineScore: number;
+  attendanceScore: number;
+  hygieneScore: number;
+  extracurricularScore: number;
+}): number {
+  const total =
+    normalizeDimensionScore(input.kpiScore, SCORE_WEIGHTS.kpi) +
+    normalizeDimensionScore(input.disciplineScore, SCORE_WEIGHTS.discipline) +
+    normalizeDimensionScore(input.attendanceScore, SCORE_WEIGHTS.attendance) +
+    normalizeDimensionScore(input.hygieneScore, SCORE_WEIGHTS.hygiene) +
+    normalizeDimensionScore(input.extracurricularScore, SCORE_WEIGHTS.extracurricular);
+  return Math.round(total * 100) / 100;
+}
+
+export function formatDimensionScoreLabel(dimension: (typeof SCORE_DIMENSIONS)[number]): string {
+  return `${dimension.label} (max ${dimension.weight} pts)`;
+}
+
 export function formatMonthlyScoreFormula(): string {
   return SCORE_DIMENSIONS.map((d) => `${d.label} ${d.weight}%`).join(", ");
 }

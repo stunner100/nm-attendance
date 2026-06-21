@@ -72,7 +72,7 @@ export function ScoreListAccordion({ scores, deleteScoreAction }: ScoreListAccor
               {SCORE_DIMENSIONS.map((dimension) => (
                 <p key={dimension.key}>
                   <span className="font-semibold text-foreground">{dimension.label}:</span>{" "}
-                  {scoreValueByKey[dimension.key](score)}
+                  {scoreValueByKey[dimension.key](score)} / {dimension.weight} pts
                 </p>
               ))}
               {score.scored_by ? (

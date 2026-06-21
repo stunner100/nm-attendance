@@ -6,7 +6,7 @@ import {
   asString,
   normalizeMonthlyScore,
 } from "@/lib/hr/shared";
-import { SCORE_WEIGHTS, computeRating } from "@/lib/hr/framework-reference";
+import { SCORE_WEIGHTS, computeRating, computeWeightedTotal, normalizeDimensionScore } from "@/lib/hr/framework-reference";
 import type { CreateMonthlyScoreInput } from "@/lib/hr/types";
 
 export type HRMonthlyScoreWithEmployee = HRMonthlyScore & {
@@ -14,26 +14,18 @@ export type HRMonthlyScoreWithEmployee = HRMonthlyScore & {
   department: string;
 };
 
-function clampPercent(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, value));
-}
-
-export function computeWeightedTotal(input: {
-  kpiScore: number;
-  disciplineScore: number;
-  attendanceScore: number;
-  hygieneScore: number;
-  extracurricularScore: number;
-}): number {
-  const total =
-    (clampPercent(input.kpiScore) * SCORE_WEIGHTS.kpi +
-      clampPercent(input.disciplineScore) * SCORE_WEIGHTS.discipline +
-      clampPercent(input.attendanceScore) * SCORE_WEIGHTS.attendance +
-      clampPercent(input.hygieneScore) * SCORE_WEIGHTS.hygiene +
-      clampPercent(input.extracurricularScore) * SCORE_WEIGHTS.extracurricular) /
-    100;
-  return Math.round(total * 100) / 100;
+function normalizeScoreInput(input: CreateMonthlyScoreInput): CreateMonthlyScoreInput {
+  return {
+    ...input,
+    kpiScore: normalizeDimensionScore(input.kpiScore, SCORE_WEIGHTS.kpi),
+    disciplineScore: normalizeDimensionScore(input.disciplineScore, SCORE_WEIGHTS.discipline),
+    attendanceScore: normalizeDimensionScore(input.attendanceScore, SCORE_WEIGHTS.attendance),
+    hygieneScore: normalizeDimensionScore(input.hygieneScore, SCORE_WEIGHTS.hygiene),
+    extracurricularScore: normalizeDimensionScore(
+      input.extracurricularScore,
+      SCORE_WEIGHTS.extracurricular
+    ),
+  };
 }
 
 export async function listMonthlyScores(options: {
@@ -85,7 +77,8 @@ export async function upsertMonthlyScore(
 ): Promise<HRMonthlyScore> {
   await ensureDbSchema();
   const pool = getDbPool();
-  const total = computeWeightedTotal(input);
+  const normalized = normalizeScoreInput(input);
+  const total = computeWeightedTotal(normalized);
   const rating = computeRating(total);
   const result = await pool.query(
     `
@@ -111,17 +104,17 @@ export async function upsertMonthlyScore(
         total_score, rating, notes, scored_by, created_at
     `,
     [
-      input.employeeId,
-      input.period.trim(),
-      clampPercent(input.kpiScore),
-      clampPercent(input.disciplineScore),
-      clampPercent(input.attendanceScore),
-      clampPercent(input.hygieneScore),
-      clampPercent(input.extracurricularScore),
+      normalized.employeeId,
+      normalized.period.trim(),
+      normalized.kpiScore,
+      normalized.disciplineScore,
+      normalized.attendanceScore,
+      normalized.hygieneScore,
+      normalized.extracurricularScore,
       total,
       rating,
-      input.notes?.trim() || null,
-      input.scoredBy?.trim() || null,
+      normalized.notes?.trim() || null,
+      normalized.scoredBy?.trim() || null,
     ]
   );
   return normalizeMonthlyScore(asRecordRows(result.rows)[0]);

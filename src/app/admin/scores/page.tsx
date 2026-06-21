@@ -12,7 +12,6 @@ import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFor
 import {
   currentPeriod,
   deleteMonthlyScore,
-  formatMonthlyScoreFormula,
   listHREmployeeOptions,
   listMonthlyScores,
   RATING_BANDS,
@@ -92,7 +91,7 @@ export default async function ScoresPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        description={`Monthly score out of 100: ${formatMonthlyScoreFormula()}. Rating is derived automatically.`}
+        description="Monthly score out of 100. Enter points earned in each category (KPI max 75, Discipline max 10, Attendance max 10, Hygiene max 2.5, Extracurricular max 2.5). Rating is derived automatically."
       />
 
       <AdminFormAlert message={readFormError(params)} />

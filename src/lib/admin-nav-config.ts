@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Award,
   BadgeDollarSign,
+  BarChart3,
   BriefcaseBusiness,
   CalendarDays,
   ClipboardCheck,
@@ -21,6 +22,8 @@ import {
   Star,
   UserPlus,
   Users,
+  UsersRound,
+  Wrench,
 } from "lucide-react";
 
 export type AdminNavItem = {
@@ -31,6 +34,7 @@ export type AdminNavItem = {
 
 export type AdminNavGroup = {
   label: string;
+  icon?: LucideIcon;
   collapsible: boolean;
   defaultOpen?: boolean;
   items: AdminNavItem[];
@@ -47,6 +51,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
   {
     label: "Performance",
+    icon: BarChart3,
     collapsible: true,
     defaultOpen: true,
     items: [
@@ -64,6 +69,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
   {
     label: "People operations",
+    icon: UsersRound,
     collapsible: true,
     defaultOpen: false,
     items: [
@@ -76,6 +82,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
   {
     label: "Tools",
+    icon: Wrench,
     collapsible: true,
     defaultOpen: false,
     items: [

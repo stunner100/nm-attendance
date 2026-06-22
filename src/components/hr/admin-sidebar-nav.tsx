@@ -65,8 +65,9 @@ function NavGroup({ group }: { group: AdminNavGroup }) {
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
               <SidebarMenuButton tooltip={group.label}>
+                {group.icon ? <group.icon /> : null}
                 <span>{group.label}</span>
-                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
               </SidebarMenuButton>
             </CollapsibleTrigger>
             <CollapsibleContent>

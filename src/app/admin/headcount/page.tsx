@@ -9,9 +9,10 @@ import { KpiCard } from "@/components/hr/kpi-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, readFormRecordId, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
 import {
   createHREmployee,
+  deleteHREmployee,
   getHeadcountModuleData,
   listHREmployeeOptions,
   updateHREmployee,
@@ -164,6 +165,34 @@ async function updateEmployeeAction(formData: FormData): Promise<void> {
   redirectWithFormSuccess("/admin/headcount", "Employee updated successfully.");
 }
 
+async function deleteEmployeeAction(formData: FormData): Promise<void> {
+  "use server";
+
+  await requireAdminPage("/admin/headcount");
+
+  const employeeId = readFormRecordId(formData, "employeeId");
+  if (!employeeId) {
+    redirectWithFormError("/admin/headcount", "Employee ID is required.");
+  }
+
+  try {
+    const deleted = await deleteHREmployee(employeeId);
+    if (!deleted) {
+      redirectWithFormError("/admin/headcount", "Employee not found.");
+    }
+  } catch (error) {
+    console.error("Failed to delete employee", error);
+    redirectWithFormError(
+      "/admin/headcount",
+      "Could not delete employee. Remove or reassign linked records, then try again."
+    );
+  }
+
+  revalidatePath("/admin/headcount");
+  revalidatePath("/admin");
+  redirectWithFormSuccess("/admin/headcount", "Employee deleted successfully.");
+}
+
 export default async function HeadcountPage({ searchParams }: HeadcountPageProps) {
   const params = await searchParams;
 
@@ -292,6 +321,7 @@ export default async function HeadcountPage({ searchParams }: HeadcountPageProps
               departmentFilter || statusFilter || contractTypeFilter
             )}
             updateEmployeeAction={updateEmployeeAction}
+            deleteEmployeeAction={deleteEmployeeAction}
           />
         </CardContent>
       </Card>

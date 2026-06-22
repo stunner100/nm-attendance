@@ -11,6 +11,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
 import { Button } from "@/components/ui/button";
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { Input } from "@/components/ui/input";
 import type { HREmployeeOption } from "@/lib/hr/shared";
 import { humanizeLabel } from "@/lib/labels";
@@ -34,6 +35,7 @@ type EmployeeListAccordionProps = {
   employeeOptions: HREmployeeOption[];
   hasActiveFilters?: boolean;
   updateEmployeeAction: (formData: FormData) => void | Promise<void>;
+  deleteEmployeeAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function EmployeeListAccordion({
@@ -41,6 +43,7 @@ export function EmployeeListAccordion({
   employeeOptions,
   hasActiveFilters = false,
   updateEmployeeAction,
+  deleteEmployeeAction,
 }: EmployeeListAccordionProps) {
   if (employees.length === 0) {
     if (hasActiveFilters) {
@@ -214,6 +217,13 @@ export function EmployeeListAccordion({
                 <Button size="sm" type="submit" variant="outline">
                   Save details
                 </Button>
+                <DeleteRecordForm
+                  action={deleteEmployeeAction}
+                  confirmMessage={`Delete ${employee.full_name}? This removes their HR record and related KPI, task, and score data.`}
+                  label="Delete employee"
+                  recordId={employee.id}
+                  recordIdFieldName="employeeId"
+                />
               </div>
             </form>
           </AccordionContent>

@@ -240,3 +240,29 @@ export async function updateHREmployee(
 
   return normalizeEmployee(asRecordRows(result.rows)[0]);
 }
+
+export async function deleteHREmployee(employeeId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+
+  const existing = await pool.query<{ full_name: string }>(
+    `SELECT full_name FROM hr_employees WHERE id = $1 LIMIT 1`,
+    [employeeId]
+  );
+  if (existing.rows.length === 0) {
+    return false;
+  }
+
+  const fullName = asString(existing.rows[0].full_name);
+
+  const result = await pool.query(`DELETE FROM hr_employees WHERE id = $1 RETURNING id`, [
+    employeeId,
+  ]);
+  if ((result.rowCount ?? 0) === 0) {
+    return false;
+  }
+
+  await pool.query(`DELETE FROM employees WHERE LOWER(btrim(name)) = LOWER($1)`, [fullName]);
+
+  return true;
+}

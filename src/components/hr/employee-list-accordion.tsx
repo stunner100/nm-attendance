@@ -217,15 +217,17 @@ export function EmployeeListAccordion({
                 <Button size="sm" type="submit" variant="outline">
                   Save details
                 </Button>
-                <DeleteRecordForm
-                  action={deleteEmployeeAction}
-                  confirmMessage={`Delete ${employee.full_name}? This removes their HR record and related KPI, task, and score data.`}
-                  label="Delete employee"
-                  recordId={employee.id}
-                  recordIdFieldName="employeeId"
-                />
               </div>
             </form>
+            <div className="mt-2">
+              <DeleteRecordForm
+                action={deleteEmployeeAction}
+                confirmMessage={`Delete ${employee.full_name}? This removes their HR record and related KPI, task, and score data.`}
+                label="Delete employee"
+                recordId={employee.id}
+                recordIdFieldName="employeeId"
+              />
+            </div>
           </AccordionContent>
         </AccordionItem>
       ))}

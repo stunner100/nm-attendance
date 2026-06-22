@@ -65,7 +65,7 @@ export function NeedsAttentionSection({
     <section
       id="alerts"
       aria-labelledby="needs-attention-heading"
-      className="scroll-mt-28 rounded-[var(--radius-lg)] border border-[var(--color-signature-forest)]/25 bg-[var(--color-signature-forest)]/[0.04] p-4 md:p-5"
+      className="scroll-mt-28 rounded-[var(--radius-lg)] border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-4 md:p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -76,7 +76,7 @@ export function NeedsAttentionSection({
             Needs attention
           </h2>
           {hasAttention ? (
-            <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--color-signature-forest)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--color-accent-ink)]">
+            <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--color-destructive)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--color-inverse-ink)]">
               {attentionCount}
             </span>
           ) : null}

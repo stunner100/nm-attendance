@@ -5,11 +5,16 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, Bell, Search } from "lucide-react";
 import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 
-import { AdminMobileNav } from "@/components/hr/admin-mobile-nav";
-import { BrandLogo } from "@/components/hr/brand-logo";
 import { ThemePickerMenu } from "@/components/hr/theme-picker";
-import { LogoutButton } from "@/components/logout-button";
 import { PeriodSelector } from "@/components/hr/period-selector";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,31 +24,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { resolveAdminPageTitle } from "@/lib/admin-nav-config";
 import { cn } from "@/lib/utils";
-
-const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
-  { prefix: "/admin/attendance", title: "Attendance" },
-  { prefix: "/admin/roster", title: "Roster" },
-  { prefix: "/admin/headcount", title: "Employees" },
-  { prefix: "/admin/company-goals", title: "Company goals" },
-  { prefix: "/admin/department-roadmap", title: "Department goals" },
-  { prefix: "/admin/kpi-cards", title: "KPI cards" },
-  { prefix: "/admin/tasks", title: "Tasks" },
-  { prefix: "/admin/scores", title: "Monthly scores" },
-  { prefix: "/admin/rewards", title: "Rewards" },
-  { prefix: "/admin/accountability", title: "Accountability" },
-  { prefix: "/admin/growth", title: "Growth plans" },
-  { prefix: "/admin/training", title: "Training" },
-  { prefix: "/admin/recruitment", title: "Recruitment" },
-  { prefix: "/admin/payroll-leave", title: "Payroll & leave" },
-  { prefix: "/admin/compliance", title: "Compliance" },
-  { prefix: "/admin/performance", title: "Performance" },
-  { prefix: "/admin/imports", title: "Imports" },
-  { prefix: "/admin/reports", title: "Reports" },
-  { prefix: "/admin/settings", title: "Settings" },
-  { prefix: "/admin/qr", title: "QR code" },
-  { prefix: "/admin", title: "Overview" },
-];
 
 type SearchResult = { label: string; href: string; group: string };
 
@@ -63,40 +47,6 @@ type AdminSearchFieldProps = {
   onResultNavigate?: () => void;
   inputClassName?: string;
 };
-
-function resolvePageTitle(pathname: string): string {
-  const match = PAGE_TITLES.find((entry) =>
-    entry.prefix === "/admin" ? pathname === "/admin" : pathname.startsWith(entry.prefix)
-  );
-
-  return match?.title ?? "Admin";
-}
-
-function displayNameFromEmail(email: string): string {
-  if (email.trim().toLowerCase() === "admin@nm-hr.com") {
-    return "HR Admin";
-  }
-
-  const local = email.split("@")[0]?.trim();
-  if (!local) {
-    return "HR Admin";
-  }
-
-  return local
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 function AdminSearchField({
   query,
@@ -180,8 +130,7 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
   const isOverview = pathname === "/admin";
   const period =
     searchParams.get("period")?.trim() || new Date().toISOString().slice(0, 7);
-  const pageTitle = resolvePageTitle(pathname);
-  const resolvedDisplayName = displayName?.trim() || displayNameFromEmail(email);
+  const pageTitle = resolveAdminPageTitle(pathname);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -262,23 +211,29 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
-      <div className="flex h-16 items-center gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
-        <div className="flex shrink-0 items-center gap-2 md:hidden">
-          <AdminMobileNav email={email} />
-          <BrandLogo className="h-8 w-8 rounded-full object-cover object-left" />
-        </div>
-
+    <header className="sticky top-0 z-40 flex shrink-0 flex-col border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
+      <div className="flex h-16 items-center gap-2 px-4 sm:gap-3 sm:px-6">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mr-1 hidden h-4 sm:block" />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-medium tracking-tight text-[var(--color-ink)]">
-            {pageTitle}
-          </h1>
-          <p className="hidden truncate text-xs text-[var(--color-ink-muted)] sm:block">
-            Welcome back, {resolvedDisplayName}
-          </p>
+          <Breadcrumb>
+            <BreadcrumbList>
+              {!isOverview ? (
+                <>
+                  <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink href="/admin">Overview</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                </>
+              ) : null}
+              <BreadcrumbItem>
+                <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
 
-        <div className="hidden max-w-xs flex-1 justify-center md:flex">
+        <div className="hidden max-w-xs flex-1 justify-center lg:flex">
           <AdminSearchField
             query={query}
             setQuery={setQuery}
@@ -363,23 +318,11 @@ export function AdminTopBar({ email, displayName }: AdminTopBarProps) {
             </Link>
           </Button>
 
-          <div className="hidden items-center gap-2 sm:flex">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-paper-3)] text-xs font-medium text-[var(--color-ink)]">
-              {initials(resolvedDisplayName)}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[var(--color-ink)]">{resolvedDisplayName}</p>
-              <p className="truncate text-xs text-[var(--color-ink-muted)]">Admin</p>
-            </div>
-          </div>
-
-          <LogoutButton iconOnly className="sm:hidden" />
-          <LogoutButton className="hidden sm:inline-flex" />
         </div>
       </div>
 
       {isOverview ? (
-        <div className="flex min-h-11 flex-wrap items-center justify-end gap-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] px-4 py-2 sm:px-6 lg:px-8">
+        <div className="flex min-h-11 flex-wrap items-center justify-end gap-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] px-4 py-2 sm:px-6">
           <PeriodSelector period={period} />
           <Button
             asChild

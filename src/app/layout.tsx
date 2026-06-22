@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 import "./globals.css";
@@ -41,7 +42,9 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col font-sans">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

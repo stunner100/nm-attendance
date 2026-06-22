@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
+import { AdminAppSidebar } from "@/components/hr/admin-app-sidebar";
 import { AdminTopBar } from "@/components/hr/admin-top-bar";
-import { HrAdminNav } from "@/components/hr/admin-nav";
-import { BrandLogo } from "@/components/hr/brand-logo";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type AdminAppShellProps = {
@@ -21,38 +21,23 @@ type AdminPageIntroProps = {
 };
 
 export function AdminAppShell({ email, displayName, children }: AdminAppShellProps) {
+  const resolvedDisplayName = displayName?.trim() || "HR Admin";
+
   return (
-    <div className="min-h-screen bg-[var(--color-paper-2)] text-[var(--color-ink)]">
-      <div className="flex min-h-screen">
-        <aside className="fixed inset-y-0 left-0 z-50 hidden w-60 flex-col border-r border-[var(--color-rule)] bg-[var(--color-paper)] md:flex">
-          <div className="flex h-16 items-center gap-3 border-b border-[var(--color-rule)] px-5">
-            <BrandLogo className="h-8 w-8 rounded-full object-cover object-left" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[var(--color-ink)]">Abonten Technologies</p>
-              <p className="truncate text-xs text-[var(--color-ink-muted)]">HR workspace</p>
-            </div>
-          </div>
+    <SidebarProvider>
+      <AdminAppSidebar email={email} displayName={resolvedDisplayName} />
+      <SidebarInset>
+        <Suspense
+          fallback={
+            <div className="h-16 border-b border-[var(--color-rule)] bg-[var(--color-paper)]" aria-hidden="true" />
+          }
+        >
+          <AdminTopBar email={email} displayName={resolvedDisplayName} />
+        </Suspense>
 
-          <HrAdminNav />
-
-          <div className="mt-auto border-t border-[var(--color-rule)] p-4">
-            <p className="text-xs text-[var(--color-ink-muted)]">Performance & people ops</p>
-          </div>
-        </aside>
-
-        <div className="flex min-w-0 flex-1 flex-col md:ml-60">
-          <Suspense
-            fallback={
-              <div className="h-16 border-b border-[var(--color-rule)] bg-[var(--color-paper)]" aria-hidden="true" />
-            }
-          >
-            <AdminTopBar email={email} displayName={displayName} />
-          </Suspense>
-
-          <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8">{children}</main>
-        </div>
-      </div>
-    </div>
+        <main className="flex flex-1 flex-col gap-4 p-4 pt-0 sm:px-6 sm:py-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

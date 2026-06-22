@@ -24,9 +24,9 @@ export type ThemePreset = {
 export const THEME_PRESETS: ThemePreset[] = [
   {
     id: "default",
-    label: "White",
-    description: "Clean white canvas — default Night Market look.",
-    preview: { canvas: "#ffffff", accent: "#181d26" },
+    label: "Geist",
+    description: "Vercel Geist light — minimal high-contrast surfaces.",
+    preview: { canvas: "#ffffff", accent: "#171717" },
   },
   {
     id: "slate",
@@ -68,7 +68,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     id: "night",
     label: "Night",
     description: "Dark workbench with light ink and soft borders.",
-    preview: { canvas: "#1a1d24", accent: "#e8eaed" },
+    preview: { canvas: "#0a0a0a", accent: "#ededed" },
   },
 ];
 

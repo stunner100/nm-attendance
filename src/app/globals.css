@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "../../tokens.css";
 @import "./theme-presets.css";
+@import "./geist-typography.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -74,7 +75,7 @@
   --chart-3: var(--color-signature-mustard);
   --chart-4: var(--color-signature-mint);
   --chart-5: var(--color-signature-peach);
-  --radius: var(--radius-card);
+  --radius: var(--radius-sm);
   --sidebar: var(--color-paper-2);
   --sidebar-foreground: var(--color-ink);
   --sidebar-primary: var(--color-accent);
@@ -132,7 +133,22 @@
   h4 {
     font-family: var(--font-display);
     font-style: normal;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  :where(a, button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
   .tabular-nums {
     font-variant-numeric: tabular-nums;

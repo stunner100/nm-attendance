@@ -1,4 +1,4 @@
-/* Surface themes — override tokens.css via html[data-theme]. Default = :root / tokens.css */
+/* Surface themes — override tokens.css via html[data-theme]. Default = Geist light (:root). */
 
 [data-theme="slate"] {
   --color-paper: #f4f6f8;
@@ -70,26 +70,27 @@
 }
 
 [data-theme="night"] {
-  --color-paper: #1a1d24;
-  --color-paper-2: #22262f;
-  --color-paper-3: #2e333d;
-  --color-ink: #f4f5f7;
-  --color-ink-2: #d8dce3;
-  --color-ink-muted: #a8adb8;
-  --color-rule: #3a3f4a;
-  --color-border-strong: #5c6370;
-  --color-accent: #e8eaed;
+  --color-paper: #0a0a0a;
+  --color-paper-2: #171717;
+  --color-paper-3: #1f1f1f;
+  --color-ink: #ededed;
+  --color-ink-2: #a1a1a1;
+  --color-ink-muted: #707070;
+  --color-rule: #ffffff14;
+  --color-border-strong: #525252;
+  --color-accent: #ededed;
   --color-accent-active: #ffffff;
-  --color-accent-ink: #181d26;
-  --color-link: #7eb4ff;
-  --color-link-active: #a8cdff;
-  --color-focus: #5c9dff;
-  --color-success: #4ade80;
-  --color-destructive: #ff8a65;
-  --color-destructive-ink: #181d26;
-  --color-signature-coral: #ff8a65;
-  --color-signature-forest: #4ade80;
-  --color-signature-mint: #2d5a45;
-  --color-signature-yellow: #5c4d1a;
-  --color-signature-cream: #3d3528;
+  --color-accent-ink: #0a0a0a;
+  --color-link: #48aeff;
+  --color-link-active: #94ccff;
+  --color-focus: #48aeff;
+  --color-success: #4ce15e;
+  --color-destructive: #ff676d;
+  --color-destructive-ink: #0a0a0a;
+  --color-signature-coral: #ff676d;
+  --color-signature-forest: #4ce15e;
+  --color-signature-mint: #003f34;
+  --color-signature-yellow: #561900;
+  --color-signature-cream: #2e333d;
+  --focus-ring: 0 0 0 2px var(--color-paper), 0 0 0 4px var(--color-focus);
 }

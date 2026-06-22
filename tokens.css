@@ -1,67 +1,107 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: design.md · designed-as-app
- * theme: Airtable-adapted (canvas #fff · ink #181d26 · Inter · signature accents)
- */
+/* Geist design system — canonical tokens. Spec: design.md */
 
 :root {
-  --color-paper: #ffffff;
-  --color-paper-2: #f8fafc;
-  --color-paper-3: #e0e2e6;
-  --color-ink: #181d26;
-  --color-ink-2: #333840;
-  --color-ink-muted: #41454d;
-  --color-rule: #dddddd;
-  --color-border-strong: #9297a0;
-  --color-accent: #181d26;
-  --color-accent-active: #0d1218;
-  --color-accent-ink: #ffffff;
-  --color-link: #1b61c9;
-  --color-link-active: #1a3866;
-  --color-focus: #458fff;
-  --color-info: #254fad;
-  --color-success: #006400;
-  --color-destructive: #aa2d00;
+  /* Geist palette (light) */
+  --geist-background-100: #ffffff;
+  --geist-background-200: #fafafa;
+  --geist-gray-100: #f2f2f2;
+  --geist-gray-200: #ebebeb;
+  --geist-gray-300: #e6e6e6;
+  --geist-gray-400: #eaeaea;
+  --geist-gray-500: #c9c9c9;
+  --geist-gray-600: #a8a8a8;
+  --geist-gray-700: #8f8f8f;
+  --geist-gray-800: #7d7d7d;
+  --geist-gray-900: #4d4d4d;
+  --geist-gray-1000: #171717;
+  --geist-gray-alpha-100: #0000000d;
+  --geist-gray-alpha-200: #00000015;
+  --geist-gray-alpha-300: #0000001a;
+  --geist-gray-alpha-400: #00000014;
+  --geist-gray-alpha-500: #00000036;
+  --geist-gray-alpha-600: #0000003d;
+  --geist-gray-alpha-700: #00000070;
+  --geist-blue-700: #006bff;
+  --geist-blue-800: #0059ec;
+  --geist-red-700: #fc0035;
+  --geist-red-800: #ea001d;
+  --geist-amber-700: #ffae00;
+  --geist-green-700: #28a948;
+  --geist-teal-700: #00ac96;
+  --geist-purple-700: #a000f8;
+
+  /* Semantic aliases (app + shadcn bridge) */
+  --color-paper: var(--geist-background-100);
+  --color-paper-2: var(--geist-background-200);
+  --color-paper-3: var(--geist-gray-100);
+  --color-ink: var(--geist-gray-1000);
+  --color-ink-2: var(--geist-gray-900);
+  --color-ink-muted: var(--geist-gray-700);
+  --color-rule: var(--geist-gray-alpha-400);
+  --color-border-strong: var(--geist-gray-600);
+  --color-accent: var(--geist-gray-1000);
+  --color-accent-active: #000000;
+  --color-accent-ink: var(--geist-background-100);
+  --color-link: var(--geist-blue-700);
+  --color-link-active: var(--geist-blue-800);
+  --color-focus: var(--geist-blue-700);
+  --color-info: var(--geist-blue-800);
+  --color-success: var(--geist-green-700);
+  --color-destructive: var(--geist-red-800);
   --color-destructive-ink: #ffffff;
   --color-inverse-ink: #ffffff;
-  --color-signature-coral: #aa2d00;
-  --color-signature-forest: #0a2e0e;
-  --color-signature-cream: #f5e9d4;
-  --color-signature-peach: #fcab79;
-  --color-signature-mint: #a8d8c4;
-  --color-signature-yellow: #f4d35e;
-  --color-signature-mustard: #d9a441;
 
-  --font-display: var(--font-body-loaded), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-body-loaded), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono-loaded), ui-monospace, monospace;
+  /* Chart / section accent aliases */
+  --color-signature-coral: var(--geist-red-800);
+  --color-signature-forest: #107d32;
+  --color-signature-cream: #fff6de;
+  --color-signature-peach: #ffdc73;
+  --color-signature-mint: #ccf9f1;
+  --color-signature-yellow: #ffc543;
+  --color-signature-mustard: var(--geist-amber-700);
 
-  --space-xxs: 0.25rem;
-  --space-xs: 0.5rem;
-  --space-sm: 0.75rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-  --space-xxl: 3rem;
+  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  --text-xs: 0.8125rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
+  /* Geist 4px spacing scale */
+  --space-xxs: 0.25rem; /* 4px */
+  --space-xs: 0.5rem; /* 8px */
+  --space-sm: 0.75rem; /* 12px */
+  --space-md: 1rem; /* 16px */
+  --space-lg: 1.5rem; /* 24px */
+  --space-xl: 2rem; /* 32px */
+  --space-2xl: 2.5rem; /* 40px */
+  --space-xxl: 4rem; /* 64px */
+
+  --text-xs: 0.8125rem; /* 13px label-13 */
+  --text-sm: 0.875rem; /* 14px copy-14 */
+  --text-md: 1rem; /* 16px copy-16 */
+  --text-lg: 1.25rem; /* 20px heading-20 */
+  --text-xl: 1.5rem; /* 24px heading-24 */
+  --text-2xl: 2rem; /* 32px heading-32 */
   --text-display: 2rem;
 
   --radius-xs: 2px;
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-pill: 9999px;
   --radius-input: var(--radius-sm);
   --radius-card: var(--radius-md);
-  --radius-button: var(--radius-lg);
+  --radius-button: var(--radius-sm);
   --radius-shell: var(--radius-lg);
 
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.175, 0.885, 0.32, 1.1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --dur-short: 150ms;
-  --dur-medium: 250ms;
+  --dur-medium: 200ms;
+  --dur-overlay: 300ms;
+
+  --shadow-raised: 0 2px 2px rgba(0, 0, 0, 0.04);
+  --shadow-popover: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04),
+    0 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --focus-ring: 0 0 0 2px var(--color-paper), 0 0 0 4px var(--color-focus);
 }

@@ -1,22 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-body-loaded",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono-loaded",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Abonten Technologies HR",
@@ -31,7 +21,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -41,7 +31,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="flex min-h-full flex-col font-sans">
+      <body className={`${GeistSans.className} flex min-h-full flex-col`}>
         <ThemeProvider>
           <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
         </ThemeProvider>

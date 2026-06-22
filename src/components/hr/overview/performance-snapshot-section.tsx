@@ -47,7 +47,6 @@ export function PerformanceSnapshotSection({
           delta={Number(trends.avg_score_delta.toFixed(1))}
           trendContext="from last month"
           href="/admin/scores"
-          variant="signature"
         />
       </div>
 

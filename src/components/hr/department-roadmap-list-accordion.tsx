@@ -100,14 +100,16 @@ export function DepartmentRoadmapListAccordion({
                 <Button type="submit" size="sm" variant="outline">
                   Update roadmap health
                 </Button>
-                <DeleteRecordForm
-                  action={deleteGoalAction}
-                  confirmMessage={`Delete department goal "${goal.title}"? This cannot be undone.`}
-                  recordId={goal.id}
-                  recordIdFieldName="goalId"
-                />
               </div>
             </form>
+            <div className="mt-2">
+              <DeleteRecordForm
+                action={deleteGoalAction}
+                confirmMessage={`Delete department goal "${goal.title}"? This cannot be undone.`}
+                recordId={goal.id}
+                recordIdFieldName="goalId"
+              />
+            </div>
           </AccordionContent>
         </AccordionItem>
       ))}

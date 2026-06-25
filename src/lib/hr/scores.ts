@@ -31,6 +31,7 @@ function normalizeScoreInput(input: CreateMonthlyScoreInput): CreateMonthlyScore
 export async function listMonthlyScores(options: {
   period?: string;
   rating?: string;
+  employeeId?: number;
   limit?: number;
 } = {}): Promise<HRMonthlyScoreWithEmployee[]> {
   await ensureDbSchema();
@@ -45,6 +46,10 @@ export async function listMonthlyScores(options: {
   if (options.rating?.trim()) {
     values.push(options.rating.trim());
     conditions.push(`s.rating = $${values.length}`);
+  }
+  if (Number.isFinite(options.employeeId) && Number(options.employeeId) > 0) {
+    values.push(options.employeeId);
+    conditions.push(`s.employee_id = $${values.length}`);
   }
 
   let query = `

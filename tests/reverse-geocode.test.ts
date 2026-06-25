@@ -34,12 +34,14 @@ describe("reverse-geocode", () => {
     );
   });
 
-  it("shouldRefreshLocationLabel flags coarse city-only labels", () => {
-    assert.equal(shouldRefreshLocationLabel("Accra, Greater Accra, Ghana", 5.6, -0.18), true);
+  it("shouldRefreshLocationLabel only flags empty or coordinate labels", () => {
+    assert.equal(shouldRefreshLocationLabel("Accra, Greater Accra, Ghana", 5.6, -0.18), false);
     assert.equal(
       shouldRefreshLocationLabel("12 Ring Road East, Osu, Accra, Ghana", 5.6, -0.18),
       false
     );
+    assert.equal(shouldRefreshLocationLabel(null, 5.6, -0.18), true);
+    assert.equal(shouldRefreshLocationLabel("5.60000, -0.18000", 5.6, -0.18), true);
   });
 });
 

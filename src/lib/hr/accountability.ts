@@ -18,6 +18,7 @@ export type HRAccountabilityActionWithEmployee = HRAccountabilityAction & {
 export async function listAccountabilityActions(options: {
   status?: string;
   stage?: string;
+  employeeId?: number;
   limit?: number;
 } = {}): Promise<HRAccountabilityActionWithEmployee[]> {
   await ensureDbSchema();
@@ -32,6 +33,10 @@ export async function listAccountabilityActions(options: {
   if (options.stage?.trim()) {
     values.push(options.stage.trim());
     conditions.push(`a.stage = $${values.length}`);
+  }
+  if (Number.isFinite(options.employeeId) && Number(options.employeeId) > 0) {
+    values.push(options.employeeId);
+    conditions.push(`a.employee_id = $${values.length}`);
   }
 
   let query = `

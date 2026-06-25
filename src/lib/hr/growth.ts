@@ -18,6 +18,7 @@ export type HRGrowthPlanWithEmployee = HRGrowthPlan & {
 
 export async function listGrowthPlans(options: {
   status?: string;
+  employeeId?: number;
   limit?: number;
 } = {}): Promise<HRGrowthPlanWithEmployee[]> {
   await ensureDbSchema();
@@ -28,6 +29,10 @@ export async function listGrowthPlans(options: {
   if (options.status?.trim()) {
     values.push(options.status.trim());
     conditions.push(`g.status = $${values.length}`);
+  }
+  if (Number.isFinite(options.employeeId) && Number(options.employeeId) > 0) {
+    values.push(options.employeeId);
+    conditions.push(`g.employee_id = $${values.length}`);
   }
 
   let query = `

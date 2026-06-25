@@ -27,6 +27,19 @@ export function getCheckinPunctualityLabel(timestamp: string): "On time" | "Late
   return getCheckinPunctuality(timestamp) === "late" ? "Late" : "On time";
 }
 
+export type AttendancePunctualityDisplay = "On time" | "Late" | "Approved";
+
+export function getAttendancePunctualityDisplay(record: {
+  timestamp: string;
+  approved_request_id: number | null;
+}): AttendancePunctualityDisplay {
+  const rawPunctuality = getCheckinPunctualityLabel(record.timestamp);
+  if (rawPunctuality === "Late" && record.approved_request_id) {
+    return "Approved";
+  }
+  return rawPunctuality;
+}
+
 export function getPunctualityMessage(timestamp: string): string {
   return getCheckinPunctuality(timestamp) === "late"
     ? "You are late"

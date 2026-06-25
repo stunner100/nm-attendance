@@ -19,6 +19,7 @@ export type HRKpiCardWithEmployee = HRKpiCard & {
 export async function listKpiCards(options: {
   status?: string;
   period?: string;
+  employeeId?: number;
   limit?: number;
 } = {}): Promise<HRKpiCardWithEmployee[]> {
   await ensureDbSchema();
@@ -33,6 +34,10 @@ export async function listKpiCards(options: {
   if (options.period?.trim()) {
     values.push(options.period.trim());
     conditions.push(`c.period = $${values.length}`);
+  }
+  if (Number.isFinite(options.employeeId) && Number(options.employeeId) > 0) {
+    values.push(options.employeeId);
+    conditions.push(`c.employee_id = $${values.length}`);
   }
 
   let query = `
@@ -71,6 +76,24 @@ export async function listKpiCardItems(cardId: number): Promise<HRKpiCardItem[]>
       ORDER BY id ASC
     `,
     [cardId]
+  );
+  return asRecordRows(result.rows).map(normalizeKpiCardItem);
+}
+
+export async function listKpiCardItemsForCards(cardIds: number[]): Promise<HRKpiCardItem[]> {
+  if (cardIds.length === 0) {
+    return [];
+  }
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(
+    `
+      SELECT id, card_id, kpi_text, target_measure, weight, created_at
+      FROM hr_kpi_card_items
+      WHERE card_id = ANY($1::int[])
+      ORDER BY card_id ASC, id ASC
+    `,
+    [cardIds]
   );
   return asRecordRows(result.rows).map(normalizeKpiCardItem);
 }

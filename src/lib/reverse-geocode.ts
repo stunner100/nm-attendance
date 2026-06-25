@@ -279,19 +279,5 @@ export function shouldRefreshLocationLabel(
   latitude: number | null,
   longitude: number | null
 ): boolean {
-  if (needsLocationBackfill(location, latitude, longitude)) {
-    return true;
-  }
-
-  if (typeof latitude !== "number" || typeof longitude !== "number") {
-    return false;
-  }
-
-  const trimmed = location?.trim();
-  if (!trimmed || looksLikeCoordinatesLabel(trimmed)) {
-    return false;
-  }
-
-  const parts = trimmed.split(",").map((part) => part.trim()).filter(Boolean);
-  return parts.length <= 3;
+  return needsLocationBackfill(location, latitude, longitude);
 }

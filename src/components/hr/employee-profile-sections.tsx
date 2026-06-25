@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Clock, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
+import { AttendanceRecordSummary } from "@/components/hr/attendance-record-summary";
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,10 +13,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
-import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
 import type { EmployeePerformanceProfile } from "@/lib/hr/employee-profile";
 import { humanizeLabel } from "@/lib/labels";
-import { formatLocationWithCoordinates } from "@/lib/reverse-geocode";
 
 type EmployeeProfileSectionsProps = {
   profile: EmployeePerformanceProfile;
@@ -60,13 +59,6 @@ function EmptySectionMessage({
   );
 }
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProps) {
   const accountabilityCount =
     profile.accountability.length + (profile.activePip ? 1 : 0);
@@ -86,49 +78,9 @@ export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProp
       content:
         profile.attendanceRecords.length > 0 ? (
           <div className="space-y-2">
-            {profile.attendanceRecords.map((record) => {
-              const hasCheckout = typeof record.checkout_timestamp === "string";
-              const rawPunctuality = getCheckinPunctualityLabel(record.timestamp);
-              const punctuality =
-                rawPunctuality === "Late" && record.approved_request_id
-                  ? "Approved"
-                  : rawPunctuality;
-              const checkInLocation = formatLocationWithCoordinates(
-                record.location,
-                record.latitude,
-                record.longitude
-              );
-
-              return (
-                <div
-                  key={record.id}
-                  className="rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 font-medium text-foreground">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                      {formatDateTime(record.timestamp)}
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        punctuality === "Late"
-                          ? "border-[var(--color-rule)] bg-[var(--color-signature-yellow)]/35 text-[var(--color-ink)]"
-                          : "border-[var(--color-rule)] bg-[var(--color-signature-mint)]/40 text-[var(--color-success)]"
-                      }
-                    >
-                      {punctuality}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {hasCheckout
-                      ? `Checked out ${formatDateTime(record.checkout_timestamp as string)}`
-                      : "Not checked out"}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{checkInLocation}</p>
-                </div>
-              );
-            })}
+            {profile.attendanceRecords.map((record) => (
+              <AttendanceRecordSummary key={record.id} record={record} variant="card" />
+            ))}
             <Link
               href="/admin/attendance"
               className="text-link inline-flex items-center gap-1 text-sm font-medium"

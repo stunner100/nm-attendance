@@ -97,6 +97,7 @@ export async function createTrainingModule(
 
 export async function listTrainingAssignments(options: {
   status?: string;
+  employeeId?: number;
   limit?: number;
 } = {}): Promise<HRTrainingAssignment[]> {
   await ensureDbSchema();
@@ -107,6 +108,10 @@ export async function listTrainingAssignments(options: {
   if (options.status?.trim()) {
     values.push(options.status.trim());
     conditions.push(`status = $${values.length}`);
+  }
+  if (Number.isFinite(options.employeeId) && Number(options.employeeId) > 0) {
+    values.push(options.employeeId);
+    conditions.push(`employee_id = $${values.length}`);
   }
 
   let query = `

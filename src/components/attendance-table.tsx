@@ -3,15 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Clock, ExternalLink, Download, MapPin } from "lucide-react";
+import { Clock, ExternalLink, Download } from "lucide-react";
 
-import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
-import { buildOpenStreetMapUrl } from "@/lib/geo-coords";
-import {
-  formatLocationWithCoordinates,
-} from "@/lib/reverse-geocode";
+import { AttendanceRecordSummary } from "@/components/hr/attendance-record-summary";
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,72 +36,6 @@ type AttendanceTableProps = {
   viewAllHref?: string;
 };
 
-function resolveLocationLabel(record: AttendanceRow, kind: "checkin" | "checkout"): string {
-  if (kind === "checkin") {
-    return formatLocationWithCoordinates(
-      record.location,
-      record.latitude,
-      record.longitude
-    );
-  }
-
-  return formatLocationWithCoordinates(
-    record.checkout_location,
-    record.checkout_latitude,
-    record.checkout_longitude
-  );
-}
-
-function MapViewLink({
-  label,
-  locationText,
-  latitude,
-  longitude,
-}: {
-  label: string;
-  locationText: string;
-  latitude: number | null;
-  longitude: number | null;
-}) {
-  const mapUrl = buildOpenStreetMapUrl(latitude, longitude);
-
-  if (!mapUrl) {
-    return (
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          <Badge variant="outline" className="text-muted-foreground">
-            No GPS
-          </Badge>
-        </div>
-        {locationText !== "—" ? (
-          <p className="text-xs text-muted-foreground">{locationText}</p>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <Link
-          href={mapUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-link inline-flex items-center gap-1.5 text-sm font-medium underline-offset-2 hover:underline"
-        >
-          <MapPin className="h-3.5 w-3.5" />
-          View on map
-        </Link>
-      </div>
-      {locationText !== "—" ? (
-        <p className="text-xs text-muted-foreground">{locationText}</p>
-      ) : null}
-    </div>
-  );
-}
-
 export function AttendanceTable({
   initialRecords,
   initialDate,
@@ -120,11 +49,6 @@ export function AttendanceTable({
   const [exportError, setExportError] = useState<string | null>(null);
   const visibleRecords =
     typeof maxRows === "number" ? initialRecords.slice(0, maxRows) : initialRecords;
-
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 
   const onDateChange = (value: string) => {
     if (!value) {
@@ -231,82 +155,12 @@ export function AttendanceTable({
                 </TableCell>
               </TableRow>
             ) : (
-              visibleRecords.map((record) => {
-                const hasCheckout = typeof record.checkout_timestamp === "string";
-                const rawPunctuality = getCheckinPunctualityLabel(record.timestamp);
-                const hasApprovedCoverage = Boolean(record.approved_request_id);
-                const punctuality =
-                  rawPunctuality === "Late" && hasApprovedCoverage
-                    ? "Approved"
-                    : rawPunctuality;
-                const isLate = punctuality === "Late";
-                const checkInLocation = resolveLocationLabel(record, "checkin");
-                const checkOutLocation = hasCheckout
-                  ? resolveLocationLabel(record, "checkout")
-                  : null;
-
-                return (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-medium">{record.name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                        {formatter.format(new Date(record.timestamp))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {hasCheckout ? (
-                        <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-600">
-                          <Clock className="h-3.5 w-3.5 text-neutral-400" />
-                          {formatter.format(new Date(record.checkout_timestamp as string))}
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="border-[var(--color-rule)] bg-[var(--color-signature-yellow)]/35 text-[var(--color-ink)]">
-                          Not checked out
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                        <Badge
-                        variant="outline"
-                        className={
-                          isLate
-                            ? "border-[var(--color-rule)] bg-[var(--color-signature-yellow)]/35 text-[var(--color-ink)]"
-                            : "border-[var(--color-rule)] bg-[var(--color-signature-mint)]/40 text-[var(--color-success)]"
-                        }
-                      >
-                        {punctuality}
-                      </Badge>
-                      {hasApprovedCoverage ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {record.approved_request_type}
-                          {record.approved_late_arrival_time
-                            ? ` · ${record.approved_late_arrival_time.slice(0, 5)}`
-                            : ""}
-                        </p>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="space-y-1 text-sm text-foreground">
-                        <MapViewLink
-                          label="In"
-                          locationText={checkInLocation}
-                          latitude={record.latitude}
-                          longitude={record.longitude}
-                        />
-                        {checkOutLocation ? (
-                          <MapViewLink
-                            label="Out"
-                            locationText={checkOutLocation}
-                            latitude={record.checkout_latitude}
-                            longitude={record.checkout_longitude}
-                          />
-                        ) : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              visibleRecords.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell className="font-medium">{record.name}</TableCell>
+                  <AttendanceRecordSummary record={record} variant="table-cells" />
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>

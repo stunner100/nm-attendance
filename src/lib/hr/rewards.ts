@@ -15,6 +15,7 @@ export type HRRewardWithEmployee = HRReward & { employee_name: string };
 
 export async function listRewards(options: {
   tier?: string;
+  employeeId?: number;
   limit?: number;
 } = {}): Promise<HRRewardWithEmployee[]> {
   await ensureDbSchema();
@@ -25,6 +26,10 @@ export async function listRewards(options: {
   if (options.tier?.trim()) {
     values.push(options.tier.trim());
     conditions.push(`r.tier = $${values.length}`);
+  }
+  if (Number.isFinite(options.employeeId) && Number(options.employeeId) > 0) {
+    values.push(options.employeeId);
+    conditions.push(`r.employee_id = $${values.length}`);
   }
 
   let query = `

@@ -7,19 +7,13 @@ import { StatusBadge } from "@/components/hr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { formatDateTime } from "@/lib/format-datetime";
 import { getEmployeePerformanceProfile } from "@/lib/hr-db";
 import { humanizeLabel } from "@/lib/labels";
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 export default async function EmployeeProfilePage({ params }: PageProps) {
   await requireAdminPage("/admin/headcount");
@@ -56,7 +50,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             <p className="text-sm font-medium">
-              {profile.displayRole || "Role not set"}
+              {employee.job_title?.trim() || "Role not set"}
             </p>
             <p className="text-xs text-muted-foreground">
               {employee.job_level

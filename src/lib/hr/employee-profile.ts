@@ -3,7 +3,7 @@ import type { AttendanceRow, HREmployee } from "@/lib/types";
 import { asNumber, asRecordRows, asString, normalizeEmployee } from "@/lib/hr/shared";
 import { listAccountabilityActions } from "@/lib/hr/accountability";
 import { listGrowthPlans } from "@/lib/hr/growth";
-import { listKpiCards, listKpiCardItems } from "@/lib/hr/kpi-cards";
+import { listKpiCards, listKpiCardItems, listKpiCardItemsForCards } from "@/lib/hr/kpi-cards";
 import { listMonthlyScores } from "@/lib/hr/scores";
 import { listRewards } from "@/lib/hr/rewards";
 import { listTasks } from "@/lib/hr/tasks";
@@ -12,7 +12,6 @@ import { listTrainingAssignments } from "@/lib/hr/training";
 export type EmployeePerformanceProfile = {
   employee: HREmployee;
   managerName: string | null;
-  displayRole: string | null;
   attendanceRecords: AttendanceRow[];
   attendanceSummary: {
     totalCheckins: number;
@@ -41,12 +40,18 @@ export type EmployeePerformanceProfile = {
   training: Awaited<ReturnType<typeof listTrainingAssignments>>;
 };
 
+const EMPLOYEE_COLUMNS = `
+  id, employee_code, full_name, work_email, department, contract_type, work_mode,
+  employment_status, manager_employee_id, job_level, job_title, hire_date, probation_end_date,
+  contract_end_date, exit_date, exit_type, created_at, updated_at
+`;
+
 export async function getEmployeeById(id: number): Promise<HREmployee | null> {
   await ensureDbSchema();
   const pool = getDbPool();
   const result = await pool.query(
     `
-      SELECT *
+      SELECT ${EMPLOYEE_COLUMNS}
       FROM hr_employees
       WHERE id = $1
       LIMIT 1
@@ -88,7 +93,7 @@ export async function getEmployeePerformanceProfile(
   );
 
   const [
-    scores,
+    employeeScores,
     kpiCards,
     tasks,
     rewards,
@@ -97,28 +102,27 @@ export async function getEmployeePerformanceProfile(
     training,
     attendanceRecords,
   ] = await Promise.all([
-    listMonthlyScores({ limit: 12 }),
-    listKpiCards({ limit: 24 }),
+    listMonthlyScores({ employeeId, limit: 12 }),
+    listKpiCards({ employeeId, limit: 24 }),
     listTasks({ employeeId, limit: 50 }),
-    listRewards({ limit: 100 }),
-    listAccountabilityActions({ limit: 100 }),
-    listGrowthPlans({ limit: 50 }),
-    listTrainingAssignments({ limit: 200 }),
+    listRewards({ employeeId, limit: 100 }),
+    listAccountabilityActions({ employeeId, limit: 100 }),
+    listGrowthPlans({ employeeId, limit: 50 }),
+    listTrainingAssignments({ employeeId, limit: 200 }),
     getAttendanceForEmployee(employeeId, 30),
   ]);
 
-  const employeeScores = scores
-    .filter((s) => s.employee_id === employeeId)
-    .sort((a, b) => b.period.localeCompare(a.period));
-
-  const employeeKpiCards = kpiCards.filter((c) => c.employee_id === employeeId);
-  const displayRole = employee.job_title?.trim() || null;
-  const kpiItems = await Promise.all(
-    employeeKpiCards.map(async (card) => ({
-      cardId: card.id,
-      items: await listKpiCardItems(card.id),
-    }))
-  );
+  const allKpiItems = await listKpiCardItemsForCards(kpiCards.map((card) => card.id));
+  const itemsByCardId = new Map<number, Awaited<ReturnType<typeof listKpiCardItems>>>();
+  for (const item of allKpiItems) {
+    const existing = itemsByCardId.get(item.card_id) ?? [];
+    existing.push(item);
+    itemsByCardId.set(item.card_id, existing);
+  }
+  const kpiItems = kpiCards.map((card) => ({
+    cardId: card.id,
+    items: itemsByCardId.get(card.id) ?? [],
+  }));
 
   const pipRow = asRecordRows(pipRes.rows)[0];
   const managerRow = asRecordRows(managerRes.rows)[0];
@@ -126,7 +130,6 @@ export async function getEmployeePerformanceProfile(
   return {
     employee,
     managerName: managerRow ? asString(managerRow.full_name) : null,
-    displayRole,
     attendanceRecords,
     attendanceSummary: {
       totalCheckins: attendanceRecords.length,
@@ -147,11 +150,11 @@ export async function getEmployeePerformanceProfile(
       total: s.total_score,
       rating: s.rating,
     })),
-    kpiCards: employeeKpiCards,
+    kpiCards,
     kpiItems,
     tasks,
-    rewards: rewards.filter((r) => r.employee_id === employeeId),
-    accountability: accountability.filter((a) => a.employee_id === employeeId),
+    rewards,
+    accountability,
     activePip: pipRow
       ? {
           id: asNumber(pipRow.id),
@@ -161,7 +164,7 @@ export async function getEmployeePerformanceProfile(
           reason: pipRow.reason ? asString(pipRow.reason) : null,
         }
       : null,
-    growthPlan: growthPlans.find((g) => g.employee_id === employeeId) ?? null,
-    training: training.filter((t) => t.employee_id === employeeId),
+    growthPlan: growthPlans[0] ?? null,
+    training,
   };
 }

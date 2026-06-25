@@ -1,5 +1,30 @@
+type NominatimAddress = {
+  house_number?: string;
+  road?: string;
+  footway?: string;
+  path?: string;
+  pedestrian?: string;
+  suburb?: string;
+  neighbourhood?: string;
+  quarter?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  municipality?: string;
+  county?: string;
+  state?: string;
+  country?: string;
+};
+
 type NominatimResponse = {
   display_name?: string;
+  address?: NominatimAddress;
+};
+
+type BigDataCloudLocalityInfo = {
+  name?: string;
+  description?: string;
+  order?: number;
 };
 
 type BigDataCloudResponse = {
@@ -7,6 +32,11 @@ type BigDataCloudResponse = {
   city?: string;
   principalSubdivision?: string;
   countryName?: string;
+  postcode?: string;
+  localityInfo?: {
+    administrative?: BigDataCloudLocalityInfo[];
+    informative?: BigDataCloudLocalityInfo[];
+  };
 };
 
 const COORDINATE_PATTERN = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/;
@@ -52,6 +82,47 @@ export function formatPlaceLabel(parts: Array<string | null | undefined>): strin
   return labels.join(", ");
 }
 
+export function buildNominatimLabel(address: NominatimAddress | undefined): string | null {
+  if (!address) {
+    return null;
+  }
+
+  const street = [address.house_number, address.road ?? address.footway ?? address.path ?? address.pedestrian]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const area = address.neighbourhood ?? address.suburb ?? address.quarter;
+  const city = address.city ?? address.town ?? address.village ?? address.municipality;
+
+  const label = formatPlaceLabel([street, area, city, address.county, address.state, address.country]);
+  return label ? label.slice(0, 200) : null;
+}
+
+function buildBigDataCloudLabel(data: BigDataCloudResponse): string | null {
+  const informativeNames =
+    data.localityInfo?.informative
+      ?.map((entry) => entry.name?.trim())
+      .filter((name): name is string => Boolean(name)) ?? [];
+
+  const administrativeNames =
+    data.localityInfo?.administrative
+      ?.map((entry) => entry.name?.trim())
+      .filter((name): name is string => Boolean(name)) ?? [];
+
+  const finerArea = informativeNames[0] ?? administrativeNames.at(-2);
+
+  const label = formatPlaceLabel([
+    finerArea,
+    data.locality,
+    data.postcode,
+    data.city,
+    data.principalSubdivision,
+    data.countryName,
+  ]);
+
+  return label ? label.slice(0, 200) : null;
+}
+
 async function reverseGeocodeBigDataCloud(
   latitude: number,
   longitude: number
@@ -73,14 +144,7 @@ async function reverseGeocodeBigDataCloud(
     }
 
     const data = (await response.json()) as BigDataCloudResponse;
-    const label = formatPlaceLabel([
-      data.locality,
-      data.city,
-      data.principalSubdivision,
-      data.countryName,
-    ]);
-
-    return label ? label.slice(0, 200) : null;
+    return buildBigDataCloudLabel(data);
   } catch {
     return null;
   }
@@ -112,6 +176,11 @@ async function reverseGeocodeNominatim(
     }
 
     const data = (await response.json()) as NominatimResponse;
+    const structured = buildNominatimLabel(data.address);
+    if (structured) {
+      return structured;
+    }
+
     const label = data.display_name?.trim();
     return label ? label.slice(0, 200) : null;
   } catch {
@@ -119,16 +188,43 @@ async function reverseGeocodeNominatim(
   }
 }
 
+export function pickMoreSpecificLabel(primary: string | null, fallback: string | null): string | null {
+  if (!primary) {
+    return fallback;
+  }
+
+  if (!fallback) {
+    return primary;
+  }
+
+  const primaryParts = primary.split(",").map((part) => part.trim()).filter(Boolean);
+  const fallbackParts = fallback.split(",").map((part) => part.trim()).filter(Boolean);
+
+  if (primaryParts.length > fallbackParts.length) {
+    return primary;
+  }
+
+  if (fallbackParts.length > primaryParts.length) {
+    return fallback;
+  }
+
+  if (primary.length >= fallback.length) {
+    return primary;
+  }
+
+  return fallback;
+}
+
 export async function reverseGeocode(
   latitude: number,
   longitude: number
 ): Promise<string | null> {
-  const bigDataCloud = await reverseGeocodeBigDataCloud(latitude, longitude);
-  if (bigDataCloud) {
-    return bigDataCloud;
-  }
+  const [nominatim, bigDataCloud] = await Promise.all([
+    reverseGeocodeNominatim(latitude, longitude),
+    reverseGeocodeBigDataCloud(latitude, longitude),
+  ]);
 
-  return reverseGeocodeNominatim(latitude, longitude);
+  return pickMoreSpecificLabel(nominatim, bigDataCloud);
 }
 
 export async function resolveLocationLabel(
@@ -141,6 +237,25 @@ export async function resolveLocationLabel(
   }
 
   return formatCoordinatesLabel(latitude, longitude) ?? "Unknown location";
+}
+
+export function formatLocationWithCoordinates(
+  label: string | null | undefined,
+  latitude: number | null,
+  longitude: number | null
+): string {
+  const coordinates = formatCoordinatesLabel(latitude, longitude);
+  const trimmed = label?.trim();
+
+  if (trimmed && coordinates && !looksLikeCoordinatesLabel(trimmed)) {
+    return `${trimmed} · ${coordinates}`;
+  }
+
+  if (trimmed) {
+    return trimmed;
+  }
+
+  return coordinates ?? "—";
 }
 
 export function needsLocationBackfill(
@@ -157,4 +272,26 @@ export function needsLocationBackfill(
   }
 
   return looksLikeCoordinatesLabel(location);
+}
+
+export function shouldRefreshLocationLabel(
+  location: string | null | undefined,
+  latitude: number | null,
+  longitude: number | null
+): boolean {
+  if (needsLocationBackfill(location, latitude, longitude)) {
+    return true;
+  }
+
+  if (typeof latitude !== "number" || typeof longitude !== "number") {
+    return false;
+  }
+
+  const trimmed = location?.trim();
+  if (!trimmed || looksLikeCoordinatesLabel(trimmed)) {
+    return false;
+  }
+
+  const parts = trimmed.split(",").map((part) => part.trim()).filter(Boolean);
+  return parts.length <= 3;
 }

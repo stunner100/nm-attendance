@@ -8,8 +8,8 @@ import {
   hashCheckinScanToken,
 } from "@/lib/checkin-tokens";
 import {
-  needsLocationBackfill,
   resolveLocationLabel,
+  shouldRefreshLocationLabel,
 } from "@/lib/reverse-geocode";
 import { isSignupOpen } from "@/lib/auth-users";
 import { runMigrations } from "@/lib/migrate";
@@ -691,9 +691,9 @@ async function hydrateAttendanceLocations(
   const targets = rows
     .filter(
       (row) =>
-        needsLocationBackfill(row.location, row.latitude, row.longitude) ||
+        shouldRefreshLocationLabel(row.location, row.latitude, row.longitude) ||
         (row.checkout_timestamp &&
-          needsLocationBackfill(
+          shouldRefreshLocationLabel(
             row.checkout_location,
             row.checkout_latitude,
             row.checkout_longitude
@@ -710,7 +710,7 @@ async function hydrateAttendanceLocations(
   for (const row of targets) {
     const patch: Partial<AttendanceRow> = {};
 
-    if (needsLocationBackfill(row.location, row.latitude, row.longitude)) {
+    if (shouldRefreshLocationLabel(row.location, row.latitude, row.longitude)) {
       const location = await resolveLocationLabel(row.latitude as number, row.longitude as number);
       patch.location = location;
       await pool.query(`UPDATE attendance SET location = $2 WHERE id = $1`, [row.id, location]);
@@ -718,7 +718,7 @@ async function hydrateAttendanceLocations(
 
     if (
       row.checkout_timestamp &&
-      needsLocationBackfill(
+      shouldRefreshLocationLabel(
         row.checkout_location,
         row.checkout_latitude,
         row.checkout_longitude

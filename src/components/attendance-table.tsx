@@ -8,8 +8,7 @@ import { Clock, ExternalLink, Download, MapPin } from "lucide-react";
 import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
 import { buildOpenStreetMapUrl } from "@/lib/geo-coords";
 import {
-  formatCoordinatesLabel,
-  looksLikeCoordinatesLabel,
+  formatLocationWithCoordinates,
 } from "@/lib/reverse-geocode";
 import { AdminFormAlert } from "@/components/hr/admin-form-alert";
 import { Badge } from "@/components/ui/badge";
@@ -44,25 +43,17 @@ type AttendanceTableProps = {
 
 function resolveLocationLabel(record: AttendanceRow, kind: "checkin" | "checkout"): string {
   if (kind === "checkin") {
-    const stored = record.location?.trim();
-    if (stored && !looksLikeCoordinatesLabel(stored)) {
-      return stored;
-    }
-
-    return (
-      formatCoordinatesLabel(record.latitude, record.longitude) ||
-      "—"
+    return formatLocationWithCoordinates(
+      record.location,
+      record.latitude,
+      record.longitude
     );
   }
 
-  const stored = record.checkout_location?.trim();
-  if (stored && !looksLikeCoordinatesLabel(stored)) {
-    return stored;
-  }
-
-  return (
-    formatCoordinatesLabel(record.checkout_latitude, record.checkout_longitude) ||
-    "—"
+  return formatLocationWithCoordinates(
+    record.checkout_location,
+    record.checkout_latitude,
+    record.checkout_longitude
   );
 }
 
@@ -242,7 +233,12 @@ export function AttendanceTable({
             ) : (
               visibleRecords.map((record) => {
                 const hasCheckout = typeof record.checkout_timestamp === "string";
-                const punctuality = getCheckinPunctualityLabel(record.timestamp);
+                const rawPunctuality = getCheckinPunctualityLabel(record.timestamp);
+                const hasApprovedCoverage = Boolean(record.approved_request_id);
+                const punctuality =
+                  rawPunctuality === "Late" && hasApprovedCoverage
+                    ? "Approved"
+                    : rawPunctuality;
                 const isLate = punctuality === "Late";
                 const checkInLocation = resolveLocationLabel(record, "checkin");
                 const checkOutLocation = hasCheckout
@@ -281,6 +277,14 @@ export function AttendanceTable({
                       >
                         {punctuality}
                       </Badge>
+                      {hasApprovedCoverage ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {record.approved_request_type}
+                          {record.approved_late_arrival_time
+                            ? ` · ${record.approved_late_arrival_time.slice(0, 5)}`
+                            : ""}
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="space-y-1 text-sm text-foreground">

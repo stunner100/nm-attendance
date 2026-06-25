@@ -20,7 +20,6 @@ import {
   HR_CONTRACT_TYPES,
   HR_DEPARTMENTS,
   HR_EMPLOYMENT_STATUSES,
-  HR_EXIT_TYPES,
   HR_WORK_MODES,
 } from "@/lib/types";
 import { Users } from "lucide-react";
@@ -195,18 +194,15 @@ export function EmployeeListAccordion({
                   type="date"
                 />
               </label>
-              <select
-                className={selectClass}
-                defaultValue={employee.exit_type ?? ""}
-                name="exitType"
-              >
-                <option value="">No exit type</option>
-                {HR_EXIT_TYPES.map((exitType) => (
-                  <option key={exitType} value={exitType}>
-                    {humanizeLabel(exitType)}
-                  </option>
-                ))}
-              </select>
+              <label className="space-y-1 text-xs">
+                <span className="text-muted-foreground">Job title</span>
+                <Input
+                  className="h-8 text-xs"
+                  defaultValue={employee.job_title ?? ""}
+                  name="jobTitle"
+                  placeholder="e.g. HR Operations Lead"
+                />
+              </label>
               <Input
                 className="h-8 text-xs"
                 defaultValue={employee.exit_date ?? ""}

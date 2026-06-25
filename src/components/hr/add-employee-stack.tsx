@@ -89,6 +89,12 @@ export function AddEmployeeStack({
       ],
     },
     {
+      id: "jobTitle",
+      label: "Job title",
+      type: "text",
+      placeholder: "e.g. HR Operations Lead",
+    },
+    {
       id: "contractDates",
       label: "Contract dates (optional)",
       type: "compound",
@@ -107,6 +113,7 @@ export function AddEmployeeStack({
     workMode: "onsite",
     employmentStatus: "active",
     managerEmployeeId: "",
+    jobTitle: "",
     contractStartDate: "",
     contractEndDate: "",
   };
@@ -123,6 +130,7 @@ export function AddEmployeeStack({
       workMode: String(data.workMode ?? ""),
       employmentStatus: String(data.employmentStatus ?? ""),
       managerEmployeeId: String(data.managerEmployeeId ?? ""),
+      jobTitle: String(data.jobTitle ?? ""),
       contractStartDate: String(data.contractStartDate ?? ""),
       contractEndDate: String(data.contractEndDate ?? ""),
     };
@@ -147,6 +155,7 @@ export function AddEmployeeStack({
         <input name="workMode" type="hidden" />
         <input name="employmentStatus" type="hidden" />
         <input name="managerEmployeeId" type="hidden" />
+        <input name="jobTitle" type="hidden" />
         <input name="contractStartDate" type="hidden" />
         <input name="contractEndDate" type="hidden" />
       </form>

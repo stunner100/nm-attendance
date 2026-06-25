@@ -18,6 +18,7 @@ type EmployeePayload = {
   contractEndDate?: unknown;
   exitDate?: unknown;
   exitType?: unknown;
+  jobTitle?: unknown;
   employeeId?: unknown;
   status?: unknown;
 };
@@ -105,8 +106,7 @@ export async function POST(request: Request) {
       contractEndDate:
         typeof payload.contractEndDate === "string" ? payload.contractEndDate : null,
       exitDate: typeof payload.exitDate === "string" ? payload.exitDate : null,
-      exitType:
-        typeof payload.exitType === "string" ? (payload.exitType as "voluntary" | "involuntary") : null,
+      jobTitle: typeof payload.jobTitle === "string" ? payload.jobTitle : null,
     });
 
     return NextResponse.json({ employee }, { status: 201 });

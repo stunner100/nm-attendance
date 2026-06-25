@@ -8,6 +8,7 @@ import type {
   HRExitType,
   HRGrowthPlanStatus,
   HRKpiCardStatus,
+  HRLeaveRequestCategory,
   HRLeaveRequestStatus,
   HRPayrollStatus,
   HRPipStatus,
@@ -30,11 +31,11 @@ export type CreateHREmployeeInput = {
   workMode?: HRWorkMode;
   employmentStatus?: HREmploymentStatus;
   managerEmployeeId?: number | null;
+  jobTitle?: string | null;
   hireDate?: string | null;
   probationEndDate?: string | null;
   contractEndDate?: string | null;
   exitDate?: string | null;
-  exitType?: HRExitType | null;
 };
 
 export type UpdateHREmployeeInput = {
@@ -46,10 +47,10 @@ export type UpdateHREmployeeInput = {
   workMode: HRWorkMode;
   employmentStatus: HREmploymentStatus;
   managerEmployeeId?: number | null;
+  jobTitle?: string | null;
   hireDate?: string | null;
   contractEndDate?: string | null;
   exitDate?: string | null;
-  exitType?: HRExitType | null;
 };
 
 export type CreateRecruitmentRoleInput = {
@@ -119,10 +120,18 @@ export type UpsertLeaveBalanceInput = {
 export type CreateLeaveRequestInput = {
   employeeId: number;
   leaveType: string;
+  requestCategory?: HRLeaveRequestCategory;
   startDate: string;
   endDate: string;
+  lateArrivalTime?: string | null;
   days: number;
   status?: HRLeaveRequestStatus;
+  reason?: string | null;
+  coveragePlan?: string | null;
+  contactNumber?: string | null;
+  submittedByEmail?: string | null;
+  reviewerNote?: string | null;
+  source?: "admin" | "staff_self_service";
 };
 
 export type CreatePerformanceReviewInput = {

@@ -44,7 +44,7 @@ export async function listHREmployees(
   let query = `
     SELECT
       id, employee_code, full_name, work_email, department, contract_type, work_mode,
-      employment_status, manager_employee_id, hire_date, probation_end_date,
+      employment_status, manager_employee_id, job_level, job_title, hire_date, probation_end_date,
       contract_end_date, exit_date, exit_type, created_at, updated_at
     FROM hr_employees
   `;
@@ -116,13 +116,13 @@ export async function createHREmployee(
     `
       INSERT INTO hr_employees (
         employee_code, full_name, work_email, department, contract_type,
-        work_mode, employment_status, manager_employee_id, hire_date, probation_end_date,
+        work_mode, employment_status, manager_employee_id, job_title, hire_date, probation_end_date,
         contract_end_date, exit_date, exit_type, updated_at
       )
-      VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+      VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, NULLIF($9, ''), $10, $11, $12, $13, $14, NOW())
       RETURNING
         id, employee_code, full_name, work_email, department, contract_type, work_mode,
-        employment_status, manager_employee_id, hire_date, probation_end_date,
+        employment_status, manager_employee_id, job_level, job_title, hire_date, probation_end_date,
         contract_end_date, exit_date, exit_type, created_at, updated_at
     `,
     [
@@ -134,11 +134,12 @@ export async function createHREmployee(
       workMode,
       employmentStatus,
       input.managerEmployeeId ?? null,
+      input.jobTitle?.trim() || null,
       ensureDateOnly(input.hireDate) || new Date().toISOString().slice(0, 10),
       ensureDateOnly(input.probationEndDate),
       ensureDateOnly(input.contractEndDate),
       ensureDateOnly(input.exitDate),
-      input.exitType || null,
+      null,
     ]
   );
 
@@ -162,7 +163,7 @@ export async function updateHREmployeeStatus(
       WHERE id = $1
       RETURNING
         id, employee_code, full_name, work_email, department, contract_type, work_mode,
-        employment_status, manager_employee_id, hire_date, probation_end_date,
+        employment_status, manager_employee_id, job_level, job_title, hire_date, probation_end_date,
         contract_end_date, exit_date, exit_type, created_at, updated_at
     `,
     [employeeId, status, options?.exitType || null, ensureDateOnly(options?.exitDate)]
@@ -206,15 +207,15 @@ export async function updateHREmployee(
           work_mode = $7,
           employment_status = $8,
           manager_employee_id = $9,
-          hire_date = COALESCE($10, hire_date),
-          contract_end_date = $11,
-          exit_date = $12,
-          exit_type = $13,
+          job_title = NULLIF($10, ''),
+          hire_date = COALESCE($11, hire_date),
+          contract_end_date = $12,
+          exit_date = $13,
           updated_at = NOW()
       WHERE id = $1
       RETURNING
         id, employee_code, full_name, work_email, department, contract_type, work_mode,
-        employment_status, manager_employee_id, hire_date, probation_end_date,
+        employment_status, manager_employee_id, job_level, job_title, hire_date, probation_end_date,
         contract_end_date, exit_date, exit_type, created_at, updated_at
     `,
     [
@@ -227,10 +228,10 @@ export async function updateHREmployee(
       workMode,
       employmentStatus,
       patch.managerEmployeeId ?? null,
+      patch.jobTitle?.trim() || null,
       ensureDateOnly(patch.hireDate),
       ensureDateOnly(patch.contractEndDate),
       ensureDateOnly(patch.exitDate),
-      patch.exitType || null,
     ]
   );
 

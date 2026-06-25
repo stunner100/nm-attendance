@@ -21,7 +21,6 @@ import {
   HR_CONTRACT_TYPES,
   HR_DEPARTMENTS,
   HR_EMPLOYMENT_STATUSES,
-  HR_EXIT_TYPES,
   HR_WORK_MODES,
 } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
@@ -51,6 +50,7 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
   const managerEmployeeIdRaw = Number(formData.get("managerEmployeeId") ?? "");
   const contractStartDate = String(formData.get("contractStartDate") ?? "").trim();
   const contractEndDate = String(formData.get("contractEndDate") ?? "").trim();
+  const jobTitle = String(formData.get("jobTitle") ?? "").trim();
 
   if (!fullName) {
     redirectWithFormError("/admin/headcount", "Full name is required.");
@@ -90,6 +90,7 @@ async function createEmployeeAction(formData: FormData): Promise<void> {
         : null,
     hireDate: contractStartDate || null,
     contractEndDate: contractEndDate || null,
+    jobTitle: jobTitle || null,
   });
 
   revalidatePath("/admin/headcount");
@@ -113,7 +114,7 @@ async function updateEmployeeAction(formData: FormData): Promise<void> {
   const managerEmployeeIdRaw = Number(formData.get("managerEmployeeId") ?? "");
   const contractStartDate = String(formData.get("contractStartDate") ?? "").trim();
   const contractEndDate = String(formData.get("contractEndDate") ?? "").trim();
-  const exitType = String(formData.get("exitType") ?? "").trim();
+  const jobTitle = String(formData.get("jobTitle") ?? "").trim();
   const exitDate = String(formData.get("exitDate") ?? "").trim();
 
   if (!Number.isFinite(employeeId) || employeeId <= 0 || !fullName) {
@@ -154,13 +155,12 @@ async function updateEmployeeAction(formData: FormData): Promise<void> {
     managerEmployeeId,
     hireDate: contractStartDate || null,
     contractEndDate: contractEndDate || null,
-    exitType: HR_EXIT_TYPES.includes(exitType as (typeof HR_EXIT_TYPES)[number])
-      ? (exitType as (typeof HR_EXIT_TYPES)[number])
-      : null,
+    jobTitle: jobTitle || null,
     exitDate: exitDate || null,
   });
 
   revalidatePath("/admin/headcount");
+  revalidatePath(`/admin/headcount/${employeeId}`);
   revalidatePath("/admin");
   redirectWithFormSuccess("/admin/headcount", "Employee updated successfully.");
 }

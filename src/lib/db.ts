@@ -616,6 +616,60 @@ export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> 
   return hydrateAttendanceLocations(pool, rows);
 }
 
+export async function getAttendanceForEmployee(
+  employeeId: number,
+  limit = 30
+): Promise<AttendanceRow[]> {
+  await ensureSchema();
+
+  const pool = getPool();
+  const result = await pool.query<AttendanceRowDb>(
+    `
+      SELECT id, name, timestamp, checkout_timestamp, latitude, longitude,
+        checkout_latitude, checkout_longitude, location, checkout_location, created_at,
+        approved_request_id, approved_request_category, approved_request_type,
+        approved_request_reason, approved_late_arrival_time
+      FROM (
+        SELECT
+          a.id, a.name, a.timestamp, a.checkout_timestamp, a.latitude, a.longitude,
+          a.checkout_latitude, a.checkout_longitude, a.location, a.checkout_location, a.created_at,
+          lr.id AS approved_request_id,
+          lr.request_category AS approved_request_category,
+          lr.leave_type AS approved_request_type,
+          lr.reason AS approved_request_reason,
+          lr.late_arrival_time::text AS approved_late_arrival_time
+        FROM attendance a
+        JOIN hr_employees e
+          ON LOWER(btrim(e.full_name)) = LOWER(btrim(a.name))
+        LEFT JOIN LATERAL (
+          SELECT lr.*
+          FROM hr_leave_requests lr
+          WHERE lr.employee_id = e.id
+            AND lr.status = 'approved'
+            AND (a.timestamp::timestamptz AT TIME ZONE $3)::date
+              BETWEEN lr.start_date AND lr.end_date
+            AND (
+              lr.request_category = 'late_arrival'
+              OR lr.request_category = 'leave'
+            )
+          ORDER BY
+            CASE lr.request_category WHEN 'late_arrival' THEN 0 ELSE 1 END,
+            lr.reviewed_at DESC NULLS LAST,
+            lr.requested_at DESC
+          LIMIT 1
+        ) lr ON TRUE
+        WHERE e.id = $1
+      ) enriched
+      ORDER BY timestamp DESC
+      LIMIT $2
+    `,
+    [employeeId, limit, CHECKIN_TIMEZONE]
+  );
+
+  const rows = result.rows.map(normalizeAttendanceRow);
+  return hydrateAttendanceLocations(pool, rows);
+}
+
 export async function getApprovedAttendanceCoverageForDate(
   date: string
 ): Promise<HRAttendanceCoverage[]> {

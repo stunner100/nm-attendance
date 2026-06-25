@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { Clock, ExternalLink } from "lucide-react";
 
 import { StatusBadge } from "@/components/hr/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +12,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/animated-accordion";
-import { humanizeLabel } from "@/lib/labels";
+import { getCheckinPunctualityLabel } from "@/lib/attendance-punctuality";
 import type { EmployeePerformanceProfile } from "@/lib/hr/employee-profile";
+import { humanizeLabel } from "@/lib/labels";
+import { formatLocationWithCoordinates } from "@/lib/reverse-geocode";
 
 type EmployeeProfileSectionsProps = {
   profile: EmployeePerformanceProfile;
@@ -31,6 +35,38 @@ function SectionTrigger({ title, count }: { title: string; count: number }) {
   );
 }
 
+function EmptySectionMessage({
+  message,
+  actionHref,
+  actionLabel,
+}: {
+  message: string;
+  actionHref?: string;
+  actionLabel?: string;
+}) {
+  return (
+    <div className="space-y-2 text-sm text-muted-foreground">
+      <p>{message}</p>
+      {actionHref && actionLabel ? (
+        <Link
+          href={actionHref}
+          className="text-link inline-flex items-center gap-1 font-medium"
+        >
+          {actionLabel}
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProps) {
   const accountabilityCount =
     profile.accountability.length + (profile.activePip ? 1 : 0);
@@ -40,62 +76,151 @@ export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProp
     title: string;
     count: number;
     content: ReactNode;
-  }> = [];
+    defaultOpen?: boolean;
+  }> = [
+    {
+      value: "attendance",
+      title: "Attendance",
+      count: profile.attendanceRecords.length,
+      defaultOpen: true,
+      content:
+        profile.attendanceRecords.length > 0 ? (
+          <div className="space-y-2">
+            {profile.attendanceRecords.map((record) => {
+              const hasCheckout = typeof record.checkout_timestamp === "string";
+              const rawPunctuality = getCheckinPunctualityLabel(record.timestamp);
+              const punctuality =
+                rawPunctuality === "Late" && record.approved_request_id
+                  ? "Approved"
+                  : rawPunctuality;
+              const checkInLocation = formatLocationWithCoordinates(
+                record.location,
+                record.latitude,
+                record.longitude
+              );
 
-  if (profile.kpiCards.length > 0) {
-    sections.push({
+              return (
+                <div
+                  key={record.id}
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      {formatDateTime(record.timestamp)}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        punctuality === "Late"
+                          ? "border-[var(--color-rule)] bg-[var(--color-signature-yellow)]/35 text-[var(--color-ink)]"
+                          : "border-[var(--color-rule)] bg-[var(--color-signature-mint)]/40 text-[var(--color-success)]"
+                      }
+                    >
+                      {punctuality}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {hasCheckout
+                      ? `Checked out ${formatDateTime(record.checkout_timestamp as string)}`
+                      : "Not checked out"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{checkInLocation}</p>
+                </div>
+              );
+            })}
+            <Link
+              href="/admin/attendance"
+              className="text-link inline-flex items-center gap-1 text-sm font-medium"
+            >
+              View all attendance
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        ) : (
+          <EmptySectionMessage message="No attendance records yet for this employee." />
+        ),
+    },
+    {
       value: "kpis",
       title: "KPIs",
       count: profile.kpiCards.length,
-      content: (
-        <div className="space-y-3">
-          {profile.kpiCards.map((card) => {
-            const items =
-              profile.kpiItems.find((i) => i.cardId === card.id)?.items ?? [];
-            return (
-              <div
-                key={card.id}
-                className="rounded-[var(--radius-sm)] border border-[var(--color-rule)] p-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">{card.period}</p>
-                  <StatusBadge status={card.status} />
+      defaultOpen: true,
+      content:
+        profile.kpiCards.length > 0 ? (
+          <div className="space-y-3">
+            {profile.kpiCards.map((card) => {
+              const items =
+                profile.kpiItems.find((entry) => entry.cardId === card.id)?.items ?? [];
+              return (
+                <div
+                  key={card.id}
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-rule)] p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium">{card.period}</p>
+                      {card.role_title ? (
+                        <p className="text-xs text-muted-foreground">{card.role_title}</p>
+                      ) : null}
+                    </div>
+                    <StatusBadge status={card.status} />
+                  </div>
+                  {items.length > 0 ? (
+                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      {items.map((item) => (
+                        <li key={item.id}>
+                          {item.kpi_text} (weight {item.weight})
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">No KPI items on this card.</p>
+                  )}
                 </div>
-                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {items.map((item) => (
-                    <li key={item.id}>
-                      {item.kpi_text} (weight {item.weight})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      ),
-    });
-  }
-
-  if (profile.tasks.length > 0) {
-    sections.push({
+              );
+            })}
+          </div>
+        ) : (
+          <EmptySectionMessage
+            message="No KPI cards assigned to this employee yet."
+            actionHref="/admin/kpi-cards"
+            actionLabel="Create KPI card"
+          />
+        ),
+    },
+    {
       value: "tasks",
       title: "Tasks",
       count: profile.tasks.length,
-      content: (
-        <div className="space-y-2">
-          {profile.tasks.slice(0, 8).map((task) => (
-            <div
-              key={task.id}
-              className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
-            >
-              <span className="truncate">{task.title}</span>
-              <StatusBadge status={task.status} />
-            </div>
-          ))}
-        </div>
-      ),
-    });
-  }
+      defaultOpen: true,
+      content:
+        profile.tasks.length > 0 ? (
+          <div className="space-y-2">
+            {profile.tasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{task.title}</p>
+                  {task.due_date ? (
+                    <p className="text-xs text-muted-foreground">Due {task.due_date}</p>
+                  ) : null}
+                </div>
+                <StatusBadge status={task.status} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptySectionMessage
+            message="No tasks assigned to this employee yet."
+            actionHref="/admin/tasks"
+            actionLabel="Assign task"
+          />
+        ),
+    },
+  ];
 
   if (profile.scoreTrend.length > 0) {
     sections.push({
@@ -104,14 +229,14 @@ export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProp
       count: profile.scoreTrend.length,
       content: (
         <div className="space-y-2">
-          {profile.scoreTrend.map((s) => (
+          {profile.scoreTrend.map((score) => (
             <div
-              key={s.period}
+              key={score.period}
               className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
             >
-              <span>{s.period}</span>
+              <span>{score.period}</span>
               <span className="tabular-nums font-medium">
-                {s.total.toFixed(1)} · {humanizeLabel(s.rating)}
+                {score.total.toFixed(1)} · {humanizeLabel(score.rating)}
               </span>
             </div>
           ))}
@@ -127,12 +252,12 @@ export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProp
       count: profile.rewards.length,
       content: (
         <div className="space-y-2">
-          {profile.rewards.slice(0, 6).map((r) => (
+          {profile.rewards.slice(0, 6).map((reward) => (
             <div
-              key={r.id}
+              key={reward.id}
               className="rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
             >
-              {r.reward_type} · {r.awarded_on}
+              {reward.reward_type} · {reward.awarded_on}
             </div>
           ))}
         </div>
@@ -162,16 +287,16 @@ export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProp
               ) : null}
             </div>
           ) : null}
-          {profile.accountability.slice(0, 6).map((a) => (
+          {profile.accountability.slice(0, 6).map((action) => (
             <div
-              key={a.id}
+              key={action.id}
               className="rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
             >
               <div className="flex items-center justify-between gap-2">
-                <StatusBadge status={a.stage} />
-                <StatusBadge status={a.status} />
+                <StatusBadge status={action.stage} />
+                <StatusBadge status={action.status} />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{a.reason}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{action.reason}</p>
             </div>
           ))}
         </div>
@@ -200,17 +325,35 @@ export function EmployeeProfileSections({ profile }: EmployeeProfileSectionsProp
     });
   }
 
-  if (sections.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No performance detail sections to show yet.
-      </p>
-    );
+  if (profile.training.length > 0) {
+    sections.push({
+      value: "training",
+      title: "Training",
+      count: profile.training.length,
+      content: (
+        <div className="space-y-2">
+          {profile.training.map((assignment) => (
+            <div
+              key={assignment.id}
+              className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-rule)] px-3 py-2 text-sm"
+            >
+              <span className="truncate">Module #{assignment.module_id}</span>
+              <StatusBadge status={assignment.status} />
+            </div>
+          ))}
+        </div>
+      ),
+    });
   }
+
+  const defaultOpenSections = sections
+    .filter((section) => section.defaultOpen)
+    .map((section) => section.value);
 
   return (
     <Accordion
       type="multiple"
+      defaultValue={defaultOpenSections}
       className="rounded-[var(--radius-card)] border border-[var(--color-rule)] bg-card px-4 shadow-none"
     >
       {sections.map((section) => (

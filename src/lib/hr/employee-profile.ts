@@ -1,5 +1,5 @@
-import { ensureDbSchema, getDbPool } from "@/lib/db";
-import type { HREmployee } from "@/lib/types";
+import { ensureDbSchema, getAttendanceForEmployee, getDbPool } from "@/lib/db";
+import type { AttendanceRow, HREmployee } from "@/lib/types";
 import { asNumber, asRecordRows, asString, normalizeEmployee } from "@/lib/hr/shared";
 import { listAccountabilityActions } from "@/lib/hr/accountability";
 import { listGrowthPlans } from "@/lib/hr/growth";
@@ -12,6 +12,13 @@ import { listTrainingAssignments } from "@/lib/hr/training";
 export type EmployeePerformanceProfile = {
   employee: HREmployee;
   managerName: string | null;
+  displayRole: string | null;
+  attendanceRecords: AttendanceRow[];
+  attendanceSummary: {
+    totalCheckins: number;
+    completedCheckouts: number;
+    lastCheckinAt: string | null;
+  };
   currentScore: {
     period: string;
     total: number;
@@ -88,6 +95,7 @@ export async function getEmployeePerformanceProfile(
     accountability,
     growthPlans,
     training,
+    attendanceRecords,
   ] = await Promise.all([
     listMonthlyScores({ limit: 12 }),
     listKpiCards({ limit: 24 }),
@@ -96,6 +104,7 @@ export async function getEmployeePerformanceProfile(
     listAccountabilityActions({ limit: 100 }),
     listGrowthPlans({ limit: 50 }),
     listTrainingAssignments({ limit: 200 }),
+    getAttendanceForEmployee(employeeId, 30),
   ]);
 
   const employeeScores = scores
@@ -103,6 +112,7 @@ export async function getEmployeePerformanceProfile(
     .sort((a, b) => b.period.localeCompare(a.period));
 
   const employeeKpiCards = kpiCards.filter((c) => c.employee_id === employeeId);
+  const displayRole = employee.job_title?.trim() || null;
   const kpiItems = await Promise.all(
     employeeKpiCards.map(async (card) => ({
       cardId: card.id,
@@ -116,6 +126,15 @@ export async function getEmployeePerformanceProfile(
   return {
     employee,
     managerName: managerRow ? asString(managerRow.full_name) : null,
+    displayRole,
+    attendanceRecords,
+    attendanceSummary: {
+      totalCheckins: attendanceRecords.length,
+      completedCheckouts: attendanceRecords.filter(
+        (record) => typeof record.checkout_timestamp === "string"
+      ).length,
+      lastCheckinAt: attendanceRecords[0]?.timestamp ?? null,
+    },
     currentScore: employeeScores[0]
       ? {
           period: employeeScores[0].period,

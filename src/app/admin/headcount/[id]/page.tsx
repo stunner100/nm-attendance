@@ -14,6 +14,13 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export default async function EmployeeProfilePage({ params }: PageProps) {
   await requireAdminPage("/admin/headcount");
   const { id: idParam } = await params;
@@ -34,7 +41,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
       <AdminPageIntro
         title={employee.full_name}
         showTitle
-        description="Full performance profile — KPIs, tasks, scores, rewards, accountability, and growth."
+        description="Employee profile — role, attendance, KPIs, tasks, scores, and performance history."
         actions={
           <Button asChild variant="outline">
             <Link href="/admin/headcount">Back to employees</Link>
@@ -42,7 +49,53 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <Card className="shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Role</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-medium">
+              {profile.displayRole || "Role not set"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {employee.job_level
+                ? humanizeLabel(employee.job_level)
+                : "Level not set"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Department
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-medium">{employee.department}</p>
+            <p className="text-xs text-muted-foreground">
+              {humanizeLabel(employee.contract_type)} · {humanizeLabel(employee.work_mode)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Attendance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold tabular-nums">
+              {profile.attendanceSummary.totalCheckins}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {profile.attendanceSummary.completedCheckouts} completed check-outs
+              {profile.attendanceSummary.lastCheckinAt
+                ? ` · Last ${formatDateTime(profile.attendanceSummary.lastCheckinAt)}`
+                : ""}
+            </p>
+          </CardContent>
+        </Card>
         <Card className="shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -66,44 +119,20 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
         </Card>
         <Card className="shadow-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Department
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm font-medium">{employee.department}</p>
-            <p className="text-xs text-muted-foreground">
-              {employee.job_title || "No role title"} ·{" "}
-              {employee.job_level ? humanizeLabel(employee.job_level) : "Level not set"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-none">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Manager
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Manager</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm">{profile.managerName || "—"}</p>
-            <StatusBadge status={employee.employment_status} />
-          </CardContent>
-        </Card>
-        <Card className="shadow-none">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">PIP</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {profile.activePip ? (
-              <>
-                <StatusBadge status={profile.activePip.status} />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {profile.activePip.start_date}
-                  {profile.activePip.end_date ? ` → ${profile.activePip.end_date}` : ""}
-                </p>
-              </>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <StatusBadge status={employee.employment_status} />
+              {profile.activePip ? <StatusBadge status={profile.activePip.status} /> : null}
+            </div>
+            {!profile.activePip ? (
+              <p className="mt-1 text-xs text-muted-foreground">No active PIP</p>
             ) : (
-              <p className="text-sm text-muted-foreground">No active PIP</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                PIP since {profile.activePip.start_date}
+              </p>
             )}
           </CardContent>
         </Card>

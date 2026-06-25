@@ -4,7 +4,7 @@ import type {
   HREmployee,
   HRFollowupAction,
   HRKpiScore,
-  HRLeaveBalance,
+  HRLeaveBalanceWithEmployee,
   HRLeaveRequest,
   HROnboardingChecklist,
   HRPayrollAnomaly,
@@ -21,10 +21,11 @@ import { asNumber, asRecordRows } from "@/lib/hr/shared";
 import { listDisciplinaryCases, listFollowupActions, listPolicyViolations } from "@/lib/hr/compliance";
 import { listHREmployees } from "@/lib/hr/employees";
 import {
-  listLeaveBalances,
+  listLeaveBalancesWithEmployees,
   listLeaveRequests,
   listPayrollAnomalies,
   listPayrollCycles,
+  PAYROLL_LEAVE_LIST_DEFAULT_LIMIT,
 } from "@/lib/hr/payroll-leave";
 import { listKpiScores, listPerformanceReviews, listPips } from "@/lib/hr/performance";
 import { listRecruitmentApplicants, listRecruitmentRoles } from "@/lib/hr/recruitment";
@@ -58,7 +59,7 @@ export type HRComplianceModuleData = {
 export type HRPayrollLeaveModuleData = {
   payrollCycles: HRPayrollCycle[];
   payrollAnomalies: HRPayrollAnomaly[];
-  leaveBalances: HRLeaveBalance[];
+  leaveBalances: HRLeaveBalanceWithEmployee[];
   leaveRequests: HRLeaveRequest[];
 };
 
@@ -166,10 +167,16 @@ export async function getPayrollLeaveModuleData(filters: {
 } = {}): Promise<HRPayrollLeaveModuleData> {
   const [payrollCycles, payrollAnomalies, leaveBalances, leaveRequests] =
     await Promise.all([
-      listPayrollCycles({ status: filters.cycleStatus }),
-      listPayrollAnomalies(),
-      listLeaveBalances(),
-      listLeaveRequests({ status: filters.leaveStatus }),
+      listPayrollCycles({
+        status: filters.cycleStatus,
+        limit: PAYROLL_LEAVE_LIST_DEFAULT_LIMIT,
+      }),
+      listPayrollAnomalies({ limit: PAYROLL_LEAVE_LIST_DEFAULT_LIMIT }),
+      listLeaveBalancesWithEmployees({ limit: PAYROLL_LEAVE_LIST_DEFAULT_LIMIT }),
+      listLeaveRequests({
+        status: filters.leaveStatus,
+        limit: PAYROLL_LEAVE_LIST_DEFAULT_LIMIT,
+      }),
     ]);
   return { payrollCycles, payrollAnomalies, leaveBalances, leaveRequests };
 }

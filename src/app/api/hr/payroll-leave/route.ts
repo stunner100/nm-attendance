@@ -11,7 +11,7 @@ import {
   updatePayrollCycleStatus,
   upsertLeaveBalance,
 } from "@/lib/hr-db";
-import { HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
+import { HR_LEAVE_REQUEST_CATEGORIES, HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
 
 type PayrollLeavePayload = {
   entity?: unknown;
@@ -33,6 +33,14 @@ type PayrollLeavePayload = {
   startDate?: unknown;
   endDate?: unknown;
   days?: unknown;
+  requestCategory?: unknown;
+  lateArrivalTime?: unknown;
+  reason?: unknown;
+  coveragePlan?: unknown;
+  contactNumber?: unknown;
+  submittedByEmail?: unknown;
+  reviewerNote?: unknown;
+  source?: unknown;
 };
 
 export async function GET() {
@@ -142,13 +150,32 @@ export async function POST(request: Request) {
       const leaveRequest = await createLeaveRequest({
         employeeId: payload.employeeId,
         leaveType: payload.leaveType,
+        requestCategory:
+          typeof payload.requestCategory === "string"
+            ? (payload.requestCategory as (typeof HR_LEAVE_REQUEST_CATEGORIES)[number])
+            : undefined,
         startDate: payload.startDate,
         endDate: payload.endDate,
+        lateArrivalTime:
+          typeof payload.lateArrivalTime === "string" ? payload.lateArrivalTime : undefined,
         days: payload.days,
         status:
           typeof payload.status === "string"
             ? (payload.status as (typeof HR_LEAVE_REQUEST_STATUSES)[number])
             : "pending",
+        reason: typeof payload.reason === "string" ? payload.reason : undefined,
+        coveragePlan:
+          typeof payload.coveragePlan === "string" ? payload.coveragePlan : undefined,
+        contactNumber:
+          typeof payload.contactNumber === "string" ? payload.contactNumber : undefined,
+        submittedByEmail:
+          typeof payload.submittedByEmail === "string" ? payload.submittedByEmail : undefined,
+        reviewerNote:
+          typeof payload.reviewerNote === "string" ? payload.reviewerNote : undefined,
+        source:
+          payload.source === "admin" || payload.source === "staff_self_service"
+            ? payload.source
+            : undefined,
       });
       return NextResponse.json({ leaveRequest }, { status: 201 });
     }
@@ -224,7 +251,8 @@ export async function PATCH(request: Request) {
       }
       const leaveRequest = await updateLeaveRequestStatus(
         payload.leaveRequestId,
-        payload.status as (typeof HR_LEAVE_REQUEST_STATUSES)[number]
+        payload.status as (typeof HR_LEAVE_REQUEST_STATUSES)[number],
+        typeof payload.reviewerNote === "string" ? payload.reviewerNote : undefined
       );
       if (!leaveRequest) {
         return NextResponse.json(

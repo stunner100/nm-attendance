@@ -12,6 +12,11 @@ export type AttendanceRow = {
   location: string | null;
   checkout_location: string | null;
   created_at: string;
+  approved_request_id: number | null;
+  approved_request_category: HRLeaveRequestCategory | null;
+  approved_request_type: string | null;
+  approved_request_reason: string | null;
+  approved_late_arrival_time: string | null;
 };
 
 export const HR_DEPARTMENTS = [
@@ -65,6 +70,9 @@ export const HR_LEAVE_REQUEST_STATUSES = [
   "rejected",
 ] as const;
 export type HRLeaveRequestStatus = (typeof HR_LEAVE_REQUEST_STATUSES)[number];
+
+export const HR_LEAVE_REQUEST_CATEGORIES = ["leave", "late_arrival"] as const;
+export type HRLeaveRequestCategory = (typeof HR_LEAVE_REQUEST_CATEGORIES)[number];
 
 export const HR_REVIEW_STATUSES = ["pending", "completed", "overdue"] as const;
 export type HRReviewStatus = (typeof HR_REVIEW_STATUSES)[number];
@@ -403,16 +411,42 @@ export type HRLeaveBalance = {
   updated_at: string;
 };
 
+export type HRLeaveBalanceWithEmployee = HRLeaveBalance & {
+  full_name: string;
+};
+
 export type HRLeaveRequest = {
   id: number;
   employee_id: number;
   leave_type: string;
+  request_category: HRLeaveRequestCategory;
   start_date: string;
   end_date: string;
+  late_arrival_time: string | null;
   days: number;
   status: HRLeaveRequestStatus;
+  reason: string | null;
+  coverage_plan: string | null;
+  contact_number: string | null;
+  submitted_by_email: string | null;
+  reviewer_note: string | null;
+  source: string;
   requested_at: string;
   reviewed_at: string | null;
+};
+
+export type HRAttendanceCoverage = {
+  request_id: number;
+  employee_id: number;
+  employee_name: string;
+  request_category: HRLeaveRequestCategory;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  late_arrival_time: string | null;
+  reason: string | null;
+  coverage_plan: string | null;
+  has_attendance: boolean;
 };
 
 export type HRPerformanceReview = {

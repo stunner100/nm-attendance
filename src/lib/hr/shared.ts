@@ -20,6 +20,7 @@ import type {
   HRKpiScore,
   HRLeaveBalance,
   HRLeaveRequest,
+  HRLeaveRequestCategory,
   HRLeaveRequestStatus,
   HRMonthlyScore,
   HROnboardingChecklist,
@@ -124,6 +125,18 @@ export function ensureDateOnly(value: string | null | undefined): string | null 
     throw new Error(`Invalid date: ${value}`);
   }
   return date.toISOString().slice(0, 10);
+}
+
+export function daysBetweenInclusive(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    return 0;
+  }
+
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((end.getTime() - start.getTime()) / millisecondsPerDay) + 1;
 }
 
 export function ensureEnumValue<T extends readonly string[]>(
@@ -276,10 +289,18 @@ export function normalizeLeaveRequest(row: DbRow): HRLeaveRequest {
     id: asNumber(row.id),
     employee_id: asNumber(row.employee_id),
     leave_type: asString(row.leave_type),
+    request_category: asString(row.request_category || "leave") as HRLeaveRequestCategory,
     start_date: asDateOnly(row.start_date),
     end_date: asDateOnly(row.end_date),
+    late_arrival_time: asNullableString(row.late_arrival_time),
     days: asNumber(row.days),
     status: asString(row.status) as HRLeaveRequestStatus,
+    reason: asNullableString(row.reason),
+    coverage_plan: asNullableString(row.coverage_plan),
+    contact_number: asNullableString(row.contact_number),
+    submitted_by_email: asNullableString(row.submitted_by_email),
+    reviewer_note: asNullableString(row.reviewer_note),
+    source: asString(row.source || "admin"),
     requested_at: asString(row.requested_at),
     reviewed_at: asNullableString(row.reviewed_at),
   };

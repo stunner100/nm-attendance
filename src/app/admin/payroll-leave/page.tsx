@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess, buildPayrollLeavePath, readPayrollLeaveFilters } from "@/lib/hr/form-actions";
 import { humanizeLabel } from "@/lib/labels";
 import {
   createLeaveRequest,
@@ -30,15 +30,54 @@ import {
   updatePayrollCycleStatus,
   upsertLeaveBalance,
 } from "@/lib/hr-db";
-import { HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
+import { HR_LEAVE_REQUEST_CATEGORIES, HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
+import type { HRLeaveRequestCategory } from "@/lib/types";
 
 type PayrollLeavePageProps = {
   searchParams: Promise<{ cycleStatus?: string; leaveStatus?: string; error?: string; success?: string }>;
 };
 
+function daysBetweenInclusive(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    return 0;
+  }
+
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((end.getTime() - start.getTime()) / millisecondsPerDay) + 1;
+}
+
+function resolveLeaveDays(
+  startDate: string,
+  endDate: string,
+  daysInput: string
+): number | null {
+  const computedDays = daysBetweenInclusive(startDate, endDate);
+  if (computedDays <= 0) {
+    return null;
+  }
+
+  const trimmedDays = daysInput.trim();
+  if (!trimmedDays) {
+    return computedDays;
+  }
+
+  const days = Number(trimmedDays);
+  if (!Number.isFinite(days) || days <= 0 || days !== computedDays) {
+    return null;
+  }
+
+  return days;
+}
+
 async function createCycleAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
+
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
 
   const cycleMonth = String(formData.get("cycleMonth") ?? "").trim();
   const status = String(formData.get("status") ?? "pending").trim();
@@ -46,10 +85,10 @@ async function createCycleAction(formData: FormData): Promise<void> {
   const notes = String(formData.get("notes") ?? "").trim();
 
   if (!cycleMonth) {
-    redirectWithFormError("/admin/payroll-leave", "Payroll cycle month is required.");
+    redirectWithFormError(redirectPath, "Payroll cycle month is required.");
   }
   if (!HR_PAYROLL_STATUSES.includes(status as (typeof HR_PAYROLL_STATUSES)[number])) {
-    redirectWithFormError("/admin/payroll-leave", "Select a valid payroll cycle status.");
+    redirectWithFormError(redirectPath, "Select a valid payroll cycle status.");
   }
 
   await createPayrollCycle({
@@ -61,12 +100,15 @@ async function createCycleAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
-  redirectWithFormSuccess("/admin/payroll-leave", "Payroll cycle created successfully.");
+  redirectWithFormSuccess(redirectPath, "Payroll cycle created successfully.");
 }
 
 async function createAnomalyAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
+
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
 
   const payrollCycleId = Number(formData.get("payrollCycleId") ?? "");
   const employeeId = Number(formData.get("employeeId") ?? "");
@@ -75,10 +117,10 @@ async function createAnomalyAction(formData: FormData): Promise<void> {
   const details = String(formData.get("details") ?? "").trim();
 
   if (!Number.isFinite(payrollCycleId) || !anomalyType) {
-    redirectWithFormError("/admin/payroll-leave", "Payroll cycle and anomaly type are required.");
+    redirectWithFormError(redirectPath, "Payroll cycle and anomaly type are required.");
   }
   if (!["open", "resolved"].includes(status)) {
-    redirectWithFormError("/admin/payroll-leave", "Select a valid anomaly status.");
+    redirectWithFormError(redirectPath, "Select a valid anomaly status.");
   }
 
   await createPayrollAnomaly({
@@ -91,12 +133,15 @@ async function createAnomalyAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
-  redirectWithFormSuccess("/admin/payroll-leave", "Payroll anomaly reported successfully.");
+  redirectWithFormSuccess(redirectPath, "Payroll anomaly reported successfully.");
 }
 
 async function upsertBalanceAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
+
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
 
   const employeeId = Number(formData.get("employeeId") ?? "");
   const annualDays = Number(formData.get("annualDays") ?? "");
@@ -104,119 +149,160 @@ async function upsertBalanceAction(formData: FormData): Promise<void> {
   const carryDays = Number(formData.get("carryDays") ?? "");
 
   if (!Number.isFinite(employeeId) || !Number.isFinite(annualDays)) {
-    redirectWithFormError("/admin/payroll-leave", "Employee and annual leave days are required.");
+    redirectWithFormError(redirectPath, "Employee and annual leave days are required.");
+  }
+
+  const usedDaysValue = Number.isFinite(usedDays) ? usedDays : 0;
+  const carryDaysValue = Number.isFinite(carryDays) ? carryDays : 0;
+
+  if (annualDays < 0 || usedDaysValue < 0 || carryDaysValue < 0) {
+    redirectWithFormError(redirectPath, "Leave days cannot be negative.");
   }
 
   await upsertLeaveBalance({
     employeeId,
     annualDays,
-    usedDays: Number.isFinite(usedDays) ? usedDays : 0,
-    carryDays: Number.isFinite(carryDays) ? carryDays : 0,
+    usedDays: usedDaysValue,
+    carryDays: carryDaysValue,
   });
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
-  redirectWithFormSuccess("/admin/payroll-leave", "Leave balance updated successfully.");
+  redirectWithFormSuccess(redirectPath, "Leave balance updated successfully.");
 }
 
 async function createLeaveRequestAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
 
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
+
   const employeeId = Number(formData.get("employeeId") ?? "");
+  const requestCategory = String(formData.get("requestCategory") ?? "leave").trim();
   const leaveType = String(formData.get("leaveType") ?? "").trim();
   const startDate = String(formData.get("startDate") ?? "").trim();
   const endDate = String(formData.get("endDate") ?? "").trim();
-  const days = Number(formData.get("days") ?? "");
-  const status = String(formData.get("status") ?? "pending").trim();
+  const daysInput = String(formData.get("days") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
 
-  if (!Number.isFinite(employeeId) || !leaveType || !startDate || !endDate || !Number.isFinite(days)) {
-    redirectWithFormError("/admin/payroll-leave", "Complete all leave request fields.");
+  if (!Number.isFinite(employeeId) || !leaveType || !startDate || !endDate || !reason) {
+    redirectWithFormError(redirectPath, "Complete all leave request fields.");
   }
   if (
-    !HR_LEAVE_REQUEST_STATUSES.includes(
-      status as (typeof HR_LEAVE_REQUEST_STATUSES)[number]
-    )
+    !HR_LEAVE_REQUEST_CATEGORIES.includes(requestCategory as HRLeaveRequestCategory)
   ) {
-    redirectWithFormError("/admin/payroll-leave", "Select a valid leave request status.");
+    redirectWithFormError(redirectPath, "Select a valid request category.");
+  }
+
+  const isLateArrival = requestCategory === "late_arrival";
+  const days = isLateArrival
+    ? 0.25
+    : resolveLeaveDays(startDate, endDate, daysInput);
+
+  if (!isLateArrival && days === null) {
+    const computedDays = daysBetweenInclusive(startDate, endDate);
+    if (computedDays <= 0) {
+      redirectWithFormError(redirectPath, "End date must be on or after start date.");
+    }
+    redirectWithFormError(redirectPath, "Days must match the selected date range.");
   }
 
   await createLeaveRequest({
     employeeId,
-    leaveType,
+    leaveType: isLateArrival ? "Late arrival" : leaveType,
+    requestCategory: requestCategory as HRLeaveRequestCategory,
     startDate,
-    endDate,
-    days,
-    status: status as (typeof HR_LEAVE_REQUEST_STATUSES)[number],
+    endDate: isLateArrival ? startDate : endDate,
+    days: days ?? 0.25,
+    status: "pending",
+    reason,
+    source: "admin",
   });
 
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
-  redirectWithFormSuccess("/admin/payroll-leave", "Leave request created successfully.");
+  redirectWithFormSuccess(redirectPath, "Leave request created successfully.");
 }
 
 async function updateCycleStatusAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
 
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
+
   const cycleId = Number(formData.get("cycleId") ?? "");
   const status = String(formData.get("status") ?? "").trim();
 
   if (!Number.isFinite(cycleId)) {
-    redirectWithFormError("/admin/payroll-leave", "Payroll cycle ID is required.");
+    redirectWithFormError(redirectPath, "Payroll cycle ID is required.");
   }
   if (!HR_PAYROLL_STATUSES.includes(status as (typeof HR_PAYROLL_STATUSES)[number])) {
-    redirectWithFormError("/admin/payroll-leave", "Select a valid payroll cycle status.");
+    redirectWithFormError(redirectPath, "Select a valid payroll cycle status.");
   }
 
   await updatePayrollCycleStatus(cycleId, status as (typeof HR_PAYROLL_STATUSES)[number]);
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
-  redirectWithFormSuccess("/admin/payroll-leave", "Payroll cycle status updated successfully.");
+  redirectWithFormSuccess(redirectPath, "Payroll cycle status updated successfully.");
 }
 
 async function updateLeaveStatusAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
 
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
+
   const leaveRequestId = Number(formData.get("leaveRequestId") ?? "");
-  const status = String(formData.get("status") ?? "").trim();
+  const intent = String(formData.get("intent") ?? "").trim();
+  const selectedStatus = String(formData.get("status") ?? "").trim();
+  const status =
+    intent === "approve" ? "approved" : intent === "reopen" ? "pending" : selectedStatus;
+  const reviewerNote = String(formData.get("reviewerNote") ?? "").trim();
 
   if (!Number.isFinite(leaveRequestId)) {
-    redirectWithFormError("/admin/payroll-leave", "Leave request ID is required.");
+    redirectWithFormError(redirectPath, "Leave request ID is required.");
   }
   if (
     !HR_LEAVE_REQUEST_STATUSES.includes(
       status as (typeof HR_LEAVE_REQUEST_STATUSES)[number]
     )
   ) {
-    redirectWithFormError("/admin/payroll-leave", "Select a valid leave request status.");
+    redirectWithFormError(redirectPath, "Select a valid leave request status.");
   }
 
   await updateLeaveRequestStatus(
     leaveRequestId,
-    status as (typeof HR_LEAVE_REQUEST_STATUSES)[number]
+    status as (typeof HR_LEAVE_REQUEST_STATUSES)[number],
+    reviewerNote || undefined
   );
   revalidatePath("/admin/payroll-leave");
+  revalidatePath("/admin/attendance");
+  revalidatePath("/staff/leave");
   revalidatePath("/admin");
-  redirectWithFormSuccess("/admin/payroll-leave", "Leave request status updated successfully.");
+  redirectWithFormSuccess(redirectPath, "Leave request status updated successfully.");
 }
 
 async function updateAnomalyStatusAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
 
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
+
   const anomalyId = Number(formData.get("anomalyId") ?? "");
   const status = String(formData.get("status") ?? "").trim();
 
   if (!Number.isFinite(anomalyId) || !["open", "resolved"].includes(status)) {
-    redirectWithFormError("/admin/payroll-leave", "Valid anomaly ID and status are required.");
+    redirectWithFormError(redirectPath, "Valid anomaly ID and status are required.");
   }
 
   await updatePayrollAnomalyStatus(anomalyId, status as "open" | "resolved");
   revalidatePath("/admin/payroll-leave");
   revalidatePath("/admin");
-  redirectWithFormSuccess("/admin/payroll-leave", "Payroll anomaly status updated successfully.");
+  redirectWithFormSuccess(redirectPath, "Payroll anomaly status updated successfully.");
 }
 
 export default async function PayrollLeavePage({ searchParams }: PayrollLeavePageProps) {
@@ -230,9 +316,24 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
       cycleStatus: cycleStatusFilter,
       leaveStatus: leaveStatusFilter,
     }),
-    listHREmployeeOptions(),
+    listHREmployeeOptions({ activeOnly: true }),
     listPayrollCycleOptions(),
   ]);
+
+  const employeeNameById = new Map(employees.map((employee) => [employee.id, employee.full_name]));
+  const filterProps = {
+    cycleStatus: cycleStatusFilter,
+    leaveStatus: leaveStatusFilter,
+  };
+  const sortedLeaveRequests = [...data.leaveRequests].sort((left, right) => {
+    const leftPending = left.status === "pending" ? 0 : 1;
+    const rightPending = right.status === "pending" ? 0 : 1;
+    if (leftPending !== rightPending) {
+      return leftPending - rightPending;
+    }
+    return new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime();
+  });
+  const pendingLeaveCount = data.leaveRequests.filter((request) => request.status === "pending").length;
 
   return (
     <div className="space-y-6">
@@ -294,7 +395,10 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
             <CardTitle>Create Payroll Cycle</CardTitle>
           </CardHeader>
           <CardContent>
-            <CreatePayrollCycleStack createCycleAction={createCycleAction} />
+            <CreatePayrollCycleStack
+              {...filterProps}
+              createCycleAction={createCycleAction}
+            />
           </CardContent>
         </Card>
 
@@ -304,6 +408,7 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
           </CardHeader>
           <CardContent>
             <CreatePayrollAnomalyStack
+              {...filterProps}
               employeeOptions={employees}
               payrollCycleOptions={payrollCycleOptions}
               createAnomalyAction={createAnomalyAction}
@@ -319,6 +424,7 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
           </CardHeader>
           <CardContent>
             <UpsertLeaveBalanceStack
+              {...filterProps}
               employeeOptions={employees}
               upsertBalanceAction={upsertBalanceAction}
             />
@@ -331,6 +437,7 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
           </CardHeader>
           <CardContent>
             <CreateLeaveRequestStack
+              {...filterProps}
               employeeOptions={employees}
               createLeaveRequestAction={createLeaveRequestAction}
             />
@@ -340,10 +447,55 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
 
       <Card>
         <CardHeader>
+          <CardTitle>Leave Balances ({data.leaveBalances.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.leaveBalances.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No leave balances recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="border-b text-xs text-muted-foreground">
+                    <th className="py-2 pr-4 font-medium">Employee</th>
+                    <th className="py-2 pr-4 font-medium">Annual</th>
+                    <th className="py-2 pr-4 font-medium">Used</th>
+                    <th className="py-2 pr-4 font-medium">Carry</th>
+                    <th className="py-2 font-medium">Remaining</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.leaveBalances.map((balance) => {
+                    const remaining =
+                      balance.annual_days + balance.carry_days - balance.used_days;
+                    return (
+                      <tr className="border-b last:border-b-0" key={balance.id}>
+                        <td className="py-2 pr-4">
+                          {balance.full_name ||
+                            employeeNameById.get(balance.employee_id) ||
+                            `Employee #${balance.employee_id}`}
+                        </td>
+                        <td className="py-2 pr-4">{balance.annual_days}</td>
+                        <td className="py-2 pr-4">{balance.used_days}</td>
+                        <td className="py-2 pr-4">{balance.carry_days}</td>
+                        <td className="py-2">{remaining}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Payroll Cycles ({data.payrollCycles.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <PayrollCyclesAccordion
+            {...filterProps}
             payrollCycles={data.payrollCycles}
             updateCycleStatusAction={updateCycleStatusAction}
           />
@@ -352,11 +504,20 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
 
       <Card>
         <CardHeader>
-          <CardTitle>Leave Requests ({data.leaveRequests.length})</CardTitle>
+          <CardTitle>
+            Leave Requests ({data.leaveRequests.length})
+            {pendingLeaveCount > 0 ? (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                · {pendingLeaveCount} pending approval
+              </span>
+            ) : null}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <LeaveRequestsAccordion
-            leaveRequests={data.leaveRequests}
+            {...filterProps}
+            employeeOptions={employees}
+            leaveRequests={sortedLeaveRequests}
             updateLeaveStatusAction={updateLeaveStatusAction}
           />
         </CardContent>
@@ -368,6 +529,9 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
         </CardHeader>
         <CardContent>
           <PayrollAnomaliesAccordion
+            {...filterProps}
+            employeeOptions={employees}
+            payrollCycleOptions={payrollCycleOptions}
             payrollAnomalies={data.payrollAnomalies}
             updateAnomalyStatusAction={updateAnomalyStatusAction}
           />

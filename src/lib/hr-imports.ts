@@ -9,6 +9,7 @@ import {
   HR_DEPARTMENTS,
   HR_EMPLOYMENT_STATUSES,
   HR_EXIT_TYPES,
+  HR_LEAVE_REQUEST_CATEGORIES,
   HR_LEAVE_REQUEST_STATUSES,
   HR_PAYROLL_STATUSES,
   HR_RECRUITMENT_STAGES,
@@ -493,6 +494,20 @@ async function importLeave(
         HR_LEAVE_REQUEST_STATUSES,
         "status"
       );
+      const requestCategoryRaw = readValue(row, ["request_category"]) || "leave";
+      const requestCategory = ensureEnum(
+        requestCategoryRaw,
+        HR_LEAVE_REQUEST_CATEGORIES,
+        "request_category"
+      );
+      const reason = readValue(row, ["reason"]) || null;
+      const coveragePlan = readValue(row, ["coverage_plan"]) || null;
+      const contactNumber = readValue(row, ["contact_number"]) || null;
+      const submittedByEmail = readValue(row, ["submitted_by_email"]) || null;
+      const sourceRaw = readValue(row, ["source"]) || "admin";
+      if (sourceRaw !== "admin" && sourceRaw !== "staff_self_service") {
+        throw new Error("source must be admin or staff_self_service");
+      }
 
       if (recordType === "request") {
         if (!leaveType) {
@@ -531,11 +546,25 @@ async function importLeave(
         await db.query(
           `
             INSERT INTO hr_leave_requests (
-              employee_id, leave_type, start_date, end_date, days, status
+              employee_id, leave_type, request_category, start_date, end_date, days,
+              status, reason, coverage_plan, contact_number, submitted_by_email, source
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           `,
-          [employeeId, leaveType, startDate, endDate, days, leaveStatus]
+          [
+            employeeId,
+            leaveType,
+            requestCategory,
+            startDate,
+            endDate,
+            days,
+            leaveStatus,
+            reason,
+            coveragePlan,
+            contactNumber,
+            submittedByEmail,
+            sourceRaw,
+          ]
         );
       }
 
@@ -763,9 +792,9 @@ export function getImportTemplate(scope: HRImportScope): string {
       ].join("\n");
     case "leave":
       return [
-        "record_type,employee_code,annual_days,used_days,carry_days,leave_type,start_date,end_date,days,status",
-        "balance,EMP-2026-001,,,,,,,,",
-        "request,EMP-2026-001,,,,Annual Leave,2026-04-10,2026-04-12,3,pending",
+        "record_type,employee_code,annual_days,used_days,carry_days,leave_type,start_date,end_date,days,status,request_category,reason,coverage_plan,contact_number,submitted_by_email,source",
+        "balance,EMP-2026-001,,,,,,,,,,,,,",
+        "request,EMP-2026-001,,,,Annual Leave,2026-04-10,2026-04-12,3,pending,leave,,,,,admin",
       ].join("\n");
     case "payroll":
       return [

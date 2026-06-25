@@ -1,13 +1,14 @@
 import { ensureDbSchema, getDbPool } from "@/lib/db";
 import type {
   HRLeaveBalance,
+  HRLeaveBalanceWithEmployee,
   HRLeaveRequest,
   HRLeaveRequestStatus,
   HRPayrollAnomaly,
   HRPayrollCycle,
   HRPayrollStatus,
 } from "@/lib/types";
-import { HR_LEAVE_REQUEST_STATUSES } from "@/lib/types";
+import { HR_LEAVE_REQUEST_CATEGORIES, HR_LEAVE_REQUEST_STATUSES } from "@/lib/types";
 import {
   applyListLimit,
   asDateOnly,
@@ -27,6 +28,10 @@ import type {
   CreatePayrollCycleInput,
   UpsertLeaveBalanceInput,
 } from "@/lib/hr/types";
+
+export { daysBetweenInclusive } from "@/lib/hr/shared";
+
+export const PAYROLL_LEAVE_LIST_DEFAULT_LIMIT = 200;
 
 export type HRPayrollCycleOption = {
   id: number;
@@ -215,6 +220,36 @@ export async function listLeaveBalances(options: {
   return asRecordRows(result.rows).map(normalizeLeaveBalance);
 }
 
+export async function listLeaveBalancesWithEmployees(options: {
+  limit?: number;
+} = {}): Promise<HRLeaveBalanceWithEmployee[]> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const values: unknown[] = [];
+  const query = applyListLimit(
+    `
+      SELECT
+        lb.id,
+        lb.employee_id,
+        lb.annual_days,
+        lb.used_days,
+        lb.carry_days,
+        lb.updated_at,
+        e.full_name
+      FROM hr_leave_balances lb
+      INNER JOIN hr_employees e ON e.id = lb.employee_id
+      ORDER BY lb.updated_at DESC
+    `,
+    values,
+    options.limit
+  );
+  const result = await pool.query(query, values);
+  return asRecordRows(result.rows).map((row) => ({
+    ...normalizeLeaveBalance(row),
+    full_name: asString(row.full_name),
+  }));
+}
+
 export async function upsertLeaveBalance(
   input: UpsertLeaveBalanceInput
 ): Promise<HRLeaveBalance> {
@@ -245,6 +280,7 @@ export async function upsertLeaveBalance(
 
 export async function listLeaveRequests(options: {
   status?: string;
+  employeeId?: number;
   limit?: number;
 } = {}): Promise<HRLeaveRequest[]> {
   await ensureDbSchema();
@@ -256,9 +292,15 @@ export async function listLeaveRequests(options: {
     values.push(options.status.trim());
     conditions.push(`status = $${values.length}`);
   }
+  if (Number.isFinite(options.employeeId) && Number(options.employeeId) > 0) {
+    values.push(options.employeeId);
+    conditions.push(`employee_id = $${values.length}`);
+  }
 
   let query = `
-    SELECT id, employee_id, leave_type, start_date, end_date, days, status, requested_at, reviewed_at
+    SELECT id, employee_id, leave_type, request_category, start_date, end_date,
+      late_arrival_time, days, status, reason, coverage_plan, contact_number,
+      submitted_by_email, reviewer_note, source, requested_at, reviewed_at
     FROM hr_leave_requests
   `;
 
@@ -278,6 +320,11 @@ export async function createLeaveRequest(
 ): Promise<HRLeaveRequest> {
   await ensureDbSchema();
   const pool = getDbPool();
+  const requestCategory = ensureEnumValue(
+    input.requestCategory || "leave",
+    HR_LEAVE_REQUEST_CATEGORIES,
+    "leaveRequestCategory"
+  );
   const status = ensureEnumValue(
     input.status || "pending",
     HR_LEAVE_REQUEST_STATUSES,
@@ -286,18 +333,30 @@ export async function createLeaveRequest(
   const result = await pool.query(
     `
       INSERT INTO hr_leave_requests (
-        employee_id, leave_type, start_date, end_date, days, status
+        employee_id, leave_type, request_category, start_date, end_date,
+        late_arrival_time, days, status, reason, coverage_plan, contact_number,
+        submitted_by_email, reviewer_note, source
       )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, employee_id, leave_type, start_date, end_date, days, status, requested_at, reviewed_at
+      VALUES ($1, $2, $3, $4, $5, $6::time, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING id, employee_id, leave_type, request_category, start_date, end_date,
+        late_arrival_time, days, status, reason, coverage_plan, contact_number,
+        submitted_by_email, reviewer_note, source, requested_at, reviewed_at
     `,
     [
       input.employeeId,
       input.leaveType.trim(),
+      requestCategory,
       ensureDateOnly(input.startDate),
       ensureDateOnly(input.endDate),
+      input.lateArrivalTime?.trim() || null,
       input.days,
       status,
+      input.reason?.trim() || null,
+      input.coveragePlan?.trim() || null,
+      input.contactNumber?.trim() || null,
+      input.submittedByEmail?.trim().toLowerCase() || null,
+      input.reviewerNote?.trim() || null,
+      input.source || "admin",
     ]
   );
   return normalizeLeaveRequest(asRecordRows(result.rows)[0]);
@@ -305,7 +364,8 @@ export async function createLeaveRequest(
 
 export async function updateLeaveRequestStatus(
   leaveRequestId: number,
-  status: HRLeaveRequestStatus
+  status: HRLeaveRequestStatus,
+  reviewerNote?: string | null
 ): Promise<HRLeaveRequest | null> {
   await ensureDbSchema();
   const pool = getDbPool();
@@ -313,14 +373,24 @@ export async function updateLeaveRequestStatus(
     `
       UPDATE hr_leave_requests
       SET status = $2,
+          reviewer_note = COALESCE(NULLIF($3, ''), reviewer_note),
           reviewed_at = NOW()
       WHERE id = $1
-      RETURNING id, employee_id, leave_type, start_date, end_date, days, status, requested_at, reviewed_at
+      RETURNING id, employee_id, leave_type, request_category, start_date, end_date,
+        late_arrival_time, days, status, reason, coverage_plan, contact_number,
+        submitted_by_email, reviewer_note, source, requested_at, reviewed_at
     `,
-    [leaveRequestId, status]
+    [leaveRequestId, status, reviewerNote?.trim() || null]
   );
   if (result.rows.length === 0) {
     return null;
   }
   return normalizeLeaveRequest(asRecordRows(result.rows)[0]);
+}
+
+export async function listEmployeeLeaveRequests(
+  employeeId: number,
+  options: { limit?: number } = {}
+): Promise<HRLeaveRequest[]> {
+  return listLeaveRequests({ employeeId, limit: options.limit });
 }

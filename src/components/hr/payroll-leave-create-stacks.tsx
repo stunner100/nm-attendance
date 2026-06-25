@@ -3,13 +3,17 @@
 import { useRef } from "react";
 
 import {
+  PayrollLeaveFilterInputs,
+  type PayrollLeaveFilterProps,
+} from "@/components/hr/payroll-leave-filter-inputs";
+import {
   ProgressiveInputStack,
   type StepData,
 } from "@/components/ui/progressive-input-stack";
-import type { HREmployeeOption } from "@/lib/hr/shared";
 import type { HRPayrollCycleOption } from "@/lib/hr/payroll-leave";
+import type { HREmployeeOption } from "@/lib/hr/shared";
 import { humanizeLabel } from "@/lib/labels";
-import { HR_LEAVE_REQUEST_STATUSES, HR_PAYROLL_STATUSES } from "@/lib/types";
+import { HR_PAYROLL_STATUSES } from "@/lib/types";
 
 function submitHiddenForm(
   formRef: React.RefObject<HTMLFormElement | null>,
@@ -28,11 +32,27 @@ function submitHiddenForm(
   form.requestSubmit();
 }
 
-type CreatePayrollCycleStackProps = {
+function daysBetweenInclusive(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    return 0;
+  }
+
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((end.getTime() - start.getTime()) / millisecondsPerDay) + 1;
+}
+
+type CreatePayrollCycleStackProps = PayrollLeaveFilterProps & {
   createCycleAction: (formData: FormData) => void | Promise<void>;
 };
 
-export function CreatePayrollCycleStack({ createCycleAction }: CreatePayrollCycleStackProps) {
+export function CreatePayrollCycleStack({
+  createCycleAction,
+  cycleStatus,
+  leaveStatus,
+}: CreatePayrollCycleStackProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
   const steps: StepData[] = [
@@ -78,6 +98,7 @@ export function CreatePayrollCycleStack({ createCycleAction }: CreatePayrollCycl
         <input name="status" type="hidden" />
         <input name="processedAt" type="hidden" />
         <input name="notes" type="hidden" />
+        <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />
       </form>
 
       <ProgressiveInputStack
@@ -97,7 +118,7 @@ export function CreatePayrollCycleStack({ createCycleAction }: CreatePayrollCycl
   );
 }
 
-type CreatePayrollAnomalyStackProps = {
+type CreatePayrollAnomalyStackProps = PayrollLeaveFilterProps & {
   employeeOptions: HREmployeeOption[];
   payrollCycleOptions: HRPayrollCycleOption[];
   createAnomalyAction: (formData: FormData) => void | Promise<void>;
@@ -107,6 +128,8 @@ export function CreatePayrollAnomalyStack({
   employeeOptions,
   payrollCycleOptions,
   createAnomalyAction,
+  cycleStatus,
+  leaveStatus,
 }: CreatePayrollAnomalyStackProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -176,6 +199,7 @@ export function CreatePayrollAnomalyStack({
         <input name="anomalyType" type="hidden" />
         <input name="status" type="hidden" />
         <input name="details" type="hidden" />
+        <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />
       </form>
 
       <ProgressiveInputStack
@@ -196,7 +220,7 @@ export function CreatePayrollAnomalyStack({
   );
 }
 
-type UpsertLeaveBalanceStackProps = {
+type UpsertLeaveBalanceStackProps = PayrollLeaveFilterProps & {
   employeeOptions: HREmployeeOption[];
   upsertBalanceAction: (formData: FormData) => void | Promise<void>;
 };
@@ -204,6 +228,8 @@ type UpsertLeaveBalanceStackProps = {
 export function UpsertLeaveBalanceStack({
   employeeOptions,
   upsertBalanceAction,
+  cycleStatus,
+  leaveStatus,
 }: UpsertLeaveBalanceStackProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -259,6 +285,7 @@ export function UpsertLeaveBalanceStack({
         <input name="annualDays" type="hidden" />
         <input name="usedDays" type="hidden" />
         <input name="carryDays" type="hidden" />
+        <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />
       </form>
 
       <ProgressiveInputStack
@@ -278,7 +305,7 @@ export function UpsertLeaveBalanceStack({
   );
 }
 
-type CreateLeaveRequestStackProps = {
+type CreateLeaveRequestStackProps = PayrollLeaveFilterProps & {
   employeeOptions: HREmployeeOption[];
   createLeaveRequestAction: (formData: FormData) => void | Promise<void>;
 };
@@ -286,6 +313,8 @@ type CreateLeaveRequestStackProps = {
 export function CreateLeaveRequestStack({
   employeeOptions,
   createLeaveRequestAction,
+  cycleStatus,
+  leaveStatus,
 }: CreateLeaveRequestStackProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -304,18 +333,19 @@ export function CreateLeaveRequestStack({
       ],
     },
     {
+      id: "requestCategory",
+      label: "Request category",
+      type: "select",
+      options: [
+        { value: "leave", label: "Leave / absence" },
+        { value: "late_arrival", label: "Late arrival" },
+      ],
+    },
+    {
       id: "leaveType",
       label: "Leave type",
       type: "text",
       placeholder: "Leave type",
-      required: true,
-    },
-    {
-      id: "days",
-      label: "Days",
-      type: "number",
-      placeholder: "Days",
-      step: 0.25,
       required: true,
     },
     {
@@ -329,50 +359,66 @@ export function CreateLeaveRequestStack({
       ],
     },
     {
-      id: "status",
-      label: "Status",
-      type: "select",
-      options: HR_LEAVE_REQUEST_STATUSES.map((status) => ({
-        value: status,
-        label: humanizeLabel(status),
-      })),
+      id: "reason",
+      label: "Reason",
+      type: "textarea",
+      placeholder: "Briefly explain the request.",
+      required: true,
+      rows: 3,
     },
   ];
 
   const initialData: Record<string, string | boolean> = {
     employeeId: "",
+    requestCategory: "leave",
     leaveType: "",
-    days: "",
     startDate: "",
     endDate: "",
-    status: "pending",
+    reason: "",
   };
 
   return (
     <div className="space-y-3">
       <form ref={formRef} action={createLeaveRequestAction} className="hidden" aria-hidden>
         <input name="employeeId" type="hidden" />
+        <input name="requestCategory" type="hidden" />
         <input name="leaveType" type="hidden" />
         <input name="days" type="hidden" />
         <input name="startDate" type="hidden" />
         <input name="endDate" type="hidden" />
-        <input name="status" type="hidden" />
+        <input name="reason" type="hidden" />
+        <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />
       </form>
 
       <ProgressiveInputStack
         steps={steps}
         initialData={initialData}
         submitLabel="Create leave request"
-        onSubmit={(data) =>
+        onSubmit={(data) => {
+          const requestCategory = String(data.requestCategory ?? "leave");
+          const startDate = String(data.startDate ?? "");
+          const endDate =
+            requestCategory === "late_arrival"
+              ? startDate
+              : String(data.endDate ?? "") || startDate;
+          const days =
+            requestCategory === "late_arrival"
+              ? "0.25"
+              : String(daysBetweenInclusive(startDate, endDate));
+
           submitHiddenForm(formRef, {
             employeeId: String(data.employeeId ?? ""),
-            leaveType: String(data.leaveType ?? ""),
-            days: String(data.days ?? ""),
-            startDate: String(data.startDate ?? ""),
-            endDate: String(data.endDate ?? ""),
-            status: String(data.status ?? ""),
-          })
-        }
+            requestCategory,
+            leaveType:
+              requestCategory === "late_arrival"
+                ? "Late arrival"
+                : String(data.leaveType ?? ""),
+            days,
+            startDate,
+            endDate,
+            reason: String(data.reason ?? ""),
+          });
+        }}
       />
     </div>
   );

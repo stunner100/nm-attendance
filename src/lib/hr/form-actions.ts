@@ -37,3 +37,40 @@ export function readFormRecordId(formData: FormData, fieldName: string): number 
   }
   return id;
 }
+
+export function readPayrollLeaveFilters(formData: FormData): {
+  cycleStatus: string;
+  leaveStatus: string;
+} {
+  return {
+    cycleStatus: String(formData.get("cycleStatus") ?? "").trim(),
+    leaveStatus: String(formData.get("leaveStatus") ?? "").trim(),
+  };
+}
+
+export function buildPayrollLeavePath(options: {
+  cycleStatus?: string;
+  leaveStatus?: string;
+  error?: string;
+  success?: string;
+} = {}): string {
+  const params = new URLSearchParams();
+  const cycleStatus = options.cycleStatus?.trim();
+  const leaveStatus = options.leaveStatus?.trim();
+
+  if (cycleStatus) {
+    params.set("cycleStatus", cycleStatus);
+  }
+  if (leaveStatus) {
+    params.set("leaveStatus", leaveStatus);
+  }
+  if (options.error?.trim()) {
+    params.set("error", options.error.trim());
+  }
+  if (options.success?.trim()) {
+    params.set("success", options.success.trim());
+  }
+
+  const query = params.toString();
+  return query ? `/admin/payroll-leave?${query}` : "/admin/payroll-leave";
+}

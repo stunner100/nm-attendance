@@ -16,12 +16,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess, buildPayrollLeavePath, readPayrollLeaveFilters } from "@/lib/hr/form-actions";
+import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess, buildPayrollLeavePath, readPayrollLeaveFilters, readFormRecordId } from "@/lib/hr/form-actions";
 import { humanizeLabel } from "@/lib/labels";
 import {
   createLeaveRequest,
   createPayrollAnomaly,
   createPayrollCycle,
+  deleteLeaveRequest,
   getPayrollLeaveModuleData,
   listHREmployeeOptions,
   listPayrollCycleOptions,
@@ -285,6 +286,30 @@ async function updateLeaveStatusAction(formData: FormData): Promise<void> {
   redirectWithFormSuccess(redirectPath, "Leave request status updated successfully.");
 }
 
+async function deleteLeaveRequestAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/payroll-leave");
+
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
+
+  const leaveRequestId = readFormRecordId(formData, "leaveRequestId");
+  if (!leaveRequestId) {
+    redirectWithFormError(redirectPath, "Leave request ID is required.");
+  }
+
+  const deleted = await deleteLeaveRequest(leaveRequestId);
+  if (!deleted) {
+    redirectWithFormError(redirectPath, "Leave request not found.");
+  }
+
+  revalidatePath("/admin/payroll-leave");
+  revalidatePath("/admin/attendance");
+  revalidatePath("/staff/leave");
+  revalidatePath("/admin");
+  redirectWithFormSuccess(redirectPath, "Leave request deleted successfully.");
+}
+
 async function updateAnomalyStatusAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
@@ -516,6 +541,7 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
         <CardContent>
           <LeaveRequestsAccordion
             {...filterProps}
+            deleteLeaveRequestAction={deleteLeaveRequestAction}
             employeeOptions={employees}
             leaveRequests={sortedLeaveRequests}
             updateLeaveStatusAction={updateLeaveStatusAction}

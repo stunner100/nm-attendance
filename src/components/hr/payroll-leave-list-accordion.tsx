@@ -1,5 +1,6 @@
 "use client";
 
+import { DeleteRecordForm } from "@/components/hr/delete-record-form";
 import { EmptyState } from "@/components/hr/empty-state";
 import {
   PayrollLeaveFilterInputs,
@@ -102,12 +103,14 @@ type LeaveRequestsAccordionProps = PayrollLeaveFilterProps & {
   employeeOptions: HREmployeeOption[];
   leaveRequests: HRLeaveRequest[];
   updateLeaveStatusAction: (formData: FormData) => void | Promise<void>;
+  deleteLeaveRequestAction: (formData: FormData) => void | Promise<void>;
 };
 
 export function LeaveRequestsAccordion({
   employeeOptions,
   leaveRequests,
   updateLeaveStatusAction,
+  deleteLeaveRequestAction,
   cycleStatus,
   leaveStatus,
 }: LeaveRequestsAccordionProps) {
@@ -173,41 +176,52 @@ export function LeaveRequestsAccordion({
                 </p>
               ) : null}
             </div>
-            <form
-              action={updateLeaveStatusAction}
-              className="grid gap-2 sm:grid-cols-[minmax(140px,180px)_1fr_auto_auto]"
-            >
-              <input name="leaveRequestId" type="hidden" value={leaveRequest.id} />
-              <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />
-              <select
-                className={selectClass}
-                defaultValue={leaveRequest.status}
-                name="status"
+            <div className="flex flex-wrap items-end gap-2">
+              <form
+                action={updateLeaveStatusAction}
+                className="grid flex-1 gap-2 sm:grid-cols-[minmax(140px,180px)_1fr_auto_auto]"
               >
-                {HR_LEAVE_REQUEST_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {humanizeLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="h-8 rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30"
-                defaultValue={leaveRequest.reviewer_note ?? ""}
-                name="reviewerNote"
-                placeholder="Reviewer note"
+                <input name="leaveRequestId" type="hidden" value={leaveRequest.id} />
+                <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />
+                <select
+                  className={selectClass}
+                  defaultValue={leaveRequest.status}
+                  name="status"
+                >
+                  {HR_LEAVE_REQUEST_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {humanizeLabel(status)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className="h-8 rounded-[var(--radius-input)] border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-[var(--color-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/30"
+                  defaultValue={leaveRequest.reviewer_note ?? ""}
+                  name="reviewerNote"
+                  placeholder="Reviewer note"
+                />
+                <Button size="sm" type="submit" variant="outline">
+                  Save status
+                </Button>
+                <Button
+                  name="intent"
+                  size="sm"
+                  type="submit"
+                  value={leaveRequest.status === "approved" ? "reopen" : "approve"}
+                >
+                  {leaveRequest.status === "approved" ? "Reopen" : "Approve"}
+                </Button>
+              </form>
+              <DeleteRecordForm
+                action={deleteLeaveRequestAction}
+                confirmMessage={`Delete leave request for ${employeeOptions.find((employee) => employee.id === leaveRequest.employee_id)?.full_name ?? `employee #${leaveRequest.employee_id}`} (${leaveRequest.start_date} to ${leaveRequest.end_date})?`}
+                extraFields={
+                  <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />
+                }
+                recordId={leaveRequest.id}
+                recordIdFieldName="leaveRequestId"
               />
-              <Button size="sm" type="submit" variant="outline">
-                Save status
-              </Button>
-              <Button
-                name="intent"
-                size="sm"
-                type="submit"
-                value={leaveRequest.status === "approved" ? "reopen" : "approve"}
-              >
-                {leaveRequest.status === "approved" ? "Reopen" : "Approve"}
-              </Button>
-            </form>
+            </div>
           </AccordionContent>
         </AccordionItem>
       ))}

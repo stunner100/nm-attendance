@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ type DeleteRecordFormProps = {
   recordIdFieldName?: string;
   label?: string;
   confirmMessage: string;
+  extraFields?: ReactNode;
 };
 
 export function DeleteRecordForm({
@@ -18,6 +20,7 @@ export function DeleteRecordForm({
   recordIdFieldName = "recordId",
   label = "Delete",
   confirmMessage,
+  extraFields,
 }: DeleteRecordFormProps) {
   return (
     <form
@@ -29,6 +32,7 @@ export function DeleteRecordForm({
       }}
     >
       <input type="hidden" name={recordIdFieldName} value={recordId} />
+      {extraFields}
       <Button type="submit" size="sm" variant="destructive">
         <Trash2 className="h-3.5 w-3.5" />
         {label}

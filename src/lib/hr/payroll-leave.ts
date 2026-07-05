@@ -388,6 +388,16 @@ export async function updateLeaveRequestStatus(
   return normalizeLeaveRequest(asRecordRows(result.rows)[0]);
 }
 
+export async function deleteLeaveRequest(leaveRequestId: number): Promise<boolean> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query(
+    `DELETE FROM hr_leave_requests WHERE id = $1 RETURNING id`,
+    [leaveRequestId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export async function listEmployeeLeaveRequests(
   employeeId: number,
   options: { limit?: number } = {}

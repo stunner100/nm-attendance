@@ -176,10 +176,10 @@ export function LeaveRequestsAccordion({
                 </p>
               ) : null}
             </div>
-            <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-3">
               <form
                 action={updateLeaveStatusAction}
-                className="grid flex-1 gap-2 sm:grid-cols-[minmax(140px,180px)_1fr_auto_auto]"
+                className="grid gap-2 sm:grid-cols-[minmax(140px,180px)_1fr_auto_auto]"
               >
                 <input name="leaveRequestId" type="hidden" value={leaveRequest.id} />
                 <PayrollLeaveFilterInputs cycleStatus={cycleStatus} leaveStatus={leaveStatus} />

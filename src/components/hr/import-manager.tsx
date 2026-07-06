@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/hr/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { normalizeImportedText } from "@/lib/normalize-import-text";
 
 const IMPORT_SCOPES = [
   { value: "employees", label: "Employee Records" },
@@ -66,8 +67,10 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
   const [template, setTemplate] = useState<string>("");
   const [runs, setRuns] = useState<ImportRun[]>(initialRuns);
   const [isRunning, setIsRunning] = useState(false);
+  const [runningAction, setRunningAction] = useState<"preview" | "import" | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +135,8 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
     reader.onload = (e) => {
       const text = e.target?.result;
       if (typeof text === "string") {
-        setCsv(text);
+        const normalized = normalizeImportedText(text);
+        setCsv(normalized);
         const detected = detectScopeFromHeaders(text);
         if (detected && detected !== scope) {
           setScope(detected);
@@ -164,7 +168,13 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
       return;
     }
 
+    const normalizedCsv = normalizeImportedText(csv);
+    if (normalizedCsv !== csv) {
+      setCsv(normalizedCsv);
+    }
+
     setIsRunning(true);
+    setRunningAction(dryRun ? "preview" : "import");
 
     try {
       const response = await fetch(`/api/hr/import/${scope}`, {
@@ -172,7 +182,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ csv, dryRun }),
+        body: JSON.stringify({ csv: normalizedCsv, dryRun }),
       });
 
       const data = (await response.json().catch(() => ({}))) as {
@@ -188,10 +198,14 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
       if (data.result) {
         if (dryRun) {
           setPreviewResult(data.result);
+          setImportResult(null);
         } else {
           setImportResult(data.result);
           setPreviewResult(null);
         }
+        requestAnimationFrame(() => {
+          feedbackRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
       }
 
       const runsResponse = await fetch(`/api/hr/import/${scope}`, { cache: "no-store" });
@@ -203,11 +217,20 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
       setError("Network error while importing data.");
     } finally {
       setIsRunning(false);
+      setRunningAction(null);
     }
   };
 
   const scopeLabel = IMPORT_SCOPES.find((s) => s.value === scope)?.label ?? scope;
-  const hasErrors = previewResult !== null && previewResult.rowsFailed > 0;
+  const hasErrors =
+    previewResult !== null &&
+    (previewResult.rowsFailed > 0 || previewResult.errors.length > 0 || previewResult.rowsTotal === 0);
+  const importBlockedReason =
+    previewResult === null && importResult === null
+      ? "Run Preview to validate your file before importing."
+      : hasErrors
+        ? "Fix validation errors before importing."
+        : null;
 
   const viewDataLink = (() => {
     switch (scope) {
@@ -307,10 +330,32 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
                   setScope(detected);
                 }
               }}
-              placeholder="employee_code,full_name,department,contract_type&#10;EMP-001,Jane Smith,Tech,full_time"
+              placeholder={"employee_code,full_name,department,contract_type\nEMP-001,Jane Smith,Tech,full_time"}
               value={csv}
             />
           </label>
+
+          {template ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCsv(template);
+                  setFileName(null);
+                  setPreviewResult(null);
+                  setImportResult(null);
+                  setError(null);
+                }}
+              >
+                Use sample data
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Loads a valid template into the editor. Each record must be on its own line.
+              </p>
+            </div>
+          ) : null}
 
           {template ? (
             <details className="rounded-[var(--radius-md)] border border-border bg-muted p-4">
@@ -339,6 +384,64 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
             </details>
           ) : null}
 
+          <div ref={feedbackRef} className="space-y-3">
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+            {previewResult ? (
+              <div className="space-y-3 rounded-xl border p-4 text-sm">
+                <p className="font-medium">
+                  {previewResult.rowsTotal === 0
+                    ? "Preview found no data rows"
+                    : `Preview complete — ${previewResult.rowsSuccess} of ${previewResult.rowsTotal} rows are valid`}
+                </p>
+                {previewResult.rowsTotal > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Success: {previewResult.rowsSuccess} &bull; Failed: {previewResult.rowsFailed}
+                  </p>
+                ) : null}
+                {previewResult.errors.length > 0 ? (
+                  <div className="space-y-1">
+                    {previewResult.errors.slice(0, 20).map((entry, index) => (
+                      <p key={`${entry.row}-${index}`} className="text-xs text-destructive">
+                        {entry.row > 0 ? `Row ${entry.row}: ` : ""}
+                        {entry.message}
+                      </p>
+                    ))}
+                    {previewResult.errors.length > 20 ? (
+                      <p className="text-xs text-muted-foreground">
+                        {previewResult.errors.length - 20} more error(s) omitted.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : previewResult.rowsTotal > 0 && previewResult.rowsFailed === 0 ? (
+                  <p className="text-xs text-[var(--color-success)]">No validation errors. Ready to import.</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {importResult ? (
+              <div className="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-rule)] bg-[var(--color-signature-mint)]/30 p-5 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-[var(--color-success)]" />
+                  <p className="font-medium text-foreground">
+                    Import complete &mdash; {importResult.rowsSuccess} rows imported
+                  </p>
+                </div>
+                {importResult.rowsFailed > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {importResult.rowsFailed} row(s) skipped due to errors.
+                  </p>
+                )}
+                <Button asChild>
+                  <a href={viewDataLink} className="inline-flex items-center gap-1.5">
+                    View imported data
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              </div>
+            ) : null}
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={isRunning || !csv.trim()}
@@ -346,7 +449,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
               type="button"
               variant="outline"
             >
-              {isRunning && importResult === null ? (
+              {runningAction === "preview" ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Eye className="mr-2 h-4 w-4" />
@@ -354,74 +457,22 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
               Preview
             </Button>
             <Button
-              disabled={isRunning || !csv.trim() || (previewResult === null && importResult === null)}
+              disabled={isRunning || !csv.trim() || previewResult === null || hasErrors}
               onClick={() => void runAction(false)}
+              title={importBlockedReason ?? undefined}
               type="button"
             >
-              {isRunning && importResult === null ? (
+              {runningAction === "import" ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <CheckCircle2 className="mr-2 h-4 w-4" />
               )}
-              {importResult !== null
-                ? "Import Again"
-                : previewResult === null
-                  ? "Preview first"
-                  : hasErrors
-                    ? "Fix errors first"
-                    : "Import"}
+              {importResult !== null ? "Import again" : "Import"}
             </Button>
           </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-          {previewResult ? (
-            <div className="space-y-3 rounded-xl border p-4 text-sm">
-              <p className="font-medium">
-                Preview complete &mdash; {previewResult.rowsSuccess} of {previewResult.rowsTotal} rows are valid
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Success: {previewResult.rowsSuccess} &bull; Failed: {previewResult.rowsFailed}
-              </p>
-              {previewResult.errors.length > 0 ? (
-                <div className="space-y-1">
-                  {previewResult.errors.slice(0, 20).map((entry, index) => (
-                    <p key={`${entry.row}-${index}`} className="text-xs text-destructive">
-                      Row {entry.row}: {entry.message}
-                    </p>
-                  ))}
-                  {previewResult.errors.length > 20 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {previewResult.errors.length - 20} more error(s) omitted.
-                    </p>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="text-xs text-[var(--color-success)]">No validation errors. Ready to import.</p>
-              )}
-            </div>
-          ) : null}
-
-          {importResult ? (
-            <div className="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-rule)] bg-[var(--color-signature-mint)]/30 p-5 text-sm">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-[var(--color-success)]" />
-                <p className="font-medium text-foreground">
-                  Import complete &mdash; {importResult.rowsSuccess} rows imported
-                </p>
-              </div>
-              {importResult.rowsFailed > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {importResult.rowsFailed} row(s) skipped due to errors.
-                </p>
-              )}
-              <Button asChild>
-                <a href={viewDataLink} className="inline-flex items-center gap-1.5">
-                  View imported data
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </Button>
-            </div>
+          {importBlockedReason ? (
+            <p className="text-xs text-muted-foreground">{importBlockedReason}</p>
           ) : null}
         </CardContent>
       </Card>

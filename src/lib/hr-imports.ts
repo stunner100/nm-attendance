@@ -721,6 +721,9 @@ async function dispatchImport(
   }
 }
 
+const NO_DATA_ROWS_ERROR =
+  "No data rows found. Put column headers on the first line and each record on its own line below.";
+
 export async function runHrCsvImport(input: {
   scope: HRImportScope;
   csv: string;
@@ -728,6 +731,17 @@ export async function runHrCsvImport(input: {
 }): Promise<HRImportResult> {
   await ensureDbSchema();
   const rows = collectRows(input.csv);
+
+  if (rows.length === 0) {
+    return {
+      scope: input.scope,
+      dryRun: input.dryRun,
+      rowsTotal: 0,
+      rowsSuccess: 0,
+      rowsFailed: 0,
+      errors: [{ row: 0, message: NO_DATA_ROWS_ERROR }],
+    };
+  }
 
   let result: HRImportResult;
 

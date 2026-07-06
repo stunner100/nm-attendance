@@ -9,6 +9,7 @@ import {
   runHrCsvImport,
   type HRImportScope,
 } from "@/lib/hr-imports";
+import { normalizeImportedText } from "@/lib/normalize-import-text";
 
 type RouteContext = {
   params: Promise<{ scope: string }>;
@@ -18,27 +19,6 @@ type ImportPayload = {
   csv?: unknown;
   dryRun?: unknown;
 };
-
-function normalizeImportedText(text: string): string {
-  const lines = text
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      if (line.includes(",")) {
-        return line;
-      }
-
-      if (line.includes("\t")) {
-        return line.replace(/\t+/g, ",");
-      }
-
-      return line.replace(/\s{2,}/g, ",");
-    });
-
-  return lines.join("\n");
-}
 
 async function readCsvFromRequest(request: Request): Promise<{
   csv: string;
@@ -88,10 +68,12 @@ async function readCsvFromRequest(request: Request): Promise<{
     throw new Error("Invalid JSON payload.");
   }
 
-  const csv = typeof payload.csv === "string" ? payload.csv : "";
-  if (!csv.trim()) {
+  const csvRaw = typeof payload.csv === "string" ? payload.csv : "";
+  if (!csvRaw.trim()) {
     throw new Error("csv is required.");
   }
+
+  const csv = normalizeImportedText(csvRaw);
 
   const dryRun =
     payload.dryRun === true ||

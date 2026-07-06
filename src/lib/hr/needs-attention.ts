@@ -1,8 +1,5 @@
 import type { AtRiskEmployee, HRDashboardSummary } from "@/lib/types";
 
-const PERFORMANCE_ALERT_CAP = 30;
-const INCOMPLETE_PREVIEW_LIMIT = 10;
-
 export type IncompleteDashboardItem = {
   id: string;
   category: string;
@@ -18,6 +15,9 @@ export type NeedsAttentionCountInput = {
   opsAlertCount: number;
   atRiskCount: number;
 };
+
+const PERFORMANCE_ALERT_CAP = 30;
+const INCOMPLETE_PREVIEW_LIMIT = 10;
 
 function performanceActionLabel(type: string): string {
   switch (type) {
@@ -111,7 +111,7 @@ export function buildIncompleteDashboardItems(input: {
   const seen = new Set<string>();
 
   for (const alert of input.performanceAlerts) {
-    if (!alert.href || seen.has(alert.id)) continue;
+    if (!alert.id || !alert.label || !alert.href || seen.has(alert.id)) continue;
     seen.add(alert.id);
     items.push({
       id: alert.id,
@@ -183,13 +183,13 @@ export function computeNeedsAttentionCountFromParts({
 
 export function computeNeedsAttentionCount(
   summary: HRDashboardSummary,
-  atRiskCount: number
+  atRiskEmployees: AtRiskEmployee[]
 ): number {
-  return computeNeedsAttentionCountFromParts({
+  return buildIncompleteDashboardItems({
     performanceAlerts: summary.performance_alerts,
-    opsAlertCount: summary.alerts.length,
-    atRiskCount,
-  });
+    opsAlerts: summary.alerts,
+    atRiskEmployees,
+  }).length;
 }
 
 export { INCOMPLETE_PREVIEW_LIMIT, PERFORMANCE_ALERT_CAP };

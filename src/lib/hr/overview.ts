@@ -13,10 +13,7 @@ export async function getOverviewBundle(periodInput?: string): Promise<OverviewB
     getRecentActivity({ limit: 10 }),
   ]);
 
-  const notification_count = computeNeedsAttentionCount(
-    summary,
-    at_risk_employees.length
-  );
+  const notification_count = computeNeedsAttentionCount(summary, at_risk_employees);
 
   return {
     period,

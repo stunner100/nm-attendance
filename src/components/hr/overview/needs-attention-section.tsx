@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   buildIncompleteDashboardItems,
-  computeNeedsAttentionCountFromParts,
 } from "@/lib/hr/needs-attention";
 import type { AtRiskEmployee, HRDashboardSummary } from "@/lib/types";
 
@@ -48,12 +47,8 @@ export function NeedsAttentionSection({
     atRiskEmployees,
   });
   const activeActions = actionItems.filter((item) => item.count > 0);
-  const attentionCount = computeNeedsAttentionCountFromParts({
-    performanceAlerts: alerts,
-    opsAlertCount: opsAlerts.length,
-    atRiskCount: atRiskEmployees.length,
-  });
-  const hasAttention = attentionCount > 0 || activeActions.length > 0;
+  const hasAttention = incompleteItems.length > 0 || activeActions.length > 0;
+  const attentionCount = incompleteItems.length;
 
   return (
     <section
@@ -71,7 +66,7 @@ export function NeedsAttentionSection({
           </h2>
           {hasAttention ? (
             <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--color-destructive)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--color-inverse-ink)]">
-              {Math.max(attentionCount, incompleteItems.length)}
+              {attentionCount}
             </span>
           ) : null}
         </div>

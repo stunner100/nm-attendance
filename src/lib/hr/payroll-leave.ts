@@ -22,6 +22,11 @@ import {
   normalizePayrollAnomaly,
   normalizePayrollCycle,
 } from "@/lib/hr/shared";
+import {
+  buildEmployeeLeaveOverviewRow,
+  type HREmployeeLeaveOverview,
+} from "@/lib/hr/leave-entitlement";
+import type { HRDepartment } from "@/lib/types";
 import type {
   CreateLeaveRequestInput,
   CreatePayrollAnomalyInput,
@@ -403,4 +408,82 @@ export async function listEmployeeLeaveRequests(
   options: { limit?: number } = {}
 ): Promise<HRLeaveRequest[]> {
   return listLeaveRequests({ employeeId, limit: options.limit });
+}
+
+export async function listEmployeeLeaveOverview(): Promise<HREmployeeLeaveOverview[]> {
+  await ensureDbSchema();
+  const pool = getDbPool();
+  const result = await pool.query<{
+    employee_id: number;
+    full_name: string;
+    department: HRDepartment;
+    hire_date: string | Date;
+    balance_id: number | null;
+    annual_days: number | null;
+    carry_days: number | null;
+    stored_used_days: number | null;
+    approved_used_ytd: number | null;
+  }>(`
+    SELECT
+      e.id AS employee_id,
+      e.full_name,
+      e.department,
+      e.hire_date,
+      lb.id AS balance_id,
+      lb.annual_days,
+      lb.carry_days,
+      lb.used_days AS stored_used_days,
+      COALESCE(usage.approved_used_ytd, 0) AS approved_used_ytd
+    FROM hr_employees e
+    LEFT JOIN hr_leave_balances lb ON lb.employee_id = e.id
+    LEFT JOIN LATERAL (
+      SELECT COALESCE(SUM(lr.days), 0)::numeric AS approved_used_ytd
+      FROM hr_leave_requests lr
+      WHERE lr.employee_id = e.id
+        AND lr.status = 'approved'
+        AND lr.request_category = 'leave'
+        AND EXTRACT(YEAR FROM lr.start_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+    ) usage ON TRUE
+    WHERE e.employment_status = 'active'
+    ORDER BY e.full_name ASC
+  `);
+
+  return asRecordRows(result.rows).map((row) =>
+    buildEmployeeLeaveOverviewRow({
+      employee_id: asNumber(row.employee_id),
+      full_name: asString(row.full_name),
+      department: asString(row.department) as HRDepartment,
+      hire_date: asDateOnly(row.hire_date),
+      balance_id: row.balance_id === null ? null : asNumber(row.balance_id),
+      annual_days: asNumber(row.annual_days ?? 0),
+      carry_days: asNumber(row.carry_days ?? 0),
+      stored_used_days: asNumber(row.stored_used_days ?? 0),
+      approved_used_ytd: asNumber(row.approved_used_ytd ?? 0),
+    })
+  );
+}
+
+export async function applyTenureLeaveEntitlements(options: {
+  employeeId?: number;
+} = {}): Promise<number> {
+  const overview = await listEmployeeLeaveOverview();
+  const targets = options.employeeId
+    ? overview.filter((row) => row.employee_id === options.employeeId)
+    : overview;
+
+  if (options.employeeId && targets.length === 0) {
+    return 0;
+  }
+
+  let updated = 0;
+  for (const row of targets) {
+    await upsertLeaveBalance({
+      employeeId: row.employee_id,
+      annualDays: row.recommended_annual_days,
+      usedDays: row.approved_used_ytd,
+      carryDays: row.carry_days,
+    });
+    updated += 1;
+  }
+  return updated;
 }

@@ -13,17 +13,20 @@ import {
   PayrollAnomaliesAccordion,
   PayrollCyclesAccordion,
 } from "@/components/hr/payroll-leave-list-accordion";
+import { LeaveBalanceOverview } from "@/components/hr/leave-balance-overview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { redirectWithFormError, readFormError, redirectWithFormSuccess, readFormSuccess, buildPayrollLeavePath, readPayrollLeaveFilters, readFormRecordId } from "@/lib/hr/form-actions";
 import { humanizeLabel } from "@/lib/labels";
 import {
+  applyTenureLeaveEntitlements,
   createLeaveRequest,
   createPayrollAnomaly,
   createPayrollCycle,
   deleteLeaveRequest,
   getPayrollLeaveModuleData,
+  listEmployeeLeaveOverview,
   listHREmployeeOptions,
   listPayrollCycleOptions,
   updateLeaveRequestStatus,
@@ -310,6 +313,48 @@ async function deleteLeaveRequestAction(formData: FormData): Promise<void> {
   redirectWithFormSuccess(redirectPath, "Leave request deleted successfully.");
 }
 
+async function applyAllTenureEntitlementsAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/payroll-leave");
+
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
+
+  const updated = await applyTenureLeaveEntitlements();
+  if (updated === 0) {
+    redirectWithFormError(redirectPath, "No active employees to update.");
+  }
+
+  revalidatePath("/admin/payroll-leave");
+  revalidatePath("/admin");
+  redirectWithFormSuccess(
+    redirectPath,
+    `Tenure entitlements applied for ${updated} employee${updated === 1 ? "" : "s"}.`
+  );
+}
+
+async function applyTenureEntitlementAction(formData: FormData): Promise<void> {
+  "use server";
+  await requireAdminPage("/admin/payroll-leave");
+
+  const filters = readPayrollLeaveFilters(formData);
+  const redirectPath = buildPayrollLeavePath(filters);
+
+  const employeeId = readFormRecordId(formData, "employeeId");
+  if (!employeeId) {
+    redirectWithFormError(redirectPath, "Employee ID is required.");
+  }
+
+  const updated = await applyTenureLeaveEntitlements({ employeeId });
+  if (updated === 0) {
+    redirectWithFormError(redirectPath, "Employee not found or not active.");
+  }
+
+  revalidatePath("/admin/payroll-leave");
+  revalidatePath("/admin");
+  redirectWithFormSuccess(redirectPath, "Tenure entitlement applied for this employee.");
+}
+
 async function updateAnomalyStatusAction(formData: FormData): Promise<void> {
   "use server";
   await requireAdminPage("/admin/payroll-leave");
@@ -336,16 +381,16 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
   const cycleStatusFilter = params.cycleStatus?.trim() || "";
   const leaveStatusFilter = params.leaveStatus?.trim() || "";
 
-  const [data, employees, payrollCycleOptions] = await Promise.all([
+  const [data, employees, payrollCycleOptions, leaveOverview] = await Promise.all([
     getPayrollLeaveModuleData({
       cycleStatus: cycleStatusFilter,
       leaveStatus: leaveStatusFilter,
     }),
     listHREmployeeOptions({ activeOnly: true }),
     listPayrollCycleOptions(),
+    listEmployeeLeaveOverview(),
   ]);
 
-  const employeeNameById = new Map(employees.map((employee) => [employee.id, employee.full_name]));
   const filterProps = {
     cycleStatus: cycleStatusFilter,
     leaveStatus: leaveStatusFilter,
@@ -363,11 +408,47 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
   return (
     <div className="space-y-6">
       <AdminPageIntro
-        description="Monitor payroll cycles, anomalies, leave balances, and approvals."
+        description="See each employee's leave balance, tenure-based entitlement, and remaining days. Review requests and payroll cycles below."
       />
 
       <AdminFormAlert message={readFormError(params)} />
       <AdminFormAlert message={readFormSuccess(params)} variant="success" />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Employee leave overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LeaveBalanceOverview
+            {...filterProps}
+            applyAllTenureEntitlementsAction={applyAllTenureEntitlementsAction}
+            applyTenureEntitlementAction={applyTenureEntitlementAction}
+            rows={leaveOverview}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Leave Requests ({data.leaveRequests.length})
+            {pendingLeaveCount > 0 ? (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                · {pendingLeaveCount} pending approval
+              </span>
+            ) : null}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LeaveRequestsAccordion
+            {...filterProps}
+            deleteLeaveRequestAction={deleteLeaveRequestAction}
+            employeeOptions={employees}
+            leaveRequests={sortedLeaveRequests}
+            updateLeaveStatusAction={updateLeaveStatusAction}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -472,50 +553,6 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
 
       <Card>
         <CardHeader>
-          <CardTitle>Leave Balances ({data.leaveBalances.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.leaveBalances.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No leave balances recorded yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Employee</th>
-                    <th className="py-2 pr-4 font-medium">Annual</th>
-                    <th className="py-2 pr-4 font-medium">Used</th>
-                    <th className="py-2 pr-4 font-medium">Carry</th>
-                    <th className="py-2 font-medium">Remaining</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.leaveBalances.map((balance) => {
-                    const remaining =
-                      balance.annual_days + balance.carry_days - balance.used_days;
-                    return (
-                      <tr className="border-b last:border-b-0" key={balance.id}>
-                        <td className="py-2 pr-4">
-                          {balance.full_name ||
-                            employeeNameById.get(balance.employee_id) ||
-                            `Employee #${balance.employee_id}`}
-                        </td>
-                        <td className="py-2 pr-4">{balance.annual_days}</td>
-                        <td className="py-2 pr-4">{balance.used_days}</td>
-                        <td className="py-2 pr-4">{balance.carry_days}</td>
-                        <td className="py-2">{remaining}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>Payroll Cycles ({data.payrollCycles.length})</CardTitle>
         </CardHeader>
         <CardContent>
@@ -523,28 +560,6 @@ export default async function PayrollLeavePage({ searchParams }: PayrollLeavePag
             {...filterProps}
             payrollCycles={data.payrollCycles}
             updateCycleStatusAction={updateCycleStatusAction}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Leave Requests ({data.leaveRequests.length})
-            {pendingLeaveCount > 0 ? (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                · {pendingLeaveCount} pending approval
-              </span>
-            ) : null}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LeaveRequestsAccordion
-            {...filterProps}
-            deleteLeaveRequestAction={deleteLeaveRequestAction}
-            employeeOptions={employees}
-            leaveRequests={sortedLeaveRequests}
-            updateLeaveStatusAction={updateLeaveStatusAction}
           />
         </CardContent>
       </Card>

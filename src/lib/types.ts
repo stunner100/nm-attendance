@@ -716,6 +716,7 @@ export type HRDashboardSummary = {
     label: string;
     due_on: string | null;
     severity: "low" | "medium" | "high";
+    href: string | null;
   }>;
 };
 

@@ -17,4 +17,5 @@ export * from "@/lib/hr/framework-reference";
 export * from "@/lib/hr/modules";
 export * from "@/lib/hr/import-runs";
 export * from "@/lib/hr/dashboard";
+export * from "@/lib/hr/needs-attention";
 export * from "@/lib/hr/form-actions";

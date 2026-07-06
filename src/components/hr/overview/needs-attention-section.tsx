@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { computeNeedsAttentionCountFromParts } from "@/lib/hr/needs-attention";
 import type { AtRiskEmployee, HRDashboardSummary } from "@/lib/types";
 
 type ActionItem = {
@@ -12,8 +13,26 @@ type ActionItem = {
 type NeedsAttentionSectionProps = {
   actionItems: ActionItem[];
   alerts: HRDashboardSummary["performance_alerts"];
+  opsAlerts: HRDashboardSummary["alerts"];
   atRiskEmployees: AtRiskEmployee[];
+  leavePendingCount?: number;
 };
+
+function formatDueDate(dueOn: string | null): string {
+  if (!dueOn) return "Ongoing";
+
+  if (/^\d{4}-\d{2}$/.test(dueOn)) {
+    const [year, month] = dueOn.split("-").map(Number);
+    return `Due ${new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+      month: "short",
+      year: "numeric",
+    })}`;
+  }
+
+  const parsed = new Date(dueOn);
+  if (Number.isNaN(parsed.getTime())) return `Due ${dueOn}`;
+  return `Due ${parsed.toLocaleDateString()}`;
+}
 
 function alertActionLabel(type: string): string {
   switch (type) {
@@ -38,6 +57,23 @@ function alertActionLabel(type: string): string {
   }
 }
 
+function opsAlertActionLabel(type: string): string {
+  switch (type) {
+    case "follow_up":
+      return "View";
+    case "probation_end":
+      return "Review";
+    case "contract_expiry":
+      return "Renew";
+    default:
+      return "Open";
+  }
+}
+
+function opsAlertHref(alert: HRDashboardSummary["alerts"][number]): string {
+  return alert.href ?? "/admin/compliance";
+}
+
 function initials(name: string): string {
   return name
     .split(/\s+/)
@@ -50,16 +86,24 @@ function initials(name: string): string {
 export function NeedsAttentionSection({
   actionItems,
   alerts,
+  opsAlerts,
   atRiskEmployees,
+  leavePendingCount = 0,
 }: NeedsAttentionSectionProps) {
   const activeActions = actionItems.filter((item) => item.count > 0);
   const previewAlerts = alerts.slice(0, 3);
+  const previewOpsAlerts = opsAlerts.slice(0, 3);
   const previewAtRisk = atRiskEmployees.slice(0, 3);
-  const attentionCount =
-    activeActions.reduce((sum, item) => sum + item.count, 0) +
-    alerts.length +
-    atRiskEmployees.length;
+  const attentionCount = computeNeedsAttentionCountFromParts({
+    performanceAlerts: alerts,
+    opsAlertCount: opsAlerts.length,
+    atRiskCount: atRiskEmployees.length,
+    leavePendingCount,
+  });
   const hasAttention = attentionCount > 0;
+  const hasAnyAlertPanels = alerts.length > 0 || opsAlerts.length > 0;
+  const headerAlertsHref =
+    alerts.length > 0 ? "/admin/accountability" : "/admin/compliance";
 
   return (
     <section
@@ -81,12 +125,9 @@ export function NeedsAttentionSection({
             </span>
           ) : null}
         </div>
-        {alerts.length > 0 ? (
-          <Link
-            href="/admin/accountability"
-            className="text-link text-xs font-medium whitespace-nowrap"
-          >
-            View accountability
+        {hasAnyAlertPanels ? (
+          <Link href={headerAlertsHref} className="text-link text-xs font-medium whitespace-nowrap">
+            View all alerts
           </Link>
         ) : null}
       </div>
@@ -114,12 +155,22 @@ export function NeedsAttentionSection({
             </div>
           ) : null}
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {previewAlerts.length > 0 ? (
               <div className="rounded-[var(--radius-md)] border border-[var(--color-rule)] bg-[var(--color-paper)] p-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
-                  Key alerts
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
+                    Key alerts
+                  </p>
+                  {alerts.length > 3 ? (
+                    <Link
+                      href="/admin/accountability"
+                      className="text-link text-xs font-medium whitespace-nowrap"
+                    >
+                      View all
+                    </Link>
+                  ) : null}
+                </div>
                 <ul className="mt-2 divide-y divide-[var(--color-rule)]">
                   {previewAlerts.map((alert) => (
                     <li
@@ -131,7 +182,7 @@ export function NeedsAttentionSection({
                           {alert.label}
                         </p>
                         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
-                          {alert.due_on ? `Due ${alert.due_on}` : "Ongoing"}
+                          {formatDueDate(alert.due_on)}
                         </p>
                       </div>
                       {alert.href ? (
@@ -144,6 +195,49 @@ export function NeedsAttentionSection({
                           <Link href={alert.href}>{alertActionLabel(alert.type)}</Link>
                         </Button>
                       ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {previewOpsAlerts.length > 0 ? (
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-rule)] bg-[var(--color-paper)] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
+                    People ops
+                  </p>
+                  {opsAlerts.length > 3 ? (
+                    <Link
+                      href="/admin/compliance"
+                      className="text-link text-xs font-medium whitespace-nowrap"
+                    >
+                      View all
+                    </Link>
+                  ) : null}
+                </div>
+                <ul className="mt-2 divide-y divide-[var(--color-rule)]">
+                  {previewOpsAlerts.map((alert) => (
+                    <li
+                      key={alert.id}
+                      className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--color-ink)]">
+                          {alert.label}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
+                          {formatDueDate(alert.due_on)}
+                        </p>
+                      </div>
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="h-8 shrink-0 rounded-[var(--radius-sm)] border-[var(--color-rule)] bg-[var(--color-paper-2)] text-xs whitespace-nowrap"
+                      >
+                        <Link href={opsAlertHref(alert)}>{opsAlertActionLabel(alert.type)}</Link>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -183,7 +277,7 @@ export function NeedsAttentionSection({
                             {employee.latest_score.toFixed(0)}
                           </p>
                           <p className="text-[11px] text-[var(--color-ink-muted)]">
-                            {employee.months_below_threshold} mo low
+                            {employee.months_below_threshold} consecutive mo below 70
                           </p>
                         </div>
                       </Link>

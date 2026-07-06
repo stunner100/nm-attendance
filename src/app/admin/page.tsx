@@ -15,7 +15,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const period = normalizePeriod(params.period);
   const bundle = await getOverviewBundle(period);
   const { summary } = bundle;
-  const { framework, headcount, performance } = summary;
+  const { framework, headcount, performance, payroll_leave } = summary;
 
   const actionItems = [
     {
@@ -48,6 +48,26 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       count: framework.overdue_tasks,
       href: "/admin/tasks",
     },
+    {
+      label: "Pending leave",
+      count: payroll_leave.leave_pending_approval,
+      href: "/admin/payroll-leave",
+    },
+    {
+      label: "Payroll anomalies",
+      count: payroll_leave.anomalies_open,
+      href: "/admin/payroll-leave",
+    },
+    {
+      label: "Growth reviews due",
+      count: framework.growth_reviews_due,
+      href: "/admin/growth",
+    },
+    {
+      label: "Roadmaps at risk",
+      count: framework.roadmaps_at_risk,
+      href: "/admin/department-roadmap",
+    },
   ];
 
   return (
@@ -55,7 +75,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <NeedsAttentionSection
         actionItems={actionItems}
         alerts={summary.performance_alerts}
+        opsAlerts={summary.alerts}
         atRiskEmployees={bundle.at_risk_employees}
+        leavePendingCount={payroll_leave.leave_pending_approval}
       />
 
       <PerformanceSnapshotSection headcount={headcount} framework={framework} />

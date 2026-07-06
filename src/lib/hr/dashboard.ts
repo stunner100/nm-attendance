@@ -323,7 +323,7 @@ export async function getHRDashboardSummary(periodInput?: string): Promise<HRDas
     pool.query(`
       SELECT COUNT(*)::int AS open_actions
       FROM hr_accountability_actions
-      WHERE status = 'open'
+      WHERE status IN ('open', 'escalated')
     `),
     pool.query(`
       SELECT COUNT(*)::int AS due_reviews
@@ -460,7 +460,8 @@ export async function getHRDashboardSummary(periodInput?: string): Promise<HRDas
           CASE
             WHEN due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 'high'
             ELSE 'medium'
-          END AS severity
+          END AS severity,
+          '/admin/compliance' AS href
         FROM hr_followup_actions
         WHERE status <> 'done'
           AND due_date IS NOT NULL
@@ -473,7 +474,8 @@ export async function getHRDashboardSummary(periodInput?: string): Promise<HRDas
           'probation_end' AS type,
           CONCAT(full_name, ' probation ends') AS label,
           probation_end_date::text AS due_on,
-          'medium' AS severity
+          'medium' AS severity,
+          CONCAT('/admin/headcount/', id::text) AS href
         FROM hr_employees
         WHERE employment_status = 'active'
           AND probation_end_date IS NOT NULL
@@ -486,7 +488,8 @@ export async function getHRDashboardSummary(periodInput?: string): Promise<HRDas
           'contract_expiry' AS type,
           CONCAT(full_name, ' contract expires') AS label,
           contract_end_date::text AS due_on,
-          'high' AS severity
+          'high' AS severity,
+          CONCAT('/admin/headcount/', id::text) AS href
         FROM hr_employees
         WHERE employment_status = 'active'
           AND contract_end_date IS NOT NULL
@@ -838,6 +841,7 @@ export async function getHRDashboardSummary(periodInput?: string): Promise<HRDas
       label: asString(row.label),
       due_on: asNullableString(row.due_on),
       severity: (asString(row.severity) as "low" | "medium" | "high") || "medium",
+      href: asNullableString(row.href),
     })),
   };
 }

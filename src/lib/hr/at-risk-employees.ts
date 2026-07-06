@@ -17,11 +17,37 @@ export async function getAtRiskEmployees(periodInput?: string): Promise<AtRiskEm
         e.job_title,
         s.total_score AS latest_score,
         (
-          SELECT COUNT(*)::int
-          FROM hr_monthly_scores s2
-          WHERE s2.employee_id = e.id
-            AND s2.period <= $1
-            AND s2.total_score < 70
+          WITH RECURSIVE streak AS (
+            SELECT
+              $1::text AS period,
+              1 AS streak_count
+            WHERE EXISTS (
+              SELECT 1
+              FROM hr_monthly_scores s0
+              WHERE s0.employee_id = e.id
+                AND s0.period = $1
+                AND s0.total_score < 70
+            )
+
+            UNION ALL
+
+            SELECT
+              to_char(
+                (to_date(streak.period || '-01', 'YYYY-MM-DD') - INTERVAL '1 month'),
+                'YYYY-MM'
+              ),
+              streak.streak_count + 1
+            FROM streak
+            INNER JOIN hr_monthly_scores sp
+              ON sp.employee_id = e.id
+             AND sp.period = to_char(
+               (to_date(streak.period || '-01', 'YYYY-MM-DD') - INTERVAL '1 month'),
+               'YYYY-MM'
+             )
+            WHERE sp.total_score < 70
+          )
+          SELECT COALESCE(MAX(streak_count), 0)::int
+          FROM streak
         ) AS months_below_threshold
       FROM hr_employees e
       INNER JOIN hr_monthly_scores s

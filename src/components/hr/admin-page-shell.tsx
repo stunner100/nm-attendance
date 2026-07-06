@@ -24,9 +24,9 @@ export function AdminAppShell({ email, displayName, children }: AdminAppShellPro
   const resolvedDisplayName = displayName?.trim() || "HR Admin";
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh min-h-0 overflow-hidden">
       <AdminAppSidebar email={email} displayName={resolvedDisplayName} />
-      <SidebarInset>
+      <SidebarInset className="min-h-0 overflow-hidden">
         <Suspense
           fallback={
             <div className="h-16 border-b border-[var(--color-rule)] bg-[var(--color-paper)]" aria-hidden="true" />
@@ -35,7 +35,9 @@ export function AdminAppShell({ email, displayName, children }: AdminAppShellPro
           <AdminTopBar email={email} displayName={resolvedDisplayName} />
         </Suspense>
 
-        <main className="flex flex-1 flex-col gap-4 p-4 pt-0 sm:px-6 sm:py-6">{children}</main>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-4 p-4 pt-0 sm:px-6 sm:py-6">{children}</div>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

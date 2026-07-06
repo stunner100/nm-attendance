@@ -258,7 +258,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
           <div>
             <span className="mb-2 block text-xs font-medium text-muted-foreground">Upload file</span>
             <div
-              className="relative flex cursor-pointer flex-col items-center gap-3 rounded-[var(--radius-md)] border-2 border-dashed border-border bg-muted p-8 transition-colors hover:border-[var(--color-border-strong)] hover:bg-muted/80"
+              className="relative flex cursor-pointer flex-col items-center gap-2 rounded-[var(--radius-md)] border-2 border-dashed border-border bg-muted px-4 py-5 transition-colors hover:border-[var(--color-border-strong)] hover:bg-muted/80 sm:py-6"
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -277,7 +277,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
                 className="hidden"
                 onChange={handleFileUpload}
               />
-              <Upload className="h-8 w-8 text-muted-foreground" />
+              <Upload className="h-6 w-6 text-muted-foreground" />
               <div className="text-center">
                 <p className="text-sm font-medium text-foreground">
                     {fileName ? fileName : "Drop your CSV or DOCX file here, or click to browse"}
@@ -296,7 +296,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
           <label className="text-sm">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">CSV data</span>
             <Textarea
-              className="min-h-40 font-mono text-xs"
+              className="field-sizing-fixed min-h-28 max-h-48 resize-y overflow-y-auto font-mono text-xs"
               onChange={(event) => {
                 setCsv(event.target.value);
                 setFileName(null);
@@ -313,19 +313,30 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
           </label>
 
           {template ? (
-            <div className="rounded-[var(--radius-md)] border border-border bg-muted p-4">
-              <div className="flex items-center justify-between">
+            <details className="rounded-[var(--radius-md)] border border-border bg-muted p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <p className="text-sm font-medium text-foreground">Template for {scopeLabel}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={downloadTemplate} className="text-xs">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    downloadTemplate();
+                  }}
+                  className="text-xs"
+                  type="button"
+                >
                   <Download className="mr-1.5 h-3.5 w-3.5" />
                   Download
                 </Button>
-              </div>
-              <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-border bg-card p-3 font-mono text-xs">{template}</pre>
-            </div>
+              </summary>
+              <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-border bg-card p-3 font-mono text-xs">
+                {template}
+              </pre>
+            </details>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
@@ -419,7 +430,7 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
         <CardHeader>
           <CardTitle>Import History ({runs.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent>
           {runs.length === 0 ? (
             <EmptyState
               description="Upload a file above to start importing HR data."
@@ -427,7 +438,8 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
               title="No imports yet"
             />
           ) : (
-            runs.map((run) => (
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            {runs.map((run) => (
               <div
                 key={run.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
@@ -448,7 +460,8 @@ export function ImportManager({ initialRuns }: ImportManagerProps) {
                   {new Date(run.created_at).toLocaleString()}
                 </p>
               </div>
-            ))
+            ))}
+            </div>
           )}
         </CardContent>
       </Card>

@@ -77,7 +77,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         alerts={summary.performance_alerts}
         opsAlerts={summary.alerts}
         atRiskEmployees={bundle.at_risk_employees}
-        leavePendingCount={payroll_leave.leave_pending_approval}
       />
 
       <PerformanceSnapshotSection headcount={headcount} framework={framework} />

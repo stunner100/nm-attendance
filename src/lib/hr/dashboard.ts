@@ -441,11 +441,63 @@ export async function getHRDashboardSummary(periodInput?: string): Promise<HRDas
           WHERE g.status = 'active'
             AND g.next_review_date IS NOT NULL
             AND g.next_review_date <= CURRENT_DATE + INTERVAL '14 days'
+
+          UNION ALL
+
+          SELECT
+            CONCAT('score-review-', s.employee_id::text, '-', s.period) AS id,
+            'score_pending' AS type,
+            CONCAT(e.full_name, ' score awaiting approval') AS label,
+            s.period AS due_on,
+            'medium' AS severity,
+            '/admin/scores' AS href
+          FROM hr_monthly_scores s
+          INNER JOIN hr_employees e ON e.id = s.employee_id
+          WHERE s.approval_status IN ('submitted', 'hr_reviewed')
+
+          UNION ALL
+
+          SELECT
+            CONCAT('accountability-', a.id::text) AS id,
+            'accountability_open' AS type,
+            CONCAT(e.full_name, ': ', a.reason) AS label,
+            a.issued_on::text AS due_on,
+            CASE WHEN a.status = 'escalated' THEN 'high' ELSE 'medium' END AS severity,
+            '/admin/accountability' AS href
+          FROM hr_accountability_actions a
+          INNER JOIN hr_employees e ON e.id = a.employee_id
+          WHERE a.status IN ('open', 'escalated')
+
+          UNION ALL
+
+          SELECT
+            CONCAT('leave-', lr.id::text) AS id,
+            'leave_pending' AS type,
+            CONCAT(e.full_name, ' leave request pending approval') AS label,
+            lr.start_date::text AS due_on,
+            'medium' AS severity,
+            '/admin/payroll-leave?leaveStatus=pending' AS href
+          FROM hr_leave_requests lr
+          INNER JOIN hr_employees e ON e.id = lr.employee_id
+          WHERE lr.status = 'pending'
+
+          UNION ALL
+
+          SELECT
+            CONCAT('anomaly-', pa.id::text) AS id,
+            'payroll_anomaly' AS type,
+            CONCAT(COALESCE(e.full_name, 'Employee'), ': ', pa.anomaly_type) AS label,
+            NULL::text AS due_on,
+            'medium' AS severity,
+            '/admin/payroll-leave' AS href
+          FROM hr_payroll_anomalies pa
+          LEFT JOIN hr_employees e ON e.id = pa.employee_id
+          WHERE pa.status = 'open'
         ) performance_alerts
         ORDER BY
           CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
           due_on ASC NULLS LAST
-        LIMIT 20
+        LIMIT 30
       `,
       [period]
     ),

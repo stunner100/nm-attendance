@@ -12,6 +12,7 @@
     "seed:profile-demo": "node --import tsx scripts/seed-profile-demo.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.8",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",

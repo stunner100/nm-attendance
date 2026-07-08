@@ -1,12 +1,14 @@
 import { getToken } from "next-auth/jwt";
 import {
   ForbiddenError,
+  jwtHmac,
   localDev,
   vercelOidc,
   type AuthFn,
 } from "eve/channels/auth";
 
 import { getAuthSessionVersion, getAuthUserByEmail } from "@/lib/auth-users";
+import { getHrEveProxyJwtConfig } from "@/lib/eve-proxy-auth-config";
 
 const SECURE_SESSION_COOKIE = "__Secure-authjs.session-token";
 const SESSION_COOKIE = "authjs.session-token";
@@ -95,4 +97,13 @@ export function adminSessionAuth(): AuthFn<Request> {
   };
 }
 
-export const hrAdminEveAuth = [adminSessionAuth(), vercelOidc(), localDev()];
+function hrEveProxyBearerAuth(): AuthFn<Request> {
+  return jwtHmac(getHrEveProxyJwtConfig());
+}
+
+export const hrAdminEveAuth = [
+  hrEveProxyBearerAuth(),
+  adminSessionAuth(),
+  vercelOidc(),
+  localDev(),
+];

@@ -57,7 +57,7 @@ function linkifyAdminPaths(text: string): ReactNode[] {
 }
 
 export function HrAssistantChat() {
-  const agent = useEveAgent();
+  const agent = useEveAgent({ host: "/api/eve" });
   const formRef = useRef<HTMLFormElement>(null);
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
 

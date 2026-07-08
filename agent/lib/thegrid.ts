@@ -5,6 +5,9 @@ const THEGRID_BASE_URL = "https://api.thegrid.ai/v1";
 /** Default instrument for HR admin Q&A. Override with THEGRID_MODEL. */
 export const THEGRID_DEFAULT_MODEL = "text-prime";
 
+/** Conservative default for The Grid text-prime when Eve cannot resolve catalog metadata. */
+export const THEGRID_CONTEXT_WINDOW_TOKENS = 128_000;
+
 export function createTheGridProvider() {
   const apiKey = process.env.THEGRID_API_KEY?.trim();
   if (!apiKey) {

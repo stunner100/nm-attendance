@@ -20,6 +20,9 @@
 
 # production
 /build
+/.output/
+/.eve/
+/.workflow-data/
 
 # misc
 .DS_Store

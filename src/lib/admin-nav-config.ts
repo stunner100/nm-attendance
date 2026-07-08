@@ -3,6 +3,7 @@ import {
   Award,
   BadgeDollarSign,
   BarChart3,
+  Bot,
   BriefcaseBusiness,
   CalendarDays,
   ClipboardCheck,
@@ -86,6 +87,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     collapsible: true,
     defaultOpen: false,
     items: [
+      { href: "/admin/assistant", label: "HR assistant", icon: Bot },
       { href: "/admin/imports", label: "Imports", icon: Import },
       { href: "/admin/reports", label: "Reports", icon: FileText },
       { href: "/admin/qr", label: "QR code", icon: LayoutGrid },
@@ -111,6 +113,7 @@ export const ADMIN_PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: "/admin/payroll-leave", title: "Payroll & leave" },
   { prefix: "/admin/compliance", title: "Compliance" },
   { prefix: "/admin/performance", title: "Performance" },
+  { prefix: "/admin/assistant", title: "HR assistant" },
   { prefix: "/admin/imports", title: "Imports" },
   { prefix: "/admin/reports", title: "Reports" },
   { prefix: "/admin/settings", title: "Settings" },

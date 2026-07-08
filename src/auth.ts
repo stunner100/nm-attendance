@@ -67,7 +67,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.sessionVersion = getAuthSessionVersion();
         if ("role" in user && typeof user.role === "string") {
@@ -83,6 +83,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.employeeName = user.employeeName;
         }
       }
+
+      const email =
+        typeof token.email === "string" ? token.email.trim().toLowerCase() : "";
+      if (email) {
+        const dbUser = await getAuthUserByEmail(email);
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.sessionVersion = getAuthSessionVersion();
+          token.employeeId = dbUser.employeeId
+            ? String(dbUser.employeeId)
+            : undefined;
+          token.jobLevel = dbUser.jobLevel ?? undefined;
+          token.employeeName = dbUser.employeeName ?? undefined;
+        }
+      }
+
       return token;
     },
     session({ session, token }) {

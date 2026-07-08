@@ -6,23 +6,65 @@ import {
   type AuthFn,
 } from "eve/channels/auth";
 
-import { getAuthSessionVersion } from "@/lib/auth-users";
+import { getAuthSessionVersion, getAuthUserByEmail } from "@/lib/auth-users";
+
+const SECURE_SESSION_COOKIE = "__Secure-authjs.session-token";
+const SESSION_COOKIE = "authjs.session-token";
+
+function usesSecureSessionCookie(): boolean {
+  return process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+}
+
+async function getAdminJwtFromRequest(request: Request) {
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (!secret) {
+    return null;
+  }
+
+  const secureCookieCandidates = usesSecureSessionCookie()
+    ? [true, false]
+    : [false, true];
+
+  for (const secureCookie of secureCookieCandidates) {
+    const cookieName = secureCookie ? SECURE_SESSION_COOKIE : SESSION_COOKIE;
+    const token = await getToken({
+      req: request,
+      secret,
+      secureCookie,
+      cookieName,
+      salt: cookieName,
+    });
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
+}
 
 export function adminSessionAuth(): AuthFn<Request> {
   return async (request) => {
-    const token = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET,
-      secureCookie: process.env.NODE_ENV === "production",
-    });
+    const token = await getAdminJwtFromRequest(request);
 
     if (!token) {
       return null;
     }
 
-    const role = typeof token.role === "string" ? token.role : "";
+    let role = typeof token.role === "string" ? token.role : "";
+    const email =
+      typeof token.email === "string" ? token.email.trim().toLowerCase() : "";
+
+    if (role !== "admin" && email) {
+      const user = await getAuthUserByEmail(email);
+      if (user?.role === "admin") {
+        role = "admin";
+      }
+    }
+
     if (role !== "admin") {
-      throw new ForbiddenError({ message: "Admin access required." });
+      throw new ForbiddenError({
+        message: "Admin access required. Sign in with an HR admin account.",
+      });
     }
 
     const sessionVersion =

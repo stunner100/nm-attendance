@@ -8,8 +8,25 @@ export const THEGRID_DEFAULT_MODEL = "text-prime";
 /** Conservative default for The Grid text-prime when Eve cannot resolve catalog metadata. */
 export const THEGRID_CONTEXT_WINDOW_TOKENS = 128_000;
 
+function normalizeEnvSecret(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (
+    trimmed.length >= 2 &&
+    trimmed.startsWith('"') &&
+    trimmed.endsWith('"')
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
+}
+
 export function createTheGridProvider() {
-  const apiKey = process.env.THEGRID_API_KEY?.trim();
+  const apiKey = normalizeEnvSecret(process.env.THEGRID_API_KEY);
   if (!apiKey) {
     return null;
   }

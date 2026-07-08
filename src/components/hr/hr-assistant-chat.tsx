@@ -137,7 +137,12 @@ export function HrAssistantChat() {
 
             {agent.error ? (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {agent.error.message}
+                <p>{agent.error.message}</p>
+                {"status" in agent.error && typeof agent.error.status === "number" ? (
+                  <p className="mt-1 text-xs text-destructive/80">
+                    Request failed with status {agent.error.status}.
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </div>

@@ -3,8 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { createHrEveProxyToken } from "@/lib/eve-proxy-auth";
 
-const EVE_INTERNAL_PREFIX = "/_eve_internal/eve";
-
 const FORWARDED_REQUEST_HEADERS = [
   "accept",
   "accept-encoding",
@@ -19,8 +17,8 @@ const FORWARDED_RESPONSE_HEADERS = [
   "x-eve-session-id",
 ] as const;
 
-function buildInternalEveUrl(request: NextRequest, pathSegments: string[]): URL {
-  const pathname = `${EVE_INTERNAL_PREFIX}/${pathSegments.join("/")}`;
+function buildUpstreamEveUrl(request: NextRequest, pathSegments: string[]): URL {
+  const pathname = `/${pathSegments.join("/")}`;
   const url = new URL(pathname, request.nextUrl.origin);
   url.search = request.nextUrl.search;
   return url;
@@ -63,7 +61,7 @@ export async function proxyEveRequest(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const upstreamUrl = buildInternalEveUrl(request, pathSegments);
+  const upstreamUrl = buildUpstreamEveUrl(request, pathSegments);
   const headers = pickHeaders(request.headers, FORWARDED_REQUEST_HEADERS);
   headers.set("authorization", `Bearer ${bearerToken}`);
 

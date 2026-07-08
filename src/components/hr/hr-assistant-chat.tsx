@@ -56,8 +56,50 @@ function linkifyAdminPaths(text: string): ReactNode[] {
   return nodes.length > 0 ? nodes : [text];
 }
 
-export function HrAssistantChat() {
-  const agent = useEveAgent({ host: "/api/eve" });
+type HrAssistantChatProps = {
+  eveAccessToken: string;
+};
+
+async function refreshEveAccessToken(): Promise<string> {
+  const response = await fetch("/api/eve/token", {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    let message = "Could not refresh Eve access.";
+    try {
+      const parsed = JSON.parse(body) as { error?: string };
+      if (typeof parsed.error === "string") {
+        message = parsed.error;
+      }
+    } catch {
+      if (body.trim()) {
+        message = body.trim();
+      }
+    }
+    throw new Error(message);
+  }
+  return response.text();
+}
+
+export function HrAssistantChat({ eveAccessToken }: HrAssistantChatProps) {
+  const accessTokenRef = useRef(eveAccessToken);
+  const agent = useEveAgent({
+    auth: {
+      bearer: async () => {
+        if (!accessTokenRef.current) {
+          accessTokenRef.current = await refreshEveAccessToken();
+        }
+        return accessTokenRef.current;
+      },
+    },
+    onError: (error) => {
+      if ("status" in error && error.status === 401) {
+        accessTokenRef.current = "";
+      }
+    },
+  });
   const formRef = useRef<HTMLFormElement>(null);
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
 

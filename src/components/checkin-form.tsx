@@ -48,7 +48,11 @@ function formatSubmitError(message: string, action: AttendanceAction): string {
   return message;
 }
 
-export function CheckinForm() {
+type CheckinFormProps = {
+  onRecorded?: () => void;
+};
+
+export function CheckinForm({ onRecorded }: CheckinFormProps) {
   const [action, setAction] = useState<AttendanceAction>("checkin");
   const [scanToken, setScanToken] = useState<string | null>(null);
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>("loading");
@@ -365,6 +369,7 @@ export function CheckinForm() {
       );
       setSubmittedAction(action);
       setSubmittedAt(data.timestamp ?? new Date().toISOString());
+      onRecorded?.();
 
       await refreshScanToken();
     } catch {

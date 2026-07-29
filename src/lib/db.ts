@@ -179,6 +179,43 @@ export async function hasOpenCheckinForEmployee(employeeId: number): Promise<boo
   return status.hasOpenCheckin;
 }
 
+export type PublicTodayAttendanceRecord = {
+  id: number;
+  name: string;
+  timestamp: string;
+  checkout_timestamp: string | null;
+};
+
+export async function getTodaysPublicAttendance(): Promise<
+  PublicTodayAttendanceRecord[]
+> {
+  await ensureSchema();
+
+  const pool = getPool();
+  const result = await pool.query<{
+    id: number;
+    name: string;
+    timestamp: string;
+    checkout_timestamp: string | null;
+  }>(
+    `
+      SELECT id, name, timestamp, checkout_timestamp
+      FROM attendance
+      WHERE (timestamp::timestamptz AT TIME ZONE $1)::date
+        = (NOW() AT TIME ZONE $1)::date
+      ORDER BY timestamp DESC
+    `,
+    [CHECKIN_TIMEZONE]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    timestamp: row.timestamp,
+    checkout_timestamp: row.checkout_timestamp,
+  }));
+}
+
 function getPool(): Pool {
   if (globalForDb.pool) {
     return globalForDb.pool;

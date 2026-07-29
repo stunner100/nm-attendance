@@ -1,9 +1,9 @@
-import { CheckinForm } from "@/components/checkin-form";
+import { CheckinExperience } from "@/components/checkin-experience";
 
 export default function CheckinPage() {
   return (
     <div className="min-h-screen bg-muted">
-      <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center px-4 py-8 sm:px-6">
+      <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-4 py-8 sm:px-6">
         <div className="mb-6">
           <p className="text-sm font-medium text-primary">Abonten Technologies</p>
           <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-foreground">
@@ -14,7 +14,7 @@ export default function CheckinPage() {
           </p>
         </div>
 
-        <CheckinForm />
+        <CheckinExperience />
       </main>
     </div>
   );

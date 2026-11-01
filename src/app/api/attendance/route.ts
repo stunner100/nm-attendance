@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const records = await getAllAttendance(dateParam || undefined);
+    const records = await getAllAttendance({ date: dateParam || undefined });
     return NextResponse.json({ records });
   } catch (error) {
     console.error("Failed to load attendance records", error);

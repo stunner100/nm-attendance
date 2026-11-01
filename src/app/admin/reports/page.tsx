@@ -3,21 +3,28 @@ import { Download } from "lucide-react";
 
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { getCurrentAttendanceMonth } from "@/lib/attendance-month";
+import { formatPeriodLabel } from "@/lib/hr/framework-reference";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const EXPORT_LINKS = [
-  { label: "Monthly scores", href: "/api/hr/export/monthly-scores" },
-  { label: "KPI cards", href: "/api/hr/export/kpi-cards" },
-  { label: "Rewards", href: "/api/hr/export/rewards" },
-  { label: "Accountability", href: "/api/hr/export/accountability" },
-  { label: "Growth plans", href: "/api/hr/export/growth-plans" },
-  { label: "Department roadmap", href: "/api/hr/export/department-roadmap" },
-  { label: "Employee performance", href: "/api/hr/export/employee-performance" },
-  { label: "Attendance", href: "/api/admin/export-attendance?format=csv" },
-];
 
 export default async function ReportsPage() {
   await requireAdminPage("/admin/reports");
+
+  const currentMonth = getCurrentAttendanceMonth();
+  const exportLinks = [
+    { label: "Monthly scores", href: "/api/hr/export/monthly-scores" },
+    { label: "KPI cards", href: "/api/hr/export/kpi-cards" },
+    { label: "Rewards", href: "/api/hr/export/rewards" },
+    { label: "Accountability", href: "/api/hr/export/accountability" },
+    { label: "Growth plans", href: "/api/hr/export/growth-plans" },
+    { label: "Department roadmap", href: "/api/hr/export/department-roadmap" },
+    { label: "Employee performance", href: "/api/hr/export/employee-performance" },
+    { label: "Attendance (all time)", href: "/api/admin/export-attendance?format=csv" },
+    {
+      label: `Attendance — ${formatPeriodLabel(currentMonth)} (full month)`,
+      href: `/api/admin/export-attendance?format=csv&month=${currentMonth}`,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -30,7 +37,7 @@ export default async function ReportsPage() {
           <CardTitle>Available exports</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {EXPORT_LINKS.map((item) => (
+          {exportLinks.map((item) => (
             <a
               key={item.href}
               href={item.href}
@@ -50,7 +57,7 @@ export default async function ReportsPage() {
         <Link href="/admin/attendance" className="font-medium text-foreground underline-offset-2 hover:underline">
           Attendance
         </Link>{" "}
-        and use the date filter there.
+        and use the date filter or the full-month export there.
       </p>
     </div>
   );

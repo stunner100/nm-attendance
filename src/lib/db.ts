@@ -601,6 +601,9 @@ function attendanceCoverageLateralJoin(timezoneParamRef: string): string {
 
 type EnrichedAttendanceQueryOptions = {
   date?: string;
+  /** Inclusive `YYYY-MM-DD` range bounds; both must be set to apply. */
+  dateFrom?: string;
+  dateTo?: string;
   employeeId?: number;
   limit?: number;
 };
@@ -608,7 +611,8 @@ type EnrichedAttendanceQueryOptions = {
 function buildEnrichedAttendanceQuery(
   options: EnrichedAttendanceQueryOptions = {}
 ): { sql: string; params: (string | number)[] } {
-  const params: (string | number)[] = [];
+  const params: (string | number)[] = [CHECKIN_TIMEZONE];
+  const timezoneParamRef = `$${params.length}`;
   const clauses: string[] = [];
   let employeeJoin = "LEFT JOIN";
   let limitClause = "";
@@ -621,13 +625,17 @@ function buildEnrichedAttendanceQuery(
       params.push(options.limit);
       limitClause = `LIMIT $${params.length}`;
     }
+  } else if (options.dateFrom && options.dateTo) {
+    params.push(options.dateFrom, options.dateTo);
+    const dateToRef = params.length;
+    const dateFromRef = dateToRef - 1;
+    clauses.push(
+      `(a.timestamp::timestamptz AT TIME ZONE ${timezoneParamRef})::date BETWEEN $${dateFromRef} AND $${dateToRef}`
+    );
   } else if (options.date) {
     params.push(options.date);
     clauses.push(`LEFT(a.timestamp, 10) = $${params.length}`);
   }
-
-  params.push(CHECKIN_TIMEZONE);
-  const timezoneParamRef = `$${params.length}`;
   const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
 
   const sql = `
@@ -649,11 +657,20 @@ function buildEnrichedAttendanceQuery(
   return { sql, params };
 }
 
-export async function getAllAttendance(date?: string): Promise<AttendanceRow[]> {
+export type GetAllAttendanceOptions = {
+  date?: string;
+  /** Inclusive `YYYY-MM-DD` range bounds; both must be set to apply. */
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export async function getAllAttendance(
+  options: GetAllAttendanceOptions = {}
+): Promise<AttendanceRow[]> {
   await ensureSchema();
 
   const pool = getPool();
-  const { sql, params } = buildEnrichedAttendanceQuery(date ? { date } : {});
+  const { sql, params } = buildEnrichedAttendanceQuery(options);
   const result = await pool.query<AttendanceRowDb>(sql, params);
 
   return result.rows.map(normalizeAttendanceRow);

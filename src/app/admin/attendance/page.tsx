@@ -4,6 +4,7 @@ import { AttendanceTable } from "@/components/attendance-table";
 import { AdminPageIntro } from "@/components/hr/admin-page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentAttendanceMonth } from "@/lib/attendance-month";
 import { getAllAttendance, getApprovedAttendanceCoverageForDate } from "@/lib/db";
 import { humanizeLabel } from "@/lib/labels";
 
@@ -18,7 +19,7 @@ export default async function AttendancePage({
   const date = params.date?.trim() || undefined;
   const coverageDate = date || new Date().toISOString().slice(0, 10);
   const [initialRecords, approvedCoverage] = await Promise.all([
-    getAllAttendance(date),
+    getAllAttendance({ date }),
     getApprovedAttendanceCoverageForDate(coverageDate),
   ]);
 
@@ -36,8 +37,9 @@ export default async function AttendancePage({
       <AttendanceTable
         initialRecords={initialRecords}
         initialDate={date}
+        initialMonth={getCurrentAttendanceMonth()}
         basePath="/admin/attendance"
-        description="Search complete attendance history (check-in + check-out) by date."
+        description="Search complete attendance history (check-in + check-out) by date, or export a full month from the 1st to the last day."
       />
 
       <Card>

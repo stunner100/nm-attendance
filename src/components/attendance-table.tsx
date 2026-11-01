@@ -29,6 +29,8 @@ import type { AttendanceRow } from "@/lib/types";
 type AttendanceTableProps = {
   initialRecords: AttendanceRow[];
   initialDate?: string;
+  /** `YYYY-MM` used as the default for the full-month export. */
+  initialMonth?: string;
   title?: string;
   description?: string;
   maxRows?: number;
@@ -39,6 +41,7 @@ type AttendanceTableProps = {
 export function AttendanceTable({
   initialRecords,
   initialDate,
+  initialMonth,
   title = "Attendance records",
   description,
   maxRows,
@@ -47,6 +50,8 @@ export function AttendanceTable({
 }: AttendanceTableProps) {
   const router = useRouter();
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportMonth, setExportMonth] = useState(initialMonth ?? "");
+  const [isExportingMonth, setIsExportingMonth] = useState(false);
   const visibleRecords =
     typeof maxRows === "number" ? initialRecords.slice(0, maxRows) : initialRecords;
 
@@ -59,30 +64,62 @@ export function AttendanceTable({
     router.push(`${basePath}?date=${value}`);
   };
 
+  const downloadExport = async (url: string, filename: string) => {
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(err.error || "Failed to export attendance");
+    }
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(objectUrl);
+  };
+
+  const reportExportError = (err: unknown) => {
+    console.error("Export failed", err);
+    setExportError(
+      err instanceof Error ? err.message : "Failed to export CSV. Please try again."
+    );
+  };
+
   const handleExportCsv = async () => {
     setExportError(null);
 
     try {
       const dateQuery = initialDate ? `&date=${encodeURIComponent(initialDate)}` : "";
-      const res = await fetch(`/api/admin/export-attendance?format=csv${dateQuery}`);
-
-      if (!res.ok) {
-        const err = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(err.error || "Failed to export attendance");
-      }
-
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = `attendance-export-${new Date().toISOString().split("T")[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(objectUrl);
-    } catch (err) {
-      console.error("Export failed", err);
-      setExportError(
-        err instanceof Error ? err.message : "Failed to export CSV. Please try again."
+      await downloadExport(
+        `/api/admin/export-attendance?format=csv${dateQuery}`,
+        `attendance-export-${new Date().toISOString().split("T")[0]}.csv`
       );
+    } catch (err) {
+      reportExportError(err);
+    }
+  };
+
+  const handleExportMonthCsv = async () => {
+    setExportError(null);
+
+    if (!exportMonth) {
+      setExportError("Select a month to export.");
+      return;
+    }
+
+    setIsExportingMonth(true);
+    try {
+      await downloadExport(
+        `/api/admin/export-attendance?format=csv&month=${encodeURIComponent(exportMonth)}`,
+        `attendance-${exportMonth}.csv`
+      );
+    } catch (err) {
+      reportExportError(err);
+    } finally {
+      setIsExportingMonth(false);
     }
   };
 
@@ -114,6 +151,33 @@ export function AttendanceTable({
               onChange={(event) => onDateChange(event.target.value)}
             />
           </div>
+          {initialMonth !== undefined ? (
+            <>
+              <div className="flex-1 space-y-1 min-w-[140px]">
+                <label
+                  className="text-xs font-medium text-muted-foreground"
+                  htmlFor="export-month"
+                >
+                  Export full month
+                </label>
+                <Input
+                  id="export-month"
+                  type="month"
+                  value={exportMonth}
+                  onChange={(event) => setExportMonth(event.target.value)}
+                />
+              </div>
+              <Button
+                onClick={handleExportMonthCsv}
+                size="sm"
+                variant="outline"
+                disabled={isExportingMonth}
+              >
+                <Download className="h-4 w-4" />
+                {isExportingMonth ? "Exporting..." : "Export month CSV"}
+              </Button>
+            </>
+          ) : null}
           {viewAllHref ? (
             <Link
               className="text-link flex items-center gap-1 pb-2 text-sm font-medium"

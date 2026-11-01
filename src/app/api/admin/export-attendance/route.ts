@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { logAdminAction } from "@/lib/admin-audit";
 import { tablesToCsv } from "@/lib/admin-backup";
+import { parseAttendanceMonth } from "@/lib/attendance-month";
 import { getAllAttendance } from "@/lib/db";
 import { isValidAdminSession } from "@/lib/session";
 
@@ -19,14 +20,37 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const format = url.searchParams.get("format") || "json";
   const date = url.searchParams.get("date")?.trim() || undefined;
+  const monthParam = url.searchParams.get("month")?.trim() || undefined;
+
+  // `month=YYYY-MM` exports the full month: 1st through last day, inclusive.
+  // It takes precedence over the single-day `date` filter.
+  const monthRange = monthParam ? parseAttendanceMonth(monthParam) : null;
+  if (monthParam && !monthRange) {
+    return NextResponse.json(
+      { error: "month must use format YYYY-MM" },
+      { status: 400 }
+    );
+  }
 
   try {
-    const records = await getAllAttendance(date);
+    const records = monthRange
+      ? await getAllAttendance({
+          dateFrom: monthRange.startDate,
+          dateTo: monthRange.endDate,
+        })
+      : await getAllAttendance({ date });
 
     await logAdminAction({
       action: "export_attendance",
       actorEmail: session.user.email,
-      details: { format, date: date ?? null, count: records.length },
+      details: {
+        format,
+        date: date ?? null,
+        month: monthRange?.month ?? null,
+        dateFrom: monthRange?.startDate ?? null,
+        dateTo: monthRange?.endDate ?? null,
+        count: records.length,
+      },
     });
 
     if (format === "csv") {
@@ -44,15 +68,28 @@ export async function GET(request: Request) {
         created_at: record.created_at,
       }));
 
+      const filename = monthRange
+        ? `attendance-${monthRange.month}.csv`
+        : `attendance-export-${new Date().toISOString().split("T")[0]}.csv`;
+
       return new Response(tablesToCsv({ attendance: rows }), {
         headers: {
           "Content-Type": "text/csv;charset=utf-8;",
-          "Content-Disposition": `attachment; filename="attendance-export-${new Date().toISOString().split("T")[0]}.csv"`,
+          "Content-Disposition": `attachment; filename="${filename}"`,
         },
       });
     }
 
-    return NextResponse.json({ records });
+    return NextResponse.json({
+      records,
+      ...(monthRange
+        ? {
+            month: monthRange.month,
+            dateFrom: monthRange.startDate,
+            dateTo: monthRange.endDate,
+          }
+        : {}),
+    });
   } catch (error) {
     console.error("Failed to export attendance", error);
     return NextResponse.json(
